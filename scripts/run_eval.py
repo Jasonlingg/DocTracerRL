@@ -120,7 +120,7 @@ def main(
         questions=questions,
         policies=policies,
         max_steps=max_steps,
-        use_docker=False,
+        use_docker=None,  # auto-detect: use Docker if rlm-sandbox image exists
         corpus_path=corpus_path,
         question_ids=question_ids,
     )
