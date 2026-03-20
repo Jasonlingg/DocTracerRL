@@ -28,6 +28,7 @@ RULES:
 3. Do NOT use XML tags, markdown fences, or any non-Python syntax.
 4. Use print() to see results. Variables persist between steps.
 5. When you have the answer, respond with ONLY: SUBMIT: <answer> CITATIONS: ["id1", "id2"]
+6. Keep each response to ONE sub-question per step. Variables persist, so you will see results next step.
 
 STRATEGY — follow these steps for multi-hop questions:
 - Initialize known_facts = {} on step 1. Store EVERY discovery.
@@ -42,33 +43,54 @@ STRATEGY — follow these steps for multi-hop questions:
 
 EXAMPLE STEP 1 — search, then verify before reading:
 known_facts = {}
-results = search("Arna Selznick employer")
+results = search("person X employer")
 for r in results:
     print(r["doc_id"], r["title"], r["score"])
 # Check which doc is actually relevant
 for r in results[:3]:
-    v = verify(r["doc_id"], "Arna Selznick employer")
+    v = verify(r["doc_id"], "person X employer")
     print(r["doc_id"], v["found"], v.get("excerpt", "")[:100])
 
 EXAMPLE STEP 2 — search_within a long document (PREFERRED over read):
-windows = search_within("musique_nelvana", "headquarters location")
+windows = search_within("some_doc_id", "headquarters location")
 for w in windows:
     print(w["text"])
-known_facts["employer"] = "Nelvana"
-known_facts["hq_city"] = "Toronto"
+known_facts["employer"] = "Company Y"
+known_facts["hq_city"] = "City Z"
 
 EXAMPLE STEP 3 — extract specific values with regex:
-matches = extract("musique_greyhound_bus_stations", r"Toronto.*?(?:station|terminal|depot)[^.]*")
+matches = extract("another_doc_id", r"City Z.*?(?:station|terminal|depot)[^.]*")
 for m in matches:
     print(m)
 
 EXAMPLE STEP 4 — follow a chain: use discovery from step 2 in a new search:
-results = search(f"Greyhound bus {known_facts['hq_city']}")
+results = search(f"bus station {known_facts['hq_city']}")
 for r in results:
     print(r["doc_id"], r["title"], r["score"])
 
 EXAMPLE STEP 5 — submit with all citations:
-SUBMIT: Greyhound buses leave from Bay Street Terminal in Toronto. CITATIONS: ["musique_nelvana", "musique_greyhound_bus_stations"]"""
+SUBMIT: The answer based on discovered facts. CITATIONS: ["doc_id_1", "doc_id_2"]"""
+
+
+def _truncate_to_first_step(code: str) -> str:
+    """If the model generated multiple steps, keep only the first one.
+
+    Haiku often outputs '# Step 1 ... # Step 2 ... # Step 3 ...' as one block.
+    Code for later steps references variables that don't exist yet (because
+    the agent hasn't seen earlier steps' output). This is not a policy choice
+    we're constraining — it's broken code that will SyntaxError/NameError.
+    """
+    lines = code.split("\n")
+    step_markers = []
+    for i, line in enumerate(lines):
+        if re.match(r"^#\s*Step\s+\d", line.strip(), re.IGNORECASE) and i > 0:
+            step_markers.append(i)
+
+    # If there are multiple step markers, cut at the second one
+    if len(step_markers) >= 1:
+        code = "\n".join(lines[: step_markers[0]]).strip()
+
+    return code
 
 
 class ClaudePolicy:
@@ -134,10 +156,10 @@ class ClaudePolicy:
 
         # Strip markdown code fences
         if stripped.startswith("```python") and stripped.endswith("```"):
-            return stripped[len("```python"):][:-3].strip()
-        if stripped.startswith("```") and stripped.endswith("```"):
+            stripped = stripped[len("```python"):][:-3].strip()
+        elif stripped.startswith("```") and stripped.endswith("```"):
             lines = stripped.split("\n")
-            return "\n".join(lines[1:-1]).strip()
+            stripped = "\n".join(lines[1:-1]).strip()
 
         # Strip XML function_calls (Haiku sometimes generates these)
         if "<function_calls>" in stripped or "<invoke" in stripped:
@@ -148,7 +170,7 @@ class ClaudePolicy:
         # Extract code from markdown fences embedded in prose
         code_blocks = re.findall(r"```(?:python)?\n(.*?)```", stripped, re.DOTALL)
         if code_blocks:
-            return "\n".join(code_blocks).strip()
+            stripped = "\n".join(code_blocks).strip()
 
         # Filter: keep only lines that look like Python code, drop prose
         lines = stripped.split("\n")
@@ -185,4 +207,11 @@ class ClaudePolicy:
             # else: drop the line (it's prose)
 
         result = "\n".join(code_lines).strip()
-        return result if result else stripped
+        result = result if result else stripped
+
+        # Haiku often generates ALL steps at once (# Step 1 ... # Step 2 ...).
+        # Truncate to just the first step to avoid running code that depends
+        # on output the agent hasn't seen yet.
+        result = _truncate_to_first_step(result)
+
+        return result
