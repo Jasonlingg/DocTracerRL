@@ -83,12 +83,12 @@ def _truncate_to_first_step(code: str) -> str:
     lines = code.split("\n")
     step_markers = []
     for i, line in enumerate(lines):
-        if re.match(r"^#\s*Step\s+\d", line.strip(), re.IGNORECASE) and i > 0:
+        if re.match(r"^#\s*Step\s+\d", line.strip(), re.IGNORECASE):
             step_markers.append(i)
 
-    # If there are multiple step markers, cut at the second one
-    if len(step_markers) >= 1:
-        code = "\n".join(lines[: step_markers[0]]).strip()
+    # Only truncate if there are 2+ step markers (multi-step dump) — cut at the second marker
+    if len(step_markers) >= 2:
+        code = "\n".join(lines[: step_markers[1]]).strip()
 
     return code
 
