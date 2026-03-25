@@ -11,13 +11,23 @@
   :root {
     --bg: #0d1117; --bg2: #161b22; --bg3: #21262d; --border: #30363d;
     --text: #c9d1d9; --text2: #8b949e; --accent: #58a6ff; --green: #3fb950;
-    --red: #f85149; --orange: #d29922; --purple: #bc8cff;
+    --red: #f85149; --orange: #d29922; --purple: #bc8cff; --cyan: #39d2c0;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+    background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
 
-  /* Sidebar */
+  /* Tab bar */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg2); }
+  .tab { padding: 10px 24px; cursor: pointer; font-size: 13px; font-weight: 600;
+    color: var(--text2); border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; height: calc(100vh - 42px); }
+  .tab-content.active { display: flex; }
+
+  /* ===== HISTORY TAB ===== */
   .sidebar { width: 320px; min-width: 320px; background: var(--bg2); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; overflow: hidden; }
   .sidebar-header { padding: 16px 20px; border-bottom: 1px solid var(--border); }
@@ -25,15 +35,13 @@
   .sidebar-header p { font-size: 12px; color: var(--text2); margin-top: 4px; }
   .sidebar-section { padding: 12px 16px 8px; font-size: 11px; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); }
-
   .run-list, .question-list { overflow-y: auto; flex-shrink: 0; max-height: 30vh; }
   .question-list { flex: 1; overflow-y: auto; }
   .run-item, .q-item { padding: 8px 16px; cursor: pointer; font-size: 13px;
     border-left: 3px solid transparent; transition: all 0.15s; display: flex;
     justify-content: space-between; align-items: center; }
   .run-item:hover, .q-item:hover { background: var(--bg3); }
-  .run-item.active { border-left-color: var(--accent); background: var(--bg3); }
-  .q-item.active { border-left-color: var(--accent); background: var(--bg3); }
+  .run-item.active, .q-item.active { border-left-color: var(--accent); background: var(--bg3); }
   .run-item .size { color: var(--text2); font-size: 11px; }
   .q-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
   .q-badge.good { background: rgba(63,185,80,0.15); color: var(--green); }
@@ -42,32 +50,32 @@
   .q-policy { font-size: 11px; color: var(--text2); margin-left: 4px; }
   .q-item-left { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .q-item-label { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-  /* Main */
-  .main { flex: 1; overflow-y: auto; padding: 0; }
+  .filter-row { padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+  .pill { font-size: 11px; padding: 3px 10px; border-radius: 12px; cursor: pointer;
+    background: var(--bg3); color: var(--text2); border: 1px solid transparent; transition: all 0.15s; }
+  .pill:hover { color: var(--text); }
+  .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.1); }
+  .main { flex: 1; overflow-y: auto; }
   .main-empty { display: flex; align-items: center; justify-content: center;
     height: 100%; color: var(--text2); font-size: 15px; }
 
-  /* Header bar */
+  /* Trajectory detail */
   .traj-header { padding: 20px 32px; border-bottom: 1px solid var(--border);
     background: var(--bg2); position: sticky; top: 0; z-index: 10; }
   .traj-question { font-size: 16px; font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
   .traj-meta { display: flex; gap: 20px; font-size: 13px; color: var(--text2); flex-wrap: wrap; }
-  .traj-meta .label { color: var(--text2); }
   .traj-meta .value { color: var(--text); font-weight: 500; }
-  .traj-meta .reward-val { font-weight: 700; font-size: 15px; }
-  .traj-meta .reward-val.good { color: var(--green); }
-  .traj-meta .reward-val.mid { color: var(--orange); }
-  .traj-meta .reward-val.bad { color: var(--red); }
-
-  /* Reward breakdown bar */
+  .reward-val { font-weight: 700; font-size: 15px; }
+  .reward-val.good { color: var(--green); }
+  .reward-val.mid { color: var(--orange); }
+  .reward-val.bad { color: var(--red); }
   .reward-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden;
     margin-top: 10px; background: var(--bg3); max-width: 400px; }
-  .reward-bar .segment { height: 100%; transition: width 0.3s; }
-  .reward-bar .seg-answer { background: var(--accent); }
-  .reward-bar .seg-cit-p { background: var(--purple); }
-  .reward-bar .seg-cit-r { background: var(--green); }
-  .reward-bar .seg-eff { background: var(--orange); }
+  .reward-bar .segment { height: 100%; }
+  .seg-answer { background: var(--accent); }
+  .seg-cit-p { background: var(--purple); }
+  .seg-cit-r { background: var(--green); }
+  .seg-eff { background: var(--orange); }
   .reward-legend { display: flex; gap: 14px; margin-top: 6px; font-size: 11px; color: var(--text2); }
   .reward-legend span::before { content: ''; display: inline-block; width: 8px; height: 8px;
     border-radius: 2px; margin-right: 4px; vertical-align: middle; }
@@ -75,8 +83,6 @@
   .leg-cit-p::before { background: var(--purple); }
   .leg-cit-r::before { background: var(--green); }
   .leg-eff::before { background: var(--orange); }
-
-  /* Steps */
   .steps-container { padding: 24px 32px; }
   .step { margin-bottom: 24px; border: 1px solid var(--border); border-radius: 8px;
     overflow: hidden; background: var(--bg2); }
@@ -87,230 +93,319 @@
   .step-tag.code { background: rgba(88,166,255,0.12); color: var(--accent); }
   .step-tag.submit { background: rgba(63,185,80,0.15); color: var(--green); }
   .step-tag.error { background: rgba(248,81,73,0.12); color: var(--red); }
-  .step-tag.timeout { background: rgba(210,153,34,0.15); color: var(--orange); }
-
   .step-action { border-bottom: 1px solid var(--border); }
   .step-action pre { margin: 0; padding: 12px 16px; font-size: 13px; line-height: 1.5;
     overflow-x: auto; background: transparent !important; }
-  .step-action code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px;
-    background: transparent !important; }
-
+  .step-action code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; background: transparent !important; }
   .step-obs { padding: 12px 16px; }
   .step-obs-label { font-size: 11px; color: var(--text2); text-transform: uppercase;
     letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
   .step-obs pre { font-family: 'SF Mono', monospace; font-size: 12px; line-height: 1.5;
-    color: var(--text2); white-space: pre-wrap; word-break: break-word; max-height: 400px;
+    color: var(--text2); white-space: pre-wrap; word-break: break-word; max-height: 300px;
     overflow-y: auto; background: var(--bg); padding: 10px 12px; border-radius: 6px; }
-
-  /* Final answer */
   .final-answer { margin: 0 32px 32px; padding: 16px 20px; border: 1px solid var(--green);
     border-radius: 8px; background: rgba(63,185,80,0.06); }
   .final-answer h3 { font-size: 13px; color: var(--green); margin-bottom: 8px; }
-  .final-answer .answer-text { font-size: 14px; line-height: 1.5; }
-  .final-answer .citations { font-size: 12px; color: var(--text2); margin-top: 8px; }
   .final-answer .citations code { background: var(--bg3); padding: 2px 6px; border-radius: 3px;
     font-size: 11px; margin: 0 2px; }
 
-  /* Loading */
-  .loading { text-align: center; padding: 40px; color: var(--text2); }
-  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
-  .loading-dot { animation: pulse 1.5s infinite; }
+  /* ===== LIVE TAB ===== */
+  .live-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .live-controls { padding: 16px 24px; background: var(--bg2); border-bottom: 1px solid var(--border);
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .live-controls label { font-size: 12px; color: var(--text2); font-weight: 600; }
+  .live-controls select, .live-controls input { background: var(--bg3); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+  .live-controls select { min-width: 200px; }
+  .btn { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer;
+    font-weight: 600; font-size: 13px; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #79b8ff; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-danger { background: var(--red); color: #fff; }
 
-  /* Filter pills */
-  .filter-row { padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap;
-    border-bottom: 1px solid var(--border); }
-  .pill { font-size: 11px; padding: 3px 10px; border-radius: 12px; cursor: pointer;
-    background: var(--bg3); color: var(--text2); border: 1px solid transparent;
-    transition: all 0.15s; }
-  .pill:hover { color: var(--text); }
-  .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.1); }
+  .live-question { padding: 12px 24px; background: var(--bg); border-bottom: 1px solid var(--border);
+    font-size: 15px; font-weight: 600; min-height: 44px; }
+
+  .race-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0; overflow: hidden; }
+  .race-lane { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .race-lane:last-child { border-right: none; }
+  .lane-header { padding: 10px 14px; background: var(--bg2); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .lane-name { font-size: 13px; font-weight: 700; }
+  .lane-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .lane-status.running { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .lane-status.done { background: rgba(63,185,80,0.15); color: var(--green); }
+  .lane-status.failed { background: rgba(248,81,73,0.15); color: var(--red); }
+  .lane-status.waiting { background: var(--bg3); color: var(--text2); }
+  .lane-reward { font-size: 20px; font-weight: 700; padding: 8px 14px;
+    text-align: center; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+  .lane-steps { flex: 1; overflow-y: auto; padding: 8px; }
+
+  .mini-step { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; background: var(--bg2); font-size: 12px; }
+  .mini-step-head { padding: 6px 10px; background: var(--bg3); font-weight: 600;
+    display: flex; justify-content: space-between; font-size: 11px; }
+  .mini-step-code { padding: 8px 10px; border-bottom: 1px solid var(--border);
+    font-family: 'SF Mono', monospace; font-size: 11px; line-height: 1.4;
+    max-height: 120px; overflow-y: auto; white-space: pre-wrap; color: var(--cyan); }
+  .mini-step-obs { padding: 8px 10px; font-family: 'SF Mono', monospace; font-size: 11px;
+    line-height: 1.4; max-height: 100px; overflow-y: auto; white-space: pre-wrap; color: var(--text2); }
+
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+  .pulsing { animation: pulse 1.5s infinite; }
+
+  /* Policy colors */
+  .policy-claude { color: var(--accent); }
+  .policy-naive { color: var(--purple); }
+  .policy-stuffing { color: var(--orange); }
+  .policy-single { color: var(--cyan); }
 </style>
 </head>
 <body>
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h1>RLM Explorer</h1>
-      <p>Trajectory Viewer</p>
-    </div>
-    <div class="sidebar-section">Runs</div>
-    <div class="run-list" id="runList"></div>
-    <div class="sidebar-section">Policy Filter</div>
-    <div class="filter-row" id="policyFilter"></div>
-    <div class="sidebar-section">Questions</div>
-    <div class="question-list" id="questionList"></div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('live')">Live Race</div>
+    <div class="tab" onclick="switchTab('history')">History</div>
   </div>
-  <div class="main" id="main">
-    <div class="main-empty">Select a run and question to view the trajectory</div>
+
+  <!-- LIVE TAB -->
+  <div class="tab-content active" id="tab-live" style="flex-direction:column">
+    <div class="live-container">
+      <div class="live-controls">
+        <label>Corpus:</label>
+        <select id="liveCorpus" onchange="loadQuestionList()">
+          <option value="musique">MuSiQue (2940 docs)</option>
+          <option value="synthetic">Synthetic (43 docs)</option>
+        </select>
+        <label>Question:</label>
+        <select id="liveQuestion" style="min-width:400px"></select>
+        <label>Steps:</label>
+        <input id="liveSteps" type="number" value="10" min="1" max="20" style="width:60px">
+        <button class="btn btn-primary" id="btnStart" onclick="startRace()">Start Race</button>
+      </div>
+      <div class="live-question" id="liveQuestionText">Select a question and click Start Race</div>
+      <div class="race-grid" id="raceGrid">
+        <div class="race-lane" id="lane-claude_policy"><div class="lane-header"><span class="lane-name policy-claude">claude_policy</span><span class="lane-status waiting">waiting</span></div><div class="lane-reward" id="reward-claude_policy">-</div><div class="lane-steps" id="steps-claude_policy"></div></div>
+        <div class="race-lane" id="lane-naive_rag"><div class="lane-header"><span class="lane-name policy-naive">naive_rag</span><span class="lane-status waiting">waiting</span></div><div class="lane-reward" id="reward-naive_rag">-</div><div class="lane-steps" id="steps-naive_rag"></div></div>
+        <div class="race-lane" id="lane-context_stuffing"><div class="lane-header"><span class="lane-name policy-stuffing">context_stuffing</span><span class="lane-status waiting">waiting</span></div><div class="lane-reward" id="reward-context_stuffing">-</div><div class="lane-steps" id="steps-context_stuffing"></div></div>
+        <div class="race-lane" id="lane-single_shot"><div class="lane-header"><span class="lane-name policy-single">single_shot</span><span class="lane-status waiting">waiting</span></div><div class="lane-reward" id="reward-single_shot">-</div><div class="lane-steps" id="steps-single_shot"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="tab-content" id="tab-history">
+    <div class="sidebar">
+      <div class="sidebar-header"><h1>RLM Explorer</h1><p>Trajectory Viewer</p></div>
+      <div class="sidebar-section">Runs</div>
+      <div class="run-list" id="runList"></div>
+      <div class="sidebar-section">Policy Filter</div>
+      <div class="filter-row" id="policyFilter"></div>
+      <div class="sidebar-section">Questions</div>
+      <div class="question-list" id="questionList"></div>
+    </div>
+    <div class="main" id="main"><div class="main-empty">Select a run and question to view the trajectory</div></div>
   </div>
 
 <script>
-let currentRun = null;
+/* ===== TAB SWITCHING ===== */
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab-content#tab-${name}`).classList.add('active');
+  document.querySelectorAll('.tab')[name === 'live' ? 0 : 1].classList.add('active');
+}
+
+/* ===== LIVE RACE ===== */
+let ws = null;
+const policies = ['claude_policy', 'naive_rag', 'context_stuffing', 'single_shot'];
+let questionData = [];
+
+async function loadQuestionList() {
+  const corpus = document.getElementById('liveCorpus').value;
+  const res = await fetch(`/api/questions/${corpus}`);
+  questionData = await res.json();
+  const sel = document.getElementById('liveQuestion');
+  sel.innerHTML = questionData.map((q, i) =>
+    `<option value="${i}">${q.id} — ${q.question.slice(0, 80)}${q.question.length > 80 ? '...' : ''}</option>`
+  ).join('');
+}
+
+function startRace() {
+  const idx = parseInt(document.getElementById('liveQuestion').value);
+  const q = questionData[idx];
+  const corpus = document.getElementById('liveCorpus').value;
+  const maxSteps = parseInt(document.getElementById('liveSteps').value);
+  if (!q) return;
+
+  document.getElementById('liveQuestionText').textContent = q.question;
+  document.getElementById('btnStart').disabled = true;
+
+  // Reset lanes
+  policies.forEach(p => {
+    document.getElementById(`steps-${p}`).innerHTML = '';
+    document.getElementById(`reward-${p}`).textContent = '-';
+    document.getElementById(`reward-${p}`).className = 'lane-reward';
+    const status = document.querySelector(`#lane-${p} .lane-status`);
+    status.textContent = 'running';
+    status.className = 'lane-status running pulsing';
+  });
+
+  ws = new WebSocket(`ws://${location.host}/ws/live`);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ corpus, question: q, policies, max_steps: maxSteps }));
+  };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'step') handleStep(msg);
+    else if (msg.type === 'complete') raceComplete();
+    else if (msg.type === 'error') { raceComplete(); alert('Error: ' + msg.message); }
+  };
+  ws.onclose = () => { document.getElementById('btnStart').disabled = false; };
+}
+
+function handleStep(ev) {
+  const container = document.getElementById(`steps-${ev.policy}`);
+  const isSubmit = ev.action?.trim().toUpperCase().startsWith('SUBMIT:');
+  const hasError = ev.observation?.includes('SyntaxError') || ev.observation?.includes('ERROR:');
+  const tagLabel = isSubmit ? 'SUBMIT' : hasError ? 'ERR' : `S${ev.step}`;
+  const tagColor = isSubmit ? 'var(--green)' : hasError ? 'var(--red)' : 'var(--accent)';
+
+  const div = document.createElement('div');
+  div.className = 'mini-step';
+  div.innerHTML = `
+    <div class="mini-step-head">
+      <span style="color:${tagColor}">${tagLabel}</span>
+      <span>${ev.elapsed?.toFixed(1) || '?'}s</span>
+    </div>
+    <div class="mini-step-code">${escapeHtml(ev.action?.slice(0, 500) || '')}</div>
+    ${ev.observation ? `<div class="mini-step-obs">${escapeHtml(ev.observation.slice(0, 400))}</div>` : ''}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+
+  if (ev.done) {
+    const rewardEl = document.getElementById(`reward-${ev.policy}`);
+    const r = ev.total_reward;
+    rewardEl.textContent = r.toFixed(3);
+    rewardEl.classList.add(r >= 0.6 ? 'good' : r >= 0.3 ? 'mid' : 'bad');
+    const status = document.querySelector(`#lane-${ev.policy} .lane-status`);
+    status.textContent = r > 0.3 ? 'done' : 'failed';
+    status.className = `lane-status ${r > 0.3 ? 'done' : 'failed'}`;
+  }
+}
+
+function raceComplete() {
+  document.getElementById('btnStart').disabled = false;
+  policies.forEach(p => {
+    const status = document.querySelector(`#lane-${p} .lane-status`);
+    if (status.textContent === 'running') {
+      status.textContent = 'done';
+      status.className = 'lane-status done';
+    }
+  });
+}
+
+/* ===== HISTORY TAB ===== */
 let currentData = [];
 let selectedPolicy = null;
 
 async function loadRuns() {
   const res = await fetch('/api/runs');
   const runs = await res.json();
-  const el = document.getElementById('runList');
-  el.innerHTML = runs.map(r =>
-    `<div class="run-item" data-file="${r.path}" onclick="selectRun(this, '${r.path}')">
-      <span>${formatRunName(r.name)}</span>
-      <span class="size">${r.size_kb}KB</span>
-    </div>`
+  document.getElementById('runList').innerHTML = runs.map(r =>
+    `<div class="run-item" onclick="selectRun(this, '${r.path}')">
+      <span>${formatRunName(r.name)}</span><span class="size">${r.size_kb}KB</span></div>`
   ).join('');
 }
-
-function formatRunName(name) {
-  // run_20260318_170023 → 2026-03-18 17:00:23
-  const m = name.match(/run_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
-  if (!m) return name;
-  return `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}:${m[6]}`;
+function formatRunName(n) {
+  const m = n.match(/run_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}:${m[6]}` : n;
 }
-
 async function selectRun(el, filename) {
   document.querySelectorAll('.run-item').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
-  const res = await fetch(`/api/runs/${filename}`);
-  currentData = await res.json();
+  currentData = await (await fetch(`/api/runs/${filename}`)).json();
   selectedPolicy = null;
   buildPolicyFilter();
   renderQuestionList();
 }
-
 function buildPolicyFilter() {
-  const policies = [...new Set(currentData.map(d => d.policy))];
-  const el = document.getElementById('policyFilter');
-  el.innerHTML = `<div class="pill active" onclick="filterPolicy(null, this)">All</div>` +
-    policies.map(p => `<div class="pill" onclick="filterPolicy('${p}', this)">${p}</div>`).join('');
+  const pols = [...new Set(currentData.map(d => d.policy))];
+  document.getElementById('policyFilter').innerHTML =
+    `<div class="pill active" onclick="filterPolicy(null,this)">All</div>` +
+    pols.map(p => `<div class="pill" onclick="filterPolicy('${p}',this)">${p}</div>`).join('');
 }
-
-function filterPolicy(policy, el) {
-  selectedPolicy = policy;
+function filterPolicy(p, el) {
+  selectedPolicy = p;
   document.querySelectorAll('#policyFilter .pill').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
   renderQuestionList();
 }
-
 function rewardClass(r) { return r >= 0.6 ? 'good' : r >= 0.3 ? 'mid' : 'bad'; }
-
-function renderQuestionList() {
-  const filtered = selectedPolicy
-    ? currentData.filter(d => d.policy === selectedPolicy)
-    : currentData;
-  const el = document.getElementById('questionList');
-  el.innerHTML = filtered.map((d, i) =>
-    `<div class="q-item" onclick="renderTrajectory(${currentData.indexOf(d)})">
-      <div class="q-item-left">
-        <div class="q-item-label">${d.question_id} — ${truncate(d.question, 40)}</div>
-        <span class="q-policy">${d.policy} · ${d.steps} steps · ${d.duration_seconds?.toFixed(1) || '?'}s</span>
-      </div>
-      <span class="q-badge ${rewardClass(d.reward)}">${d.reward.toFixed(3)}</span>
-    </div>`
-  ).join('');
-  // auto-select first
-  if (filtered.length > 0 && !document.querySelector('.q-item.active')) {
-    renderTrajectory(currentData.indexOf(filtered[0]));
-  }
-}
-
 function truncate(s, n) { return s.length > n ? s.slice(0, n) + '...' : s; }
-
+function renderQuestionList() {
+  const f = selectedPolicy ? currentData.filter(d => d.policy === selectedPolicy) : currentData;
+  document.getElementById('questionList').innerHTML = f.map(d =>
+    `<div class="q-item" onclick="renderTrajectory(${currentData.indexOf(d)})">
+      <div class="q-item-left"><div class="q-item-label">${d.question_id} — ${truncate(d.question,40)}</div>
+      <span class="q-policy">${d.policy} · ${d.steps}s · ${d.duration_seconds?.toFixed(1)||'?'}s</span></div>
+      <span class="q-badge ${rewardClass(d.reward)}">${d.reward.toFixed(3)}</span></div>`
+  ).join('');
+}
 function renderTrajectory(idx) {
-  document.querySelectorAll('.q-item').forEach(e => e.classList.remove('active'));
-  const items = document.querySelectorAll('.q-item');
-  // find correct item
   const d = currentData[idx];
-  items.forEach(el => {
-    if (el.querySelector('.q-item-label')?.textContent.startsWith(d.question_id)) {
-      el.classList.add('active');
-    }
-  });
-
-  const r = d.reward;
-  const rc = rewardClass(r);
-  const as = d.answer_score || 0, cp = d.citation_precision || 0,
-        cr = d.citation_recall || 0, eff = d.efficiency_bonus || 0;
-  // reward bar widths (max total ~1.2)
-  const total = as * 0.5 + cp * 0.25 + cr * 0.25 + eff;
-  const scale = total > 0 ? 100 / Math.max(total, 1) : 0;
-
-  let html = `
-    <div class="traj-header">
-      <div class="traj-question">${d.question}</div>
-      <div class="traj-meta">
-        <span><span class="label">Policy:</span> <span class="value">${d.policy}</span></span>
-        <span><span class="label">Reward:</span> <span class="reward-val ${rc}">${r.toFixed(3)}</span></span>
-        <span><span class="label">Steps:</span> <span class="value">${d.steps}</span></span>
-        <span><span class="label">Time:</span> <span class="value">${d.duration_seconds?.toFixed(1) || '?'}s</span></span>
-        <span><span class="label">Question:</span> <span class="value">${d.question_id}</span></span>
-      </div>
-      <div class="reward-bar">
-        <div class="segment seg-answer" style="width:${as * 0.5 * scale}%"></div>
-        <div class="segment seg-cit-p" style="width:${cp * 0.25 * scale}%"></div>
-        <div class="segment seg-cit-r" style="width:${cr * 0.25 * scale}%"></div>
-        <div class="segment seg-eff" style="width:${eff * scale}%"></div>
-      </div>
-      <div class="reward-legend">
-        <span class="leg-answer">Answer ${(as).toFixed(2)}</span>
-        <span class="leg-cit-p">Cite P ${(cp).toFixed(2)}</span>
-        <span class="leg-cit-r">Cite R ${(cr).toFixed(2)}</span>
-        <span class="leg-eff">Efficiency ${(eff).toFixed(2)}</span>
-      </div>
+  const r = d.reward, rc = rewardClass(r);
+  const as = d.answer_score||0, cp = d.citation_precision||0, cr = d.citation_recall||0, eff = d.efficiency_bonus||0;
+  const total = as*0.5+cp*0.25+cr*0.25+eff;
+  const scale = total > 0 ? 100/Math.max(total,1) : 0;
+  let html = `<div class="traj-header">
+    <div class="traj-question">${d.question}</div>
+    <div class="traj-meta">
+      <span><span class="text2">Policy:</span> <span class="value">${d.policy}</span></span>
+      <span><span class="text2">Reward:</span> <span class="reward-val ${rc}">${r.toFixed(3)}</span></span>
+      <span><span class="text2">Steps:</span> <span class="value">${d.steps}</span></span>
+      <span><span class="text2">Time:</span> <span class="value">${d.duration_seconds?.toFixed(1)||'?'}s</span></span>
     </div>
-    <div class="steps-container">`;
-
+    <div class="reward-bar">
+      <div class="segment seg-answer" style="width:${as*0.5*scale}%"></div>
+      <div class="segment seg-cit-p" style="width:${cp*0.25*scale}%"></div>
+      <div class="segment seg-cit-r" style="width:${cr*0.25*scale}%"></div>
+      <div class="segment seg-eff" style="width:${eff*scale}%"></div>
+    </div>
+    <div class="reward-legend">
+      <span class="leg-answer">Answer ${as.toFixed(2)}</span>
+      <span class="leg-cit-p">Cite P ${cp.toFixed(2)}</span>
+      <span class="leg-cit-r">Cite R ${cr.toFixed(2)}</span>
+      <span class="leg-eff">Eff ${eff.toFixed(2)}</span>
+    </div></div><div class="steps-container">`;
   for (const step of d.trajectory) {
     const isSubmit = step.action?.trim().toUpperCase().startsWith('SUBMIT:');
-    const hasError = step.observation?.includes('SyntaxError') || step.observation?.includes('ERROR:');
-    const isTimeout = step.observation?.includes('timed out');
-    const tagClass = isSubmit ? 'submit' : hasError ? 'error' : isTimeout ? 'timeout' : 'code';
-    const tagLabel = isSubmit ? 'SUBMIT' : hasError ? 'ERROR' : isTimeout ? 'TIMEOUT' : 'CODE';
-
-    html += `
-      <div class="step">
-        <div class="step-header">
-          <span class="step-num">Step ${step.step}</span>
-          <span class="step-tag ${tagClass}">${tagLabel}</span>
-        </div>
-        <div class="step-action">
-          <pre><code class="language-python">${escapeHtml(step.action || '')}</code></pre>
-        </div>`;
-
-    if (step.observation) {
-      html += `
-        <div class="step-obs">
-          <div class="step-obs-label">Output</div>
-          <pre>${escapeHtml(step.observation)}</pre>
-        </div>`;
-    }
+    const hasError = step.observation?.includes('SyntaxError')||step.observation?.includes('ERROR:');
+    const tagClass = isSubmit ? 'submit' : hasError ? 'error' : 'code';
+    const tagLabel = isSubmit ? 'SUBMIT' : hasError ? 'ERROR' : 'CODE';
+    html += `<div class="step"><div class="step-header"><span class="step-num">Step ${step.step}</span>
+      <span class="step-tag ${tagClass}">${tagLabel}</span></div>
+      <div class="step-action"><pre><code class="language-python">${escapeHtml(step.action||'')}</code></pre></div>`;
+    if (step.observation) html += `<div class="step-obs"><div class="step-obs-label">Output</div>
+      <pre>${escapeHtml(step.observation)}</pre></div>`;
     html += `</div>`;
   }
-
-  // Final answer
   if (d.predicted_answer) {
-    html += `
-      <div class="final-answer">
-        <h3>Predicted Answer</h3>
-        <div class="answer-text">${escapeHtml(d.predicted_answer)}</div>
-        <div class="citations">Citations: ${
-          (d.predicted_citations || []).map(c => `<code>${c}</code>`).join(' ') || '<em>none</em>'
-        }</div>
-      </div>`;
+    html += `<div class="final-answer"><h3>Predicted Answer</h3>
+      <div>${escapeHtml(d.predicted_answer)}</div>
+      <div class="citations">Citations: ${(d.predicted_citations||[]).map(c=>`<code>${c}</code>`).join(' ')||'<em>none</em>'}</div></div>`;
   }
-
   html += `</div>`;
-
   document.getElementById('main').innerHTML = html;
   document.querySelectorAll('.step-action code').forEach(el => hljs.highlightElement(el));
 }
 
-function escapeHtml(s) {
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
-}
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+/* Init */
 loadRuns();
+loadQuestionList();
 </script>
 </body>
 </html>

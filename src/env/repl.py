@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import tempfile
 import time
 from abc import ABC, abstractmethod
@@ -228,7 +229,7 @@ class LocalREPL(BaseREPL):
 
         try:
             result = subprocess.run(
-                ["python3", script_path],
+                [sys.executable, script_path],
                 capture_output=True, text=True, timeout=timeout,
                 env=env,
             )
