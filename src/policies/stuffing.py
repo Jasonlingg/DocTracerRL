@@ -35,9 +35,10 @@ class ContextStuffingPolicy:
         corpus: Corpus,
         model: str = "claude-haiku-4-5-20251001",
         max_context_chars: int = 100_000,
+        api_key: str | None = None,
     ) -> None:
         self.corpus = corpus
-        self.client = anthropic.Anthropic()
+        self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
         self.max_context_chars = max_context_chars
         self._question: str | None = None

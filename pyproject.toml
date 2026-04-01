@@ -35,6 +35,7 @@ viewer = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
     "websockets>=12.0",
+    "slowapi>=0.1.9",
 ]
 
 [tool.setuptools.packages.find]

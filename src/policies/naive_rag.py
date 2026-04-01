@@ -32,9 +32,10 @@ class NaiveRAGPolicy:
         model: str = "claude-haiku-4-5-20251001",
         top_k: int = 10,
         max_context_chars: int = 30_000,
+        api_key: str | None = None,
     ) -> None:
         self.corpus = corpus
-        self.client = anthropic.Anthropic()
+        self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
         self.top_k = top_k
         self.max_context_chars = max_context_chars

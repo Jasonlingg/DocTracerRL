@@ -32,12 +32,11 @@ RULES:
 
 STRATEGY — follow these steps for multi-hop questions:
 - Initialize known_facts = {} on step 1. Store EVERY discovery.
-- Break the question into sub-questions. Solve one per step.
-- When a document references another entity, person, or place, SEARCH for it next.
 - PREFER search_within(doc_id, query) over read(doc_id). It returns only the relevant 500-char windows.
 - Use verify(doc_id, claim) BEFORE reading — it's a fast check if a doc is relevant.
 - Use extract(doc_id, pattern) to pull specific values (dates, numbers, names) with regex.
-- NEVER call read() on the same document twice. NEVER call read() on docs longer than 1000 chars.
+- Use verify(doc_id, claim) BEFORE reading. If a document is irrelevant, discard it immediately
+- NEVER call read() on the same document twice, and NEVER call read() on docs longer than 1000 chars.
 - If search returns nothing useful, try different keywords or method="chunk".
 - Submit as soon as you have enough facts. Do not over-explore.
 
@@ -101,8 +100,9 @@ class ClaudePolicy:
         model: str = "claude-haiku-4-5-20251001",
         max_tokens: int = 4096,
         temperature: float = 0.0,
+        api_key: str | None = None,
     ) -> None:
-        self.client = anthropic.Anthropic()
+        self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature

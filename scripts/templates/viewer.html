@@ -182,7 +182,10 @@
         <select id="liveQuestion" style="min-width:400px"></select>
         <label>Steps:</label>
         <input id="liveSteps" type="number" value="10" min="1" max="20" style="width:60px">
+        <label>API Key:</label>
+        <input id="apiKey" type="password" placeholder="sk-ant-... (optional)" style="min-width:200px">
         <button class="btn btn-primary" id="btnStart" onclick="startRace()">Start Race</button>
+        <button class="btn" id="btnReplay" onclick="playReplay()" style="background:var(--purple);color:#fff">Watch Replay</button>
       </div>
       <div class="live-question" id="liveQuestionText">Select a question and click Start Race</div>
       <div class="race-grid" id="raceGrid">
@@ -232,29 +235,63 @@ async function loadQuestionList() {
   ).join('');
 }
 
-function startRace() {
-  const idx = parseInt(document.getElementById('liveQuestion').value);
-  const q = questionData[idx];
-  const corpus = document.getElementById('liveCorpus').value;
-  const maxSteps = parseInt(document.getElementById('liveSteps').value);
-  if (!q) return;
-
-  document.getElementById('liveQuestionText').textContent = q.question;
-  document.getElementById('btnStart').disabled = true;
-
-  // Reset lanes
+function resetLanes() {
   policies.forEach(p => {
     document.getElementById(`steps-${p}`).innerHTML = '';
     document.getElementById(`reward-${p}`).textContent = '-';
     document.getElementById(`reward-${p}`).className = 'lane-reward';
     const status = document.querySelector(`#lane-${p} .lane-status`);
+    status.textContent = 'waiting';
+    status.className = 'lane-status waiting';
+  });
+}
+
+async function startRace() {
+  const idx = parseInt(document.getElementById('liveQuestion').value);
+  const q = questionData[idx];
+  const corpus = document.getElementById('liveCorpus').value;
+  const maxSteps = parseInt(document.getElementById('liveSteps').value);
+  const apiKey = document.getElementById('apiKey').value.trim() || null;
+  if (!q) return;
+
+  document.getElementById('liveQuestionText').textContent = q.question;
+  document.getElementById('btnStart').disabled = true;
+
+  // Get rate-limit token
+  try {
+    const tokenRes = await fetch('/api/race/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({api_key: apiKey}),
+    });
+    const tokenData = await tokenRes.json();
+    if (tokenData.error) {
+      alert(tokenData.error);
+      document.getElementById('btnStart').disabled = false;
+      return;
+    }
+    var raceToken = tokenData.token;
+  } catch (e) {
+    alert('Failed to start race: ' + e.message);
+    document.getElementById('btnStart').disabled = false;
+    return;
+  }
+
+  // Reset lanes
+  resetLanes();
+  policies.forEach(p => {
+    const status = document.querySelector(`#lane-${p} .lane-status`);
     status.textContent = 'running';
     status.className = 'lane-status running pulsing';
   });
 
-  ws = new WebSocket(`ws://${location.host}/ws/live`);
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws/live`);
   ws.onopen = () => {
-    ws.send(JSON.stringify({ corpus, question: q, policies, max_steps: maxSteps }));
+    ws.send(JSON.stringify({
+      token: raceToken, api_key: apiKey,
+      corpus, question: q, policies, max_steps: maxSteps,
+    }));
   };
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
@@ -304,6 +341,41 @@ function raceComplete() {
       status.className = 'lane-status done';
     }
   });
+}
+
+/* ===== REPLAY PLAYBACK ===== */
+async function playReplay() {
+  const res = await fetch('/api/replays');
+  const replays = await res.json();
+  if (!replays.length) { alert('No replays available yet.'); return; }
+
+  const name = replays[0].name;
+  const dataRes = await fetch(`/api/replays/${name}`);
+  const data = await dataRes.json();
+  const events = data.events || [];
+  if (!events.length) { alert('Replay has no events.'); return; }
+
+  document.getElementById('liveQuestionText').textContent = data.meta?.question || 'Replay';
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnReplay').disabled = true;
+  resetLanes();
+  policies.forEach(p => {
+    const status = document.querySelector(`#lane-${p} .lane-status`);
+    status.textContent = 'running';
+    status.className = 'lane-status running pulsing';
+  });
+
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i >= events.length) {
+      clearInterval(timer);
+      raceComplete();
+      document.getElementById('btnReplay').disabled = false;
+      return;
+    }
+    handleStep(events[i]);
+    i++;
+  }, 300);
 }
 
 /* ===== HISTORY TAB ===== */
