@@ -38,6 +38,17 @@ viewer = [
     "websockets>=12.0",
     "slowapi>=0.1.9",
 ]
+training = [
+    # Multi-turn / tool-env RL stack. GPU-only; do NOT install in CI.
+    "verifiers>=0.1.12",
+    "trl>=1.3.0",
+    "transformers>=4.45",
+    "peft>=0.13",
+    "accelerate>=1.0",
+    "bitsandbytes>=0.44",
+    "vllm>=0.6.3",
+    "datasets>=2.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

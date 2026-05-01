@@ -82,6 +82,9 @@ git clone https://github.com/jasonlingg/rlm-explorer.git
 cd rlm-explorer
 pip install -e ".[dev]"
 
+# GPU-only: GRPO training stack (verifiers, vllm, etc.) — do NOT install on CPU
+# pip install -e ".[training]"
+
 # Generate synthetic corpus (43 cross-referencing business documents)
 python scripts/setup_corpus.py
 
