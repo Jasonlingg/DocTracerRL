@@ -36,8 +36,17 @@ def slugify(text: str) -> str:
     return text[:80]
 
 
-def download_musique(split: str = "validation", num_questions: int | None = None) -> list[dict]:
-    """Download MuSiQue dataset from HuggingFace."""
+def download_musique(
+    split: str = "validation",
+    num_questions: int | None = None,
+    skip: int = 0,
+) -> list[dict]:
+    """Download MuSiQue dataset from HuggingFace.
+
+    Slicing is `examples[skip : skip + num_questions]`. Use `skip` to carve
+    a held-out test set out of the validation split (HF doesn't expose MuSiQue's
+    real test split — it's hidden behind a leaderboard).
+    """
     try:
         from datasets import load_dataset
     except ImportError:
@@ -52,9 +61,13 @@ def download_musique(split: str = "validation", num_questions: int | None = None
     examples = [ex for ex in examples if ex.get("answerable", True)]
     console.print(f"  {len(examples)} answerable examples found")
 
+    if skip:
+        examples = examples[skip:]
+        console.print(f"  Skipping first {skip} examples")
+
     if num_questions and num_questions < len(examples):
         examples = examples[:num_questions]
-        console.print(f"  Using first {num_questions} questions")
+        console.print(f"  Using next {num_questions} questions")
 
     return examples
 
@@ -103,7 +116,9 @@ def build_corpus(examples: list[dict]) -> tuple[dict[str, dict], dict[str, str]]
 
 
 def build_questions(
-    examples: list[dict], para_key_to_doc_id: dict[str, str]
+    examples: list[dict],
+    para_key_to_doc_id: dict[str, str],
+    id_prefix: str = "m",
 ) -> list[dict]:
     """Convert MuSiQue examples to RLM Explorer eval format."""
     questions: list[dict] = []
@@ -126,7 +141,7 @@ def build_questions(
         answer_aliases = ex.get("answer_aliases", [])
 
         questions.append({
-            "id": f"m{i:04d}",
+            "id": f"{id_prefix}{i:04d}",
             "question": ex["question"],
             "answer": ex["answer"],
             "answer_aliases": answer_aliases,
@@ -143,26 +158,36 @@ def build_questions(
 def main(
     split: str = typer.Option("validation", help="HuggingFace dataset split"),
     num_questions: int = typer.Option(200, "--num-questions", "-n", help="Number of questions"),
+    skip: int = typer.Option(0, "--skip", help="Skip first N examples (for non-overlapping slices)"),
+    output: str = typer.Option(
+        "data/musique/questions/eval_set.json",
+        "--output", "-o",
+        help="Output path for the questions JSON",
+    ),
+    id_prefix: str = typer.Option(
+        "m", "--id-prefix",
+        help="Prefix for question IDs (e.g. 'train_', 'dev_', 'test_')",
+    ),
 ) -> None:
     """Download MuSiQue and build corpus + questions for RLM Explorer."""
-    examples = download_musique(split=split, num_questions=num_questions)
+    examples = download_musique(split=split, num_questions=num_questions, skip=skip)
 
     console.print("Building corpus from paragraphs...")
     documents, para_map = build_corpus(examples)
 
     console.print("Building question set...")
-    questions = build_questions(examples, para_map)
+    questions = build_questions(examples, para_map, id_prefix=id_prefix)
 
-    # Write corpus
+    # Write corpus (additive — preserves articles from prior splits)
     CORPUS_DIR.mkdir(parents=True, exist_ok=True)
     for doc in documents.values():
         path = CORPUS_DIR / f"{doc['doc_id']}.json"
         with open(path, "w") as f:
             json.dump(doc, f, indent=2)
 
-    # Write questions
-    QUESTIONS_DIR.mkdir(parents=True, exist_ok=True)
-    q_path = QUESTIONS_DIR / "eval_set.json"
+    # Write questions to caller-specified path
+    q_path = Path(output)
+    q_path.parent.mkdir(parents=True, exist_ok=True)
     with open(q_path, "w") as f:
         json.dump(questions, f, indent=2)
 

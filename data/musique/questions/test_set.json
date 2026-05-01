@@ -1,0 +1,2856 @@
+[
+  {
+    "id": "test_0000",
+    "question": "The operator of Brent field announced it was in the process of doing what in April 2010?",
+    "answer": "trying to find a potential buyer for all of its operations in Finland",
+    "answer_aliases": [
+      "FIN",
+      "fi",
+      "Finland"
+    ],
+    "expected_citations": [
+      "musique_brent_spar",
+      "musique_royal_dutch_shell"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0001",
+    "question": "When did the party Oklahoma's US Senators come from take control of the body determining the rules of the US House and US Senate?",
+    "answer": "January 2015",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_2014_united_states_senate_elections",
+      "musique_oklahoma",
+      "musique_standing_rules_of_the_united_states_senate"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0002",
+    "question": "In what region of the country where An Phu is located is John Phan's birthplace?",
+    "answer": "South Central Coast",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_south_central_coast",
+      "musique_an_ph\u00fa_district",
+      "musique_john_phan"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0003",
+    "question": "Who did the producer of Big Jim McLain play in True Grit?",
+    "answer": "U.S. Marshal Rooster Cogburn",
+    "answer_aliases": [
+      "the US",
+      "America",
+      "USA",
+      "U.S.",
+      "United States",
+      "US"
+    ],
+    "expected_citations": [
+      "musique_true_grit_1969_film",
+      "musique_big_jim_mclain"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0004",
+    "question": "Where is the base of the newspaper saying if you find yourself in a hole stop digging?",
+    "answer": "Washington, D.C.",
+    "answer_aliases": [
+      "Washington",
+      "D.C.",
+      "District of Columbia"
+    ],
+    "expected_citations": [
+      "musique_the_washington_post",
+      "musique_law_of_holes"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0005",
+    "question": "For what did the singer of Moon River in Breakfast at Tiffany's win a Tony?",
+    "answer": "for Best Performance by a Leading Actress in a Play in Ondine",
+    "answer_aliases": [
+      "leading role",
+      "star",
+      "leading actress",
+      "lead"
+    ],
+    "expected_citations": [
+      "musique_list_of_awards_and_honours_received_by_audrey_hepburn",
+      "musique_moon_river"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0006",
+    "question": "Who was picked in the NBA draft before the player with the highest point average in NBA history?",
+    "answer": "Greg Oden",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_2007_nba_draft",
+      "musique_list_of_national_basketball_association_annual_scoring_leaders"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0007",
+    "question": "Who is the father of the man with the same name as the Big Brother hot dog challenge winner?",
+    "answer": "Aeson",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_aeson",
+      "musique_big_brother_19_american_season"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0008",
+    "question": "When was the region immediately north of the region home to Israel and the location of Operation Earnest Will established?",
+    "answer": "1932",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_geography_of_saudi_arabia",
+      "musique_operation_praying_mantis",
+      "musique_saudi_arabia",
+      "musique_israel"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0009",
+    "question": "When did the maker of Acura Legend, the biggest automobile company in the world, and Nissan open US assembly plants?",
+    "answer": "1981",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_1973_oil_crisis",
+      "musique_automotive_industry",
+      "musique_acura_legend"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0010",
+    "question": "Where do greyhound buses leave from in the city where the performer of Darlings formed?",
+    "answer": "Toronto Coach Terminal",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_toronto_coach_terminal",
+      "musique_darlings_kevin_drew_album",
+      "musique_kevin_drew"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0011",
+    "question": "Who was Beyonce's husband talking about in the the song Cry?",
+    "answer": "three different relationships he had in the past",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_beyonc\u00e9",
+      "musique_song_cry"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0012",
+    "question": "What major conflict is the country between the country that hosted the tournament and the country where That Dam is from known for?",
+    "answer": "one of the world's longest-running ongoing civil wars.",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_myanmar",
+      "musique_geography_of_myanmar",
+      "musique_2020_afc_u_23_championship_qualification",
+      "musique_that_dam"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0013",
+    "question": "Who is the spouse of the actor who plays Paul in Breakfast at Tiffany's?",
+    "answer": "Sherry Boucher",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_breakfast_at_tiffanys_film",
+      "musique_five_days_from_home"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0014",
+    "question": "What institute did the actor playing the voice of John Smith in Pocahontas attend?",
+    "answer": "National Institute of Dramatic Art",
+    "answer_aliases": [
+      "NIDA"
+    ],
+    "expected_citations": [
+      "musique_jason_keng_kwin_chan",
+      "musique_pocahontas_1995_film"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0015",
+    "question": "What is the average salary of a working person of the same nationality as MacGruder and Loud's creator?",
+    "answer": "$59,039",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_household_income_in_the_united_states",
+      "musique_aaron_spelling",
+      "musique_macgruder_and_loud"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0016",
+    "question": "When does the regular season begin for the league the Carolina Hurricanes belong to?",
+    "answer": "October 4, 2017",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_north_carolina",
+      "musique_201718_nhl_season"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0017",
+    "question": "Where is the mission for the agency that controls the monetary policy of the EU found?",
+    "answer": "Article 2 of the Statute of the ECB",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_european_central_bank"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0018",
+    "question": "When did the first mosque in the place where the Marshall Islands International Airport is located open?",
+    "answer": "September 2012",
+    "answer_aliases": [
+      "2012"
+    ],
+    "expected_citations": [
+      "musique_marshall_islands_international_airport",
+      "musique_marshall_islands"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0019",
+    "question": "Who is the owner of the record label of the performer of Flamenco a Go-Go?",
+    "answer": "Warner Music Group",
+    "answer_aliases": [
+      "Warner Music"
+    ],
+    "expected_citations": [
+      "musique_flamenco_a_go_go",
+      "musique_warner_records",
+      "musique_atomic_playboys"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0020",
+    "question": "When was the last time the team that Arthur James was a member of beat the 1894-95 FA cup winner?",
+    "answer": "1 December 2010",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_189495_fa_cup",
+      "musique_second_city_derby",
+      "musique_arthur_james_footballer"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0021",
+    "question": "How many students attend the university that Edith Humphrey was educated?",
+    "answer": "nearly 25,000",
+    "answer_aliases": [
+      "University of Zurich"
+    ],
+    "expected_citations": [
+      "musique_switzerland",
+      "musique_edith_humphrey"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0022",
+    "question": "In which borough was Callum McManaman born?",
+    "answer": "Knowsley",
+    "answer_aliases": [
+      "Metropolitan Borough of Knowsley"
+    ],
+    "expected_citations": [
+      "musique_whiston_merseyside",
+      "musique_callum_mcmanaman"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0023",
+    "question": "According to Pew, in 2010, what percent of Nigeria's population was the religion that Pickthall was buried in?",
+    "answer": "48.8 percent",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_marmaduke_pickthall",
+      "musique_nigeria"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0024",
+    "question": "When did the town WIZE is licensed in become capitol of the state where Green Township is located?",
+    "answer": "1839",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_wize",
+      "musique_springfield_illinois",
+      "musique_green_township_randolph_county_indiana",
+      "musique_randolph_county_illinois"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0025",
+    "question": "What record label does the spouse of the performer of Somethin' Bad belong to?",
+    "answer": "Warner Bros. Records",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_pure_bs",
+      "musique_candy_coburn",
+      "musique_somethin_bad"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0026",
+    "question": "How many people work at the school where Gene Ball was educated?",
+    "answer": "11,900",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_oklahoma_city",
+      "musique_gene_ball"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0027",
+    "question": "Who is the brother of the artist who made Nothin' My Love Can't Fix's album?",
+    "answer": "Matthew Lawrence",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_pulse_1988_film",
+      "musique_nothin_my_love_cant_fix"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0028",
+    "question": "The author of Elizabeth and After attended which university?",
+    "answer": "University of Toronto",
+    "answer_aliases": [
+      "UT"
+    ],
+    "expected_citations": [
+      "musique_matt_cohen_writer",
+      "musique_elizabeth_and_after"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0029",
+    "question": "When did the military instruction start in the university that Paulo Manalo attended?",
+    "answer": "1912",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_paolo_manalo",
+      "musique_reserve_officers_training_corps_philippines"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0030",
+    "question": "How many mandatory transmitters of the Canadian Broadcasting Centre's owner were updated before the deadline?",
+    "answer": "only about half",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_african_guitar_summit",
+      "musique_cbc_television"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0031",
+    "question": "When was the country established that lies north of the region that prevailed with the disgrace of the \"Near East\" and the body of water containing The World islands?",
+    "answer": "1932",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_near_east",
+      "musique_geography_of_saudi_arabia",
+      "musique_the_world_archipelago",
+      "musique_saudi_arabia"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0032",
+    "question": "In what region of the country where Ch\u00e2u \u0110\u1ee9c is found, is the birthplace of John Phan?",
+    "answer": "South Central Coast",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_ch\u00e2u_\u0111\u1ee9c_district",
+      "musique_south_central_coast",
+      "musique_john_phan"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0033",
+    "question": "Who started the organization that founded Defective by Design?",
+    "answer": "Richard Stallman",
+    "answer_aliases": [
+      "rms"
+    ],
+    "expected_citations": [
+      "musique_defective_by_design",
+      "musique_intellectual_property"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0034",
+    "question": "Who is the mother of the screenwriter of WarGames?",
+    "answer": "Jane Greer",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_wargames",
+      "musique_lawrence_lasker"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0035",
+    "question": "What team is the highest goal scorer in the EPL a member of?",
+    "answer": "Egypt national football team",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_list_of_top_premier_league_goal_scorers_by_season",
+      "musique_ahmed_salah_hosny"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0036",
+    "question": "What day is the feast held in the city containing the headquarters of the company, that owns the record label that released Study in Brown?",
+    "answer": "May 4",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_emarcy_records",
+      "musique_study_in_brown",
+      "musique_santa_monica_california",
+      "musique_the_right_stuff_records"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0037",
+    "question": "When is opening day of the season of the league that the team that has the most titles from the competition they gave out MVP awards after?",
+    "answer": "March 29, 2018",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_new_york_yankees",
+      "musique_major_league_baseball_most_valuable_player_award",
+      "musique_world_series",
+      "musique_2018_major_league_baseball_season"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0038",
+    "question": "Who won the Indy car race in the largest populated city in the state where the Jazz Portraits: Mingus in Wonderland performer is from?",
+    "answer": "Mario Andretti",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_desert_diamond_west_valley_phoenix_grand_prix",
+      "musique_jazz_portraits_mingus_in_wonderland",
+      "musique_tucson_arizona",
+      "musique_charles_mingus"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0039",
+    "question": "When did the party that controls the House of Representatives take control of the branch who determines the rules of the US house and Senate?",
+    "answer": "January 2015",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_standing_rules_of_the_united_states_senate",
+      "musique_114th_united_states_congress",
+      "musique_2014_united_states_senate_elections"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0040",
+    "question": "What year did the author of The First Blast of the Trumpet Against the Monstruous Regiment of Women die?",
+    "answer": "1572",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_the_first_blast_of_the_trumpet_against_the_monstruous_regiment_of_women",
+      "musique_presbyterianism"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0041",
+    "question": "Who is the child of Sigrid Eskilsdotter's child?",
+    "answer": "Svante Stensson Sture",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_sigrid_sture",
+      "musique_sigrid_eskilsdotter_ban\u00e9r"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0042",
+    "question": "Ivo Werner is from Country A that invaded Country B because their military branch that helped the Old West police was unprepared. When was the word \"Slavs\" used in the national anthem of country B?",
+    "answer": "1943\u20131992",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_josip_broz_tito",
+      "musique_ivo_werner",
+      "musique_police",
+      "musique_slavs"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0043",
+    "question": "What label was responsible for the performer of Delta Hardware?",
+    "answer": "Kicking Mule Records",
+    "answer_aliases": [
+      "Real World Records"
+    ],
+    "expected_citations": [
+      "musique_charlie_musselwhite",
+      "musique_delta_hardware"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0044",
+    "question": "What is the capital of the county that shares a border with the county where Pierce Manufacturing's headquarters are located?",
+    "answer": "Green Bay",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_john_c_petersen",
+      "musique_pierce_manufacturing",
+      "musique_pulaski_high_school",
+      "musique_jerome_quinn"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0045",
+    "question": "According to Pew, in 2010, what percent of Nigeria's population practiced the religion dominant in the countries surrounding Armenia?",
+    "answer": "48.8 percent",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_armenians",
+      "musique_nigeria"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0046",
+    "question": "Who is the brother of the player who has won the most bbc sports personality of the year awards?",
+    "answer": "Jamie Murray",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_bbc_sports_personality_of_the_year_award",
+      "musique_2011_valencia_open_500_doubles"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0047",
+    "question": "Who is the owner of the record label of the guitarist who performed on the Top Gun theme?",
+    "answer": "Warner Music Group",
+    "answer_aliases": [
+      "Warner Music"
+    ],
+    "expected_citations": [
+      "musique_top_gun_anthem",
+      "musique_atomic_playboys",
+      "musique_warner_records"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0048",
+    "question": "What were the Genesis's advantages over the platform of the game Nightshade?",
+    "answer": "built on 16-bit architectures and offered improved graphics and sound",
+    "answer_aliases": [
+      "16-bit",
+      "16-bit architecture"
+    ],
+    "expected_citations": [
+      "musique_nintendo_entertainment_system",
+      "musique_super_nintendo_entertainment_system",
+      "musique_nightshade_1992_video_game"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0049",
+    "question": "When does the new season start for the show starring the author of True Story: A Novel?",
+    "answer": "January 20, 2017",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_true_story_a_novel",
+      "musique_real_time_with_bill_maher"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0050",
+    "question": "What was the last year of the Governor post for the city which contains the basilica which is named after the saint who also has the Schleswig Cathedral dedicated to him?",
+    "answer": "1952",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_governor_of_vatican_city",
+      "musique_schleswig_cathedral",
+      "musique_st_peters_basilica"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0051",
+    "question": "The owner of IPLEDGE has a food safety system know as what?",
+    "answer": "Food Safety Modernization Act (FSMA)",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_ipledge_program",
+      "musique_fda_food_safety_modernization_act"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0052",
+    "question": "What does seal stand for in the branch of the U.S. military that operates a list of destroyer classes, as well as containing the rank O-1?",
+    "answer": "Sea, Air, and Land",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_united_states_navy_seals",
+      "musique_o_1_airship",
+      "musique_list_of_destroyer_classes_of_the_united_states_navy"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0053",
+    "question": "What league includes the sports team that has Maycon Carvalho Inez?",
+    "answer": "K-League",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_maycon_carvalho_inez",
+      "musique_bae_hae_min"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0054",
+    "question": "What was the wettest year for the city within the county that houses Eric Marcus Municipal Airport?",
+    "answer": "1905",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_pima_county_natural_resources_parks_and_recreation",
+      "musique_tucson_arizona",
+      "musique_eric_marcus_municipal_airport"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0055",
+    "question": "How were the Portuguese expelled from the country that is a natural boundary between the country that hosted the tournament and the country That Dam is located?",
+    "answer": "The dynasty regrouped and defeated the Portuguese",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_geography_of_myanmar",
+      "musique_2020_afc_u_23_championship_qualification",
+      "musique_myanmar",
+      "musique_that_dam"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0056",
+    "question": "How many times did plague occur in the place where Crucifixion's creator died?",
+    "answer": "22",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_crucifixion_titian",
+      "musique_black_death",
+      "musique_the_martyrdom_of_saint_lawrence_titian"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0057",
+    "question": "When was the composer of Till dom ensamma born?",
+    "answer": "11 September 1962",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_till_dom_ensamma",
+      "musique_mauro_scocco"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0058",
+    "question": "What company was formed after a merger of the company that built ASM-N-5 Gorgon V?",
+    "answer": "Martin Marietta",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_martin_marietta",
+      "musique_asm_n_5_gorgon_v"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0059",
+    "question": "How many refugees emigrated to the European country where Huguenots felt a kinship for emigration?",
+    "answer": "75,000 to 100,000",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_huguenots"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0060",
+    "question": "Who played who sang is she really going out with him in the performer of Anthology movie?",
+    "answer": "Lawrence Hilton - Jacobs",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_is_she_really_going_out_with_him",
+      "musique_the_jacksons_an_american_dream",
+      "musique_anthology_michael_jackson_album"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0061",
+    "question": "What city shares a border with the city where a person worked during the gold rush in the state that has the most house of representatives seat?",
+    "answer": "Rio Linda",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_united_states_house_of_representatives",
+      "musique_history_of_sacramento_california",
+      "musique_california_gold_rush",
+      "musique_rio_linda_high_school"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0062",
+    "question": "When did the city where Hillcrest High School is located become capitol of the state where the screenwriter of The Poor Boob was born?",
+    "answer": "1839",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_hillcrest_high_school_springfield_missouri",
+      "musique_springfield_illinois",
+      "musique_the_poor_boob",
+      "musique_margaret_mayo_playwright"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0063",
+    "question": "Where was the first woman appointed to the Supreme Court educated?",
+    "answer": "Stanford University",
+    "answer_aliases": [
+      "Stanford"
+    ],
+    "expected_citations": [
+      "musique_sandra_day_oconnor",
+      "musique_harry_rathbun"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0064",
+    "question": "Where in Zhejiang is the city where Protestants are especially notable?",
+    "answer": "Yongjia County",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_sanjiang_church",
+      "musique_zhejiang"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0065",
+    "question": "Which was did the operator of the Jurmo class landing craft serve in?",
+    "answer": "Winter War",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_jurmo_class_landing_craft",
+      "musique_finnish_navy"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0066",
+    "question": "How many times did the plague occur where the creator of The Entombment died?",
+    "answer": "22",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_the_martyrdom_of_saint_lawrence_titian",
+      "musique_the_entombment_titian_1559",
+      "musique_black_death"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0067",
+    "question": "Which season was the runner up of the third season of American Idol on?",
+    "answer": "season three",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_american_idol"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0068",
+    "question": "Who was a prominent figure at the radio division of the network that created the version of The Biggest Loser: The Final Chance, set in the country containing Luamapas?",
+    "answer": "Walter Sabo",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_lumapas_brunei_muara",
+      "musique_adult_contemporary_music",
+      "musique_the_biggest_loser_brunei_lose_it_all"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0069",
+    "question": "In what region of the country containing An Ph\u00fa, is the city with the Zone 5 Military Museum located?",
+    "answer": "South Central Coast",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_south_central_coast",
+      "musique_an_ph\u00fa_district",
+      "musique_zone_5_military_museum_danang"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0070",
+    "question": "When did the person chosen to be president of the confederacy end his fight in the Mexican-American war?",
+    "answer": "1848",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_jefferson_davis",
+      "musique_president_of_the_confederate_states_of_america"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0071",
+    "question": "Who was the second pick in the 1999 draft of the organization, that includes the team with the most titles, in the event preceding the awarding of the MLB MVP?",
+    "answer": "Josh Beckett",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_new_york_yankees",
+      "musique_1999_major_league_baseball_draft",
+      "musique_world_series",
+      "musique_major_league_baseball_most_valuable_player_award"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0072",
+    "question": "Where do greyhound buses leave from in the city where the performer of Darlings was born?",
+    "answer": "Toronto Coach Terminal",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_kevin_drew",
+      "musique_darlings_kevin_drew_album",
+      "musique_toronto_coach_terminal"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0073",
+    "question": "Where do greyhound buses leave from in the city where the performer of We Sweat Blood was formed?",
+    "answer": "Toronto Coach Terminal",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_toronto_coach_terminal",
+      "musique_we_sweat_blood",
+      "musique_danko_jones"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0074",
+    "question": "Where was the person who acted in the film Sous les pieds des femmes born?",
+    "answer": "La Goulette",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_sous_les_pieds_des_femmes",
+      "musique_a_summer_in_la_goulette"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0075",
+    "question": "When did the explorer reach the headquarters location of the only company larger than Langa natter's record label?",
+    "answer": "August 3, 1769",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_sony_music",
+      "musique_santa_monica_california",
+      "musique_the_right_stuff_records",
+      "musique_l\u00e5nga_n\u00e4tter"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0076",
+    "question": "Where did the founder of the Acting Company study?",
+    "answer": "Clifton College",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_john_houseman",
+      "musique_edgar_lansbury_producer"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0077",
+    "question": "How many times did plague occur in the birthplace of the composer of Gloria in D Major?",
+    "answer": "22",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_gloria_vivaldi",
+      "musique_black_death",
+      "musique_orlando_furioso_vivaldi_1714"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0078",
+    "question": "The actor who plays Barney in \"How I Met Your Mother\" plays what character in Batman Under the Red Hood?",
+    "answer": "Nightwing / Dick Grayson",
+    "answer_aliases": [
+      "Nightwing",
+      "Dick Grayson",
+      "Batman",
+      "Robin"
+    ],
+    "expected_citations": [
+      "musique_neil_patrick_harris",
+      "musique_batman_under_the_red_hood"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0079",
+    "question": "What did MV Rapana's owner announce it was the process of doing in April 2010?",
+    "answer": "trying to find a potential buyer for all of its operations in Finland",
+    "answer_aliases": [
+      "FIN",
+      "fi",
+      "Finland"
+    ],
+    "expected_citations": [
+      "musique_mv_rapana",
+      "musique_royal_dutch_shell"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0080",
+    "question": "In what region of the country where Lam Dong is located is the city where Zone 5 Military Museum is found?",
+    "answer": "South Central Coast",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_l\u00e2m_\u0111\u1ed3ng_province",
+      "musique_zone_5_military_museum_danang",
+      "musique_south_central_coast"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0081",
+    "question": "What is Mohamed Atta's car, manufactured by the company that includes Datsun, an instance of?",
+    "answer": "Nissan Altima",
+    "answer_aliases": [
+      "ALTIMA"
+    ],
+    "expected_citations": [
+      "musique_datsun",
+      "musique_mohamed_attas_nissan"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0082",
+    "question": "Who is the mascot of the university related to Randy Conrads?",
+    "answer": "Benny Beaver",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_benny_beaver",
+      "musique_randy_conrads"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0083",
+    "question": "Where did the arguer that Kirill Eskov's country of citizenship had become an imperialist power declare he would intervene in the Korean conflict?",
+    "answer": "the Politburo",
+    "answer_aliases": [
+      "Politburo"
+    ],
+    "expected_citations": [
+      "musique_imperialism",
+      "musique_korean_war",
+      "musique_kirill_eskov"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0084",
+    "question": "In which county is the city sharing a border with the capitol of the state where Ocean Forest Country Club is located?",
+    "answer": "Richland County",
+    "answer_aliases": [
+      "Richland County, South Carolina"
+    ],
+    "expected_citations": [
+      "musique_ocean_forest_country_club",
+      "musique_charleston_south_carolina",
+      "musique_forest_acres_south_carolina",
+      "musique_wwnq"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0085",
+    "question": "On what date did the creator of The Blind Girl die?",
+    "answer": "13 August 1896",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_the_blind_girl",
+      "musique_john_everett_millais"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0086",
+    "question": "What league does the team that uses Dick's Sporting Goods Park play for?",
+    "answer": "Major League Soccer",
+    "answer_aliases": [
+      "MLS"
+    ],
+    "expected_citations": [
+      "musique_dicks_sporting_goods_park",
+      "musique_colorado_rapids"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0087",
+    "question": "What was the language from which the last name Sylvester originates during the era of the person crowned new Roman emperor in 800 A.D. later known as?",
+    "answer": "Medieval Latin",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_sylvester",
+      "musique_middle_ages",
+      "musique_charlemagne"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0088",
+    "question": "What company is I Dig Love's record label a part of?",
+    "answer": "Apple Corps",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_i_dig_love",
+      "musique_apple_records"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0089",
+    "question": "What did M. King Hubbert's employer announce it was in the process of doing in April 2010?",
+    "answer": "trying to find a potential buyer for all of its operations in Finland",
+    "answer_aliases": [
+      "FIN",
+      "fi",
+      "Finland"
+    ],
+    "expected_citations": [
+      "musique_m_king_hubbert",
+      "musique_royal_dutch_shell"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0090",
+    "question": "Who is the other child of Chian Hsiao-chang's father?",
+    "answer": "Chiang Hsiao-wu",
+    "answer_aliases": [
+      "Alex Chiang"
+    ],
+    "expected_citations": [
+      "musique_chiang_hsiao_wu",
+      "musique_chiang_hsiao_chang"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0091",
+    "question": "Who does the actress that played mary poppins in the 1964 film play in princess diaries?",
+    "answer": "Queen dowager Clarisse Renaldi",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_mary_poppins_film",
+      "musique_the_princess_diaries_film"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0092",
+    "question": "Where into the Gulf of Mexico does the body of water by the city where the Lots More Blues, Rags and Hollers performer was formed empty?",
+    "answer": "the Mississippi River Delta",
+    "answer_aliases": [
+      "Mississippi River Delta"
+    ],
+    "expected_citations": [
+      "musique_minneapolis",
+      "musique_mississippi_river",
+      "musique_lots_more_blues_rags_and_hollers",
+      "musique_koerner_ray_glover"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0093",
+    "question": "When did the sports team that Craig Westcarr played for win the fa cup?",
+    "answer": "1898 and 1959",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_craig_westcarr",
+      "musique_nottingham_forest_fc"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0094",
+    "question": "What's the place of birth of the former member of The Sunnyboys?",
+    "answer": "Kingscliff",
+    "answer_aliases": [
+      "Kingscliff, New South Wales"
+    ],
+    "expected_citations": [
+      "musique_sunnyboys",
+      "musique_jeremy_oxley"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0095",
+    "question": "When did the majority party in the House of Representatives gain control of the body which approves members of the Cabinet?",
+    "answer": "January 2015",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_cabinet_of_the_united_states",
+      "musique_2014_united_states_senate_elections",
+      "musique_114th_united_states_congress"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0096",
+    "question": "Which company owns the manufacturer of Learjet 60?",
+    "answer": "Bombardier Inc.",
+    "answer_aliases": [
+      "Bombardier"
+    ],
+    "expected_citations": [
+      "musique_list_of_bombardier_crj_operators",
+      "musique_learjet_60"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0097",
+    "question": "When did the city where Ill's performer was born elect its first black mayor?",
+    "answer": "1970s",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_iii_stanton_moore_album",
+      "musique_flyin_the_koop",
+      "musique_black_people"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0098",
+    "question": "Who is the child of the physicist who who developed an explanation for the photoelectric effect?",
+    "answer": "Hans Albert Einstein",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_photoelectric_effect",
+      "musique_evelyn_einstein"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0099",
+    "question": "A country was in effective control of both political and military functions of the organization the People's Socialist Republic of Albania belonged to. When did this country agree to a unified Germany inside the organization that ran an annual event called Exercise Reforger?",
+    "answer": "May 1990",
+    "answer_aliases": [
+      "1990"
+    ],
+    "expected_citations": [
+      "musique_hero_of_socialist_labour_albania",
+      "musique_exercise_reforger",
+      "musique_warsaw_pact",
+      "musique_german_reunification"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0100",
+    "question": "What does the seal stand for in the operator of the list of destroyer classes of the operator of the USS ZigZag seals?",
+    "answer": "Sea, Air, and Land",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_uss_zigzag_sp_106",
+      "musique_united_states_navy_seals",
+      "musique_list_of_destroyer_classes_of_the_united_states_navy"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0101",
+    "question": "When was the region immediately north of the region where Israel is located and the site of the most growth in desalination for agricultural use established?",
+    "answer": "1932",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_water_resources",
+      "musique_israel",
+      "musique_geography_of_saudi_arabia",
+      "musique_saudi_arabia"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0102",
+    "question": "When did the party with majorities in Congress prior to the 1954 elections gain control of the body which determines rules of the US House and US Senate?",
+    "answer": "January 2015",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_2014_united_states_senate_elections",
+      "musique_dwight_d_eisenhower",
+      "musique_standing_rules_of_the_united_states_senate"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0103",
+    "question": "Who was the spouse of the person the Bible says was the first king of Israel?",
+    "answer": "Ahinoam",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_ahinoam",
+      "musique_saul"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0104",
+    "question": "When did the city that contains the basilica named after the saint who is holding a knife in the last supper become a country?",
+    "answer": "11 February 1929",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_st_peters_basilica",
+      "musique_vatican_city",
+      "musique_the_last_supper_leonardo"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0105",
+    "question": "Which county shares a border with the county where the most populous city in the state where armed robbery is a capital crime is located?",
+    "answer": "Presque Isle County",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_list_of_municipalities_in_georgia_us_state",
+      "musique_capital_punishment_in_the_united_states",
+      "musique_snodrift",
+      "musique_alpena_power_company"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0106",
+    "question": "What does the river that Darling Mills Creek turns into flow into?",
+    "answer": "Sydney Harbour",
+    "answer_aliases": [
+      "Port Jackson"
+    ],
+    "expected_citations": [
+      "musique_darling_mills_creek",
+      "musique_parramatta_river"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0107",
+    "question": "What was Nintendo's limit on games per developer per year on the gaming platform with a three letter abbreviation that the game Bigfoot was on?",
+    "answer": "five",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_bigfoot_video_game",
+      "musique_nintendo_entertainment_system",
+      "musique_super_nintendo_entertainment_system"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0108",
+    "question": "Who is the sibling of the actress that played the little girl in Miracle on 34th street 1947?",
+    "answer": "Lana Wood",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_miracle_on_34th_street",
+      "musique_five_finger_exercise"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0109",
+    "question": "The actor who plays copper in Fox and the Hound is a character in which film?",
+    "answer": "The Hateful Eight",
+    "answer_aliases": [
+      "Hateful Eight"
+    ],
+    "expected_citations": [
+      "musique_the_fox_and_the_hound",
+      "musique_the_hateful_eight"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0110",
+    "question": "How many times did plague occur in the place of death of the creator of the Malchiostro Annunciation?",
+    "answer": "22",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_malchiostro_annunciation",
+      "musique_the_martyrdom_of_saint_lawrence_titian",
+      "musique_black_death"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0111",
+    "question": "When did the maker of Acura Legend, the owner of Scion, and Nissan open US assembly plants?",
+    "answer": "1981",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_scion_automobile",
+      "musique_acura_legend",
+      "musique_1973_oil_crisis"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0112",
+    "question": "What field of work did the person who first recognized that hydrogen was a discrete substance work in?",
+    "answer": "physic",
+    "answer_aliases": [
+      "Physic"
+    ],
+    "expected_citations": [
+      "musique_hydrogen",
+      "musique_cavendish_professor_of_physics"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0113",
+    "question": "Who played the girlfriend of Chance's voice actor in Homeward Bound in Back to the Future?",
+    "answer": "Claudia Wells",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_homeward_bound_the_incredible_journey",
+      "musique_list_of_back_to_the_future_characters"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0114",
+    "question": "What is the birthplace of St. Simeon Stylites' author?",
+    "answer": "Somersby",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_st_simeon_stylites_poem",
+      "musique_charles_tennyson_turner"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0115",
+    "question": "The field of work of the physicist making the first to measure value of the Newton Universal Gravitation Constant is what?",
+    "answer": "physic",
+    "answer_aliases": [
+      "Physic"
+    ],
+    "expected_citations": [
+      "musique_force",
+      "musique_cavendish_professor_of_physics"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0116",
+    "question": "In what year was the successor of Sperry Corporation established?",
+    "answer": "1986",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_unisys",
+      "musique_robert_smallwood"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0117",
+    "question": "Who is the female star in Gone with the Wind married to?",
+    "answer": "Laurence Olivier",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_gone_with_the_wind_film",
+      "musique_darlings_of_the_gods"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0118",
+    "question": "What is the longest win streak, in the history of the league, that includes the team with the most titles, from the event preceding the awarding of the MLB MVP?",
+    "answer": "26",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_major_league_baseball_most_valuable_player_award",
+      "musique_list_of_major_league_baseball_longest_winning_streaks",
+      "musique_world_series",
+      "musique_new_york_yankees"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0119",
+    "question": "When was the last time the team employing Ronnie Morris beat the 1894-95 FA Cup winner?",
+    "answer": "1 December 2010",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_second_city_derby",
+      "musique_189495_fa_cup",
+      "musique_ronnie_morris_footballer"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0120",
+    "question": "When was the Palau de la Generalitat constructed in the city where Martin of the place where Castiliscar is located died?",
+    "answer": "built in the 15th century",
+    "answer_aliases": [
+      "15th century"
+    ],
+    "expected_citations": [
+      "musique_castiliscar",
+      "musique_gothic_architecture",
+      "musique_martin_of_aragon"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0121",
+    "question": "When did Burma change its name to the country on the natural boundary between the country that hosted the tournament and the country where That Dam is from?",
+    "answer": "1989",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_that_dam",
+      "musique_names_of_myanmar",
+      "musique_2020_afc_u_23_championship_qualification",
+      "musique_geography_of_myanmar"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0122",
+    "question": "When was the all-star game played for the league that includes the team with the most titles won just before the mlb mvp is awarded?",
+    "answer": "July 11, 2017",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_new_york_yankees",
+      "musique_2017_major_league_baseball_all_star_game",
+      "musique_world_series",
+      "musique_major_league_baseball_most_valuable_player_award"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0123",
+    "question": "What was the wettest year in the city that shares the same county as the ghost town Allen?",
+    "answer": "1905",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_pima_county_natural_resources_parks_and_recreation",
+      "musique_tucson_arizona",
+      "musique_allen_arizona"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0124",
+    "question": "What territorial entity does the town where John the Hairy lived belong to?",
+    "answer": "Yaroslavl Oblast",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_john_the_hairy",
+      "musique_rostov"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0125",
+    "question": "Who is the child of the president who suffered a major defeat when the body which approves members of the American cabinet refused to ratify the Versailles treaty?",
+    "answer": "Jessie Woodrow Wilson",
+    "answer_aliases": [
+      "Jessie Woodrow Wilson Sayre"
+    ],
+    "expected_citations": [
+      "musique_cabinet_of_the_united_states",
+      "musique_treaty_of_versailles",
+      "musique_jessie_woodrow_wilson_sayre"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0126",
+    "question": "When is Celebrity Big Brother coming to the network that, along with ABC and the distributor of The Cube, is one of the the major broadcasters based in New York?",
+    "answer": "February 7, 2018",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_new_york_city",
+      "musique_celebrity_big_brother_american_tv_series",
+      "musique_the_cube_film"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0127",
+    "question": "Who was the first black student admitted to where Robert Khayat was educated?",
+    "answer": "James Howard Meredith",
+    "answer_aliases": [
+      "James Meredith"
+    ],
+    "expected_citations": [
+      "musique_james_meredith",
+      "musique_robert_khayat"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0128",
+    "question": "How long was the place where the Yongle Emperor greeted who the Ming court thought representatives were sent by the capitol of the city in which Guangling District is located?",
+    "answer": "about 400 years",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_guangling_district",
+      "musique_nanjing",
+      "musique_sino_tibetan_relations_during_the_ming_dynasty"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0129",
+    "question": "How long had the place of birth of Tang Jinhua been the capital city of the Yaxing Coach headquarters location?",
+    "answer": "about 400 years",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_yaxing_coach",
+      "musique_tang_jinhua",
+      "musique_nanjing"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0130",
+    "question": "In what region of the country where Mount Can is located is the city where Zone 5 Military Museum is found?",
+    "answer": "South Central Coast",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_mount_c\u1ea9n",
+      "musique_zone_5_military_museum_danang",
+      "musique_south_central_coast"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0131",
+    "question": "Who was the person talking at the beginning of Thriller by Fall Out Boy talking about in Song Cry?",
+    "answer": "three different relationships he had in the past",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_song_cry",
+      "musique_infinity_on_high"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0132",
+    "question": "How many games does the team play that had the most champion league wins between 1992 and 2013?",
+    "answer": "38",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_premier_league",
+      "musique_la_liga"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0133",
+    "question": "Where did the player who scored the most points in a NBA season go in the NBA Draft?",
+    "answer": "Seattle SuperSonics",
+    "answer_aliases": [
+      "Sonics"
+    ],
+    "expected_citations": [
+      "musique_list_of_national_basketball_association_annual_scoring_leaders",
+      "musique_2007_nba_draft"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0134",
+    "question": "How many times did plague occur in the place where Bajazet's composer was born?",
+    "answer": "22",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_bajazet_opera",
+      "musique_orlando_furioso_vivaldi_1714",
+      "musique_black_death"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0135",
+    "question": "When was the Palau de la Generalitat constructed in the city where Martin from the region where Perdiguera is located died?",
+    "answer": "built in the 15th century",
+    "answer_aliases": [
+      "15th century"
+    ],
+    "expected_citations": [
+      "musique_perdiguera",
+      "musique_gothic_architecture",
+      "musique_martin_of_aragon"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0136",
+    "question": "What is the date of birth for the performer of Hits?",
+    "answer": "11 September 1962",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_mauro_scocco",
+      "musique_hits_mauro_scocco_album"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0137",
+    "question": "When was the Palau de la Generalitat built in the place of death of Martin, of the region containing Piedratajada?",
+    "answer": "built in the 15th century",
+    "answer_aliases": [
+      "15th century"
+    ],
+    "expected_citations": [
+      "musique_piedratajada",
+      "musique_martin_of_aragon",
+      "musique_gothic_architecture"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0138",
+    "question": "Where is the Voshmgir District located?",
+    "answer": "in the north-east of the country south of the Caspian Sea",
+    "answer_aliases": [
+      "Caspian Sea"
+    ],
+    "expected_citations": [
+      "musique_golestan_province",
+      "musique_voshmgir_district"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0139",
+    "question": "Who was in charge in the country that is the natural boundary between the country that hosted the tournament and the country where A Don is located?",
+    "answer": "Thein Sein",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_geography_of_myanmar",
+      "musique_a_don",
+      "musique_2020_afc_u_23_championship_qualification",
+      "musique_myanmar"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0140",
+    "question": "How many times did plague occur in the birthplace of the person who used the spice route that the Ottoman Empire controlled?",
+    "answer": "22",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_ottoman_empire",
+      "musique_black_death",
+      "musique_in_the_footsteps_of_marco_polo"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0141",
+    "question": "What was the name of the law passed by who was featured in the film the 6th Day?",
+    "answer": "\"Donda West Law\"",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_the_6th_day",
+      "musique_kanye_west"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0142",
+    "question": "Along with the person who played Andy's brother in The Office, what notable pop artist started his career in adult contemporary radio?",
+    "answer": "Michael Bubl\u00e9",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_garden_party_the_office",
+      "musique_adult_contemporary_music"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0143",
+    "question": "The author of Abel's Island wrote what 1982 book featuring a mouse-dentist?",
+    "answer": "Doctor De Soto",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_doctor_de_soto",
+      "musique_abels_island"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0144",
+    "question": "who is the president of newly declared independent country which is the country of the country of Alabio \u2013Timor Leste Commission of Truth and Friendship?",
+    "answer": "Francisco Guterres",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_east_timor",
+      "musique_alabio",
+      "musique_indonesiatimor_leste_commission_of_truth_and_friendship"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0145",
+    "question": "How long had Lynn Hung's birthplace been the capitol city of Yaxing Coach's headquarters location?",
+    "answer": "about 400 years",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_yaxing_coach",
+      "musique_nanjing",
+      "musique_lynn_hung"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0146",
+    "question": "Where did the wrestler who has won the most intercontinental championships win in 2008?",
+    "answer": "Great American Bash",
+    "answer_aliases": [
+      "The Great American Bash"
+    ],
+    "expected_citations": [
+      "musique_list_of_wwe_intercontinental_champions",
+      "musique_professional_wrestling"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0147",
+    "question": "Who won the Indy Car Race in the largest populated city of the state where the performer of The Black Saint and the Sinner Lady is from?",
+    "answer": "Mario Andretti",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_tucson_arizona",
+      "musique_charles_mingus",
+      "musique_desert_diamond_west_valley_phoenix_grand_prix",
+      "musique_the_black_saint_and_the_sinner_lady"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0148",
+    "question": "What does dell call the feature letting the interface replacing FireWire in later iterations of the iPod drives to remain powered when the computer is off?",
+    "answer": "PowerShare",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_ipod",
+      "musique_usb"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0149",
+    "question": "Who is the wife of the actor of Grace's boyfriend in Frankie and Grace?",
+    "answer": "Katharine Ross",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_grace_and_frankie",
+      "musique_murder_in_texas"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0150",
+    "question": "Who wrote turn me on, which was performed by the person who also performed Chasing Pirates?",
+    "answer": "John D. Loudermilk",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_chasing_pirates",
+      "musique_turn_me_on_mark_dinning_song"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0151",
+    "question": "Where does the city where Veoh's headquarters is located rank in the top five largest urban areas of the state where Scars' performers were formed?",
+    "answer": "third-largest",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_papa_roach",
+      "musique_scars_papa_roach_song",
+      "musique_veoh",
+      "musique_san_diego"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0152",
+    "question": "Where is the embassy in the only communist country whose military branch helping the Old West's inadequate local police was unprepared for invasion of the country conquered by the Pact?",
+    "answer": "Alfredo Stroessner's Paraguay",
+    "answer_aliases": [
+      "Alfredo Stroessner"
+    ],
+    "expected_citations": [
+      "musique_police",
+      "musique_josip_broz_tito",
+      "musique_warsaw_pact"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0153",
+    "question": "Who is the owner of the record label of the Please Remember Me performer?",
+    "answer": "Warner Music Group",
+    "answer_aliases": [
+      "Warner Music"
+    ],
+    "expected_citations": [
+      "musique_aint_living_long_like_this",
+      "musique_warner_records",
+      "musique_please_remember_me"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0154",
+    "question": "In The Godfather Part II, who did the producer of Mistress play?",
+    "answer": "Vito Corleone",
+    "answer_aliases": [
+      "Vito Andolini",
+      "Vito Andolini Corleone"
+    ],
+    "expected_citations": [
+      "musique_the_godfather_part_ii",
+      "musique_mistress_1992_film"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0155",
+    "question": "What UK label was bought by the company which, along with ABC and the original broadcaster of Then Came Bronson, is the other major broadcaster based in NY?",
+    "answer": "Oriole Records.",
+    "answer_aliases": [
+      "Oriole Records"
+    ],
+    "expected_citations": [
+      "musique_sony_music",
+      "musique_then_came_bronson",
+      "musique_new_york_city"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0156",
+    "question": "In True Grit, who did the star play?",
+    "answer": "U.S. Marshal Rooster Cogburn",
+    "answer_aliases": [
+      "America",
+      "U.S.",
+      "the United States",
+      "United States",
+      "US"
+    ],
+    "expected_citations": [
+      "musique_turner_classic_movies",
+      "musique_true_grit_1969_film"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0157",
+    "question": "Who won the Indy car race in the largest city and capitol of the state where the Changes Two performer is from?",
+    "answer": "Mario Andretti",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_charles_mingus",
+      "musique_arizona",
+      "musique_desert_diamond_west_valley_phoenix_grand_prix",
+      "musique_changes_two"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0158",
+    "question": "In which state is P\u00f3voa de Santa Iria's municipality located?",
+    "answer": "Lisbon District",
+    "answer_aliases": [
+      "Lisbon"
+    ],
+    "expected_citations": [
+      "musique_vila_franca_de_xira",
+      "musique_p\u00f3voa_de_santa_iria_e_forte_da_casa"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0159",
+    "question": "Who founded the organization that wrote GNU Free Documentation License?",
+    "answer": "Richard Stallman",
+    "answer_aliases": [
+      "rms"
+    ],
+    "expected_citations": [
+      "musique_gnu_free_documentation_license",
+      "musique_intellectual_property"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0160",
+    "question": "Who is the spouse of the actor that plays vision in avengers age of ultron?",
+    "answer": "Jennifer Connelly",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_a_beautiful_mind_soundtrack",
+      "musique_paul_bettany"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0161",
+    "question": "Who is the father of the author of Novum Organum?",
+    "answer": "Nicholas Bacon",
+    "answer_aliases": [
+      "Sir Nicholas Bacon"
+    ],
+    "expected_citations": [
+      "musique_novum_organum",
+      "musique_francis_bacon"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0162",
+    "question": "When was the region that lies to the north of the region Israel is located and where The World is located created?",
+    "answer": "1930",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_history_of_saudi_arabia",
+      "musique_geography_of_saudi_arabia",
+      "musique_israel",
+      "musique_the_world_archipelago"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0163",
+    "question": "Who followed Menucha Rochel Slonim's father?",
+    "answer": "Menachem Mendel Schneersohn",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_chaya_mushka_schneersohn",
+      "musique_menucha_rochel_slonim"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0164",
+    "question": "Which county shares a border with the county where the most populous city in the state where WDXQ can be found is located?",
+    "answer": "Presque Isle County",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_wdxq",
+      "musique_list_of_municipalities_in_georgia_us_state",
+      "musique_snodrift",
+      "musique_alpena_power_company"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0165",
+    "question": "Which war did the operator of the Finnish coastal defence ship Ilmarinen serve in?",
+    "answer": "Winter War",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_finnish_navy",
+      "musique_finnish_coastal_defence_ship_ilmarinen"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0166",
+    "question": "Country A has an embassy from the country that contains the bay where the city of General Santos is located. What network created country A's version of The Biggest Loser?",
+    "answer": "NBC",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_the_biggest_loser_brunei_lose_it_all",
+      "musique_embassy_of_the_philippines_bandar_seri_begawan",
+      "musique_south_cotabato",
+      "musique_sarangani_bay"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0167",
+    "question": "When did the make of Acura Legend, the company that made toyopet Master and Nissan open US assembly plants?",
+    "answer": "1981",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_toyopet_master",
+      "musique_1973_oil_crisis",
+      "musique_acura_legend"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0168",
+    "question": "What area that abuts the country where the Prunus spinosa leaf much sooner still has some older people who speak West Flemish?",
+    "answer": "French Flanders",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_biodiversity",
+      "musique_dutch_language"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0169",
+    "question": "The singer, who starred in Shake It Up, signed to which record label?",
+    "answer": "Hollywood Records",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_swag_it_out",
+      "musique_zendaya_album"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0170",
+    "question": "Who is the Chief Judge of the place where Orezi was born?",
+    "answer": "Honorable Justice Abiodun Smith",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_rosaline_bozimo",
+      "musique_orezi"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0171",
+    "question": "Who is the president of newly declared independent country part of the Commission of Truth and Friendship with the country where Kaimana is located?",
+    "answer": "Francisco Guterres",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_kaimana_regency",
+      "musique_east_timor",
+      "musique_indonesiatimor_leste_commission_of_truth_and_friendship"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0172",
+    "question": "Who was a prominent figure at the radio division of the network that created the version of The Biggest Loser set in the country where Seria is?",
+    "answer": "Walter Sabo",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_adult_contemporary_music",
+      "musique_the_biggest_loser_brunei_lose_it_all",
+      "musique_seria_belait"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0173",
+    "question": "How many miles of highways are in the city where the Yongle emperor greeted the person to whom the edict was addressed?",
+    "answer": "140 mi",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_sino_tibetan_relations_during_the_ming_dynasty",
+      "musique_nanjing"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0174",
+    "question": "Who won the Indy car race in the largest populated city in the state where the Oh Yeah performer is from?",
+    "answer": "Mario Andretti",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_desert_diamond_west_valley_phoenix_grand_prix",
+      "musique_tucson_arizona",
+      "musique_charles_mingus",
+      "musique_oh_yeah_charles_mingus_album"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0175",
+    "question": "Who introduced a system of musical notation used during the 14th century in the place where there is no evidence of a Slavic settlement before c. 600 AD?",
+    "answer": "John Kukuzelis",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_slavs",
+      "musique_late_middle_ages"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0176",
+    "question": "Who is the child of Mahmoud Mirza's father?",
+    "answer": "Ahmad Shah Qajar",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_amanollah_khan_zia_os_soltan",
+      "musique_mahmoud_mirza"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0177",
+    "question": "What county has a city that is adjacent to the capital city of Erskine College's state?",
+    "answer": "Richland County",
+    "answer_aliases": [
+      "Richland County, South Carolina"
+    ],
+    "expected_citations": [
+      "musique_charleston_south_carolina",
+      "musique_erskine_college",
+      "musique_forest_acres_south_carolina",
+      "musique_wwnq"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0178",
+    "question": "By how many votes did the signer of the decree suspending the Communist Party of the Russian SFSR survive impeachment?",
+    "answer": "72",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_1993_russian_constitutional_crisis",
+      "musique_russian_soviet_federative_socialist_republic"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0179",
+    "question": "In what region of the country containing the C\u00e1i River is the city that has the Zone 5 Military Museum located?",
+    "answer": "South Central Coast",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_south_central_coast",
+      "musique_c\u00e1i_river",
+      "musique_zone_5_military_museum_danang"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0180",
+    "question": "What company is the record label for Oh Woman, Oh Why a part of?",
+    "answer": "Apple Corps",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_apple_records",
+      "musique_oh_woman_oh_why"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0181",
+    "question": "Who wrote the song turn me on that is performed by performer of Feelin' the Same Way?",
+    "answer": "John D. Loudermilk",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_feelin_the_same_way",
+      "musique_turn_me_on_mark_dinning_song"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0182",
+    "question": "The Socialist Autonomous Province of the city where there were mass executions of Danube Swabian population are located in where?",
+    "answer": "SR Serbia",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_attila_juh\u00e1sz",
+      "musique_josip_broz_tito"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0183",
+    "question": "Where does the body of water by the city where Write This Down was formed empty into the Gulf of Mexico?",
+    "answer": "the Mississippi River Delta",
+    "answer_aliases": [
+      "Mississippi River Delta"
+    ],
+    "expected_citations": [
+      "musique_minneapolis",
+      "musique_mississippi_river",
+      "musique_write_this_down_band"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0184",
+    "question": "In which province is San Clemente, from the country where Fuser and Alberto meet the indigenous couple who were traveling to look for work?",
+    "answer": "Talca Province",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_san_clemente_chile",
+      "musique_the_motorcycle_diaries_film"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0185",
+    "question": "Normalization occurred in Country A that invaded Country B because the military branch that Air Defense Artillery is part of was unprepared. when was the word \"Slavs\" used in the national anthem of Country B?",
+    "answer": "1943\u20131992",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_slavs",
+      "musique_josip_broz_tito",
+      "musique_prague_underground_culture",
+      "musique_united_states_army"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0186",
+    "question": "Who is the father of the father of Anwer Ali?",
+    "answer": "Ahmad Shah Bahadur",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_anwer_ali",
+      "musique_qudsia_begum"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0187",
+    "question": "What county is Gerald T. Whelan's birthplace located in?",
+    "answer": "Adams County",
+    "answer_aliases": [
+      "Adams County, Nebraska"
+    ],
+    "expected_citations": [
+      "musique_hastings_nebraska",
+      "musique_gerald_t_whelan"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0188",
+    "question": "When is Celebrity Big Brother coming to the network which, along with ABC and the network which hosts Westinghouse Playhouse, is the other major broadcaster based in NY?",
+    "answer": "February 7, 2018",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_westinghouse_playhouse",
+      "musique_new_york_city",
+      "musique_celebrity_big_brother_american_tv_series"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0189",
+    "question": "When did the performer of Goosebumpz release best day ever?",
+    "answer": "March 11, 2011",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_goosebumpz",
+      "musique_best_day_ever_mixtape"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0190",
+    "question": "Who is the president of the newly declared independent country that is part of the Commission of Truth and Friendship with the country where Sambas is located?",
+    "answer": "Francisco Guterres",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_indonesiatimor_leste_commission_of_truth_and_friendship",
+      "musique_sambas_regency",
+      "musique_east_timor"
+    ],
+    "type": "3hop",
+    "difficulty": "hard",
+    "hops": 3
+  },
+  {
+    "id": "test_0191",
+    "question": "When did the president of Notre Dame in 2012 begin his tenure?",
+    "answer": "2005",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_university_of_notre_dame"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0192",
+    "question": "The league playing in the Thursday night football game is a type of what?",
+    "answer": "sports league",
+    "answer_aliases": [
+      "Sports league",
+      "league"
+    ],
+    "expected_citations": [
+      "musique_sports_league_ranking",
+      "musique_thursday_night_football"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0193",
+    "question": "Who plays the legendary figure featured in Historia Regum Britanniae in the show Once Upon a Time?",
+    "answer": "Liam Thomas Garrigan",
+    "answer_aliases": [
+      "Liam Garrigan"
+    ],
+    "expected_citations": [
+      "musique_middle_ages",
+      "musique_liam_garrigan"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0194",
+    "question": "Who does William Clito's father follow?",
+    "answer": "William the Conqueror",
+    "answer_aliases": [
+      "William I"
+    ],
+    "expected_citations": [
+      "musique_clito",
+      "musique_rebellion_of_1088"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0195",
+    "question": "Why was Common Sense, by the same author as Rights of Man, an important work?",
+    "answer": "crystallized the rebellious demand for independence from Great Britain",
+    "answer_aliases": [
+      "Great Britain"
+    ],
+    "expected_citations": [
+      "musique_rights_of_man",
+      "musique_thomas_paine"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0196",
+    "question": "When was the region that lies to the north of where israel is located and the body of water where Kharg Island is located established?",
+    "answer": "1932",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_geography_of_saudi_arabia",
+      "musique_israel",
+      "musique_kharg_island",
+      "musique_saudi_arabia"
+    ],
+    "type": "4hop",
+    "difficulty": "hard",
+    "hops": 4
+  },
+  {
+    "id": "test_0197",
+    "question": "What company resulted from a merger in 1961 involving the builder of the Martin BM?",
+    "answer": "Martin Marietta",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_martin_marietta",
+      "musique_martin_bm"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0198",
+    "question": "Who was in charge of the state where Graft-De Rijp is located?",
+    "answer": "Johan Remkes",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_graft_de_rijp",
+      "musique_north_holland"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  },
+  {
+    "id": "test_0199",
+    "question": "Who led the military expedition in the place where the fight between Ming loyalists and Manchus occurred?",
+    "answer": "Chen Zheng",
+    "answer_aliases": [],
+    "expected_citations": [
+      "musique_qing_dynasty",
+      "musique_hokkien"
+    ],
+    "type": "2hop",
+    "difficulty": "medium",
+    "hops": 2
+  }
+]
