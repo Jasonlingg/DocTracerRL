@@ -1,10 +1,10 @@
-data/corpus/
-data/musique/corpus/
+.git
+.env
 out/
 __pycache__/
-.env
 *.egg-info/
 dist/
 .ruff_cache/
 *.pyc
 .pytest_cache/
+.venv/
