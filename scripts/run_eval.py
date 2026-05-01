@@ -68,6 +68,10 @@ def main(
     musique: bool = typer.Option(
         False, "--musique", help="Use MuSiQue corpus + questions (run setup_musique.py first)"
     ),
+    split: str = typer.Option(
+        "eval", "--split",
+        help="Question split (MuSiQue only): eval | train | dev | test",
+    ),
     test: int = typer.Option(
         0, "--test", "-t", help="Test mode: only run first N questions (e.g. -t 5)"
     ),
@@ -90,8 +94,10 @@ def main(
     # MuSiQue overrides corpus + questions paths
     if musique:
         corpus_path = "data/musique/corpus"
-        questions_path = "data/musique/questions/eval_set.json"
-        console.print("[bold cyan]Using MuSiQue corpus + questions[/bold cyan]")
+        questions_path = f"data/musique/questions/{split}_set.json"
+        console.print(
+            f"[bold cyan]Using MuSiQue corpus + {split} questions[/bold cyan]"
+        )
 
     # Load corpus
     console.print("Loading corpus...")
