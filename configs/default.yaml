@@ -17,4 +17,4 @@ musique:
   questions_path: data/musique/questions/eval_set.json
 eval:
   questions_path: data/questions/eval_set.json
-  policies: [claude_policy, naive_rag, context_stuffing, single_shot]
+  policies: [claude_policy, naive_rag, sparse_rag, context_stuffing, single_shot]

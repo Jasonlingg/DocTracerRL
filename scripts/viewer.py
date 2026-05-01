@@ -34,6 +34,7 @@ from src.eval.live_harness import StepEvent, run_parallel
 from src.policies.claude_policy import ClaudePolicy
 from src.policies.naive_rag import NaiveRAGPolicy
 from src.policies.single_shot import SingleShotPolicy
+from src.policies.sparse_rag import SparseRAGPolicy
 from src.policies.stuffing import ContextStuffingPolicy
 
 OUT_DIR = Path(__file__).parent.parent / "out"
@@ -87,6 +88,7 @@ def build_policies(
     factories = {
         "claude_policy": lambda: ClaudePolicy(api_key=api_key),
         "naive_rag": lambda: NaiveRAGPolicy(corpus=corpus, api_key=api_key),
+        "sparse_rag": lambda: SparseRAGPolicy(corpus=corpus, api_key=api_key),
         "context_stuffing": lambda: ContextStuffingPolicy(corpus=corpus, api_key=api_key),
         "single_shot": lambda: SingleShotPolicy(corpus=corpus, api_key=api_key),
     }

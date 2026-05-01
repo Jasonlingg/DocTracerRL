@@ -20,6 +20,7 @@ from src.eval.report import print_results
 from src.policies.claude_policy import ClaudePolicy
 from src.policies.naive_rag import NaiveRAGPolicy
 from src.policies.single_shot import SingleShotPolicy
+from src.policies.sparse_rag import SparseRAGPolicy
 from src.policies.stuffing import ContextStuffingPolicy
 
 app = typer.Typer(help="RLM Explorer Evaluation CLI")
@@ -39,6 +40,7 @@ def build_policies(
     all_policies = {
         "claude_policy": lambda: ClaudePolicy(),
         "naive_rag": lambda: NaiveRAGPolicy(corpus=corpus),
+        "sparse_rag": lambda: SparseRAGPolicy(corpus=corpus),
         "context_stuffing": lambda: ContextStuffingPolicy(corpus=corpus),
         "single_shot": lambda: SingleShotPolicy(corpus=corpus),
     }
