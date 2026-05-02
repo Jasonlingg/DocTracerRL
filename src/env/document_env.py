@@ -7,16 +7,26 @@ Reward: 0 during exploration, verifiable score on submission
 
 from __future__ import annotations
 
-import json
-import random
-import re
 from dataclasses import dataclass, field
 
 from loguru import logger
 
 from src.env.corpus import Corpus
 from src.env.repl import PersistentREPL
-from src.env.reward import RewardBreakdown, compute_reward
+from src.env.reward import (
+    RewardBreakdown,
+    compute_reward,
+    parse_submission,
+)
+
+# Re-exported so `from src.env.document_env import parse_submission` keeps working.
+__all__ = [
+    "DocumentExplorationEnv",
+    "EpisodeInfo",
+    "StepRecord",
+    "SYSTEM_PREAMBLE",
+    "parse_submission",
+]
 
 
 @dataclass
@@ -54,33 +64,6 @@ TIP: Track discoveries as you go: known_facts = {}
 Respond with ONLY Python code. Use print() to see output.
 When done, respond: SUBMIT: <answer> CITATIONS: ["id1", "id2"]
 """
-
-
-def parse_submission(action: str) -> tuple[str, list[str]] | None:
-    """Parse a SUBMIT action into (answer, citations). Returns None if not a submission."""
-    if not action.strip().upper().startswith("SUBMIT:"):
-        return None
-
-    # Extract answer (between SUBMIT: and CITATIONS:)
-    match = re.search(
-        r"SUBMIT:\s*(.*?)\s*CITATIONS:\s*(\[.*?\])",
-        action,
-        re.DOTALL | re.IGNORECASE,
-    )
-    if match:
-        answer = match.group(1).strip()
-        try:
-            citations = json.loads(match.group(2))
-        except json.JSONDecodeError:
-            citations = []
-        return answer, citations
-
-    # Fallback: just SUBMIT with no citations
-    match = re.search(r"SUBMIT:\s*(.*)", action, re.DOTALL | re.IGNORECASE)
-    if match:
-        return match.group(1).strip(), []
-
-    return None
 
 
 class DocumentExplorationEnv:

@@ -6,8 +6,41 @@ and an efficiency bonus. This is what a GRPO training loop would optimize.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
+
+
+def parse_submission(action: str) -> tuple[str, list[str]] | None:
+    """Parse a SUBMIT action into (answer, citations).
+
+    Returns None if the action is not a submission. Used by both the
+    Gym-style env (`document_env.py`) and the verifiers wrapper
+    (`verifiers_env.py`).
+    """
+    if not action.strip().upper().startswith("SUBMIT:"):
+        return None
+
+    # Extract answer (between SUBMIT: and CITATIONS:)
+    match = re.search(
+        r"SUBMIT:\s*(.*?)\s*CITATIONS:\s*(\[.*?\])",
+        action,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if match:
+        answer = match.group(1).strip()
+        try:
+            citations = json.loads(match.group(2))
+        except json.JSONDecodeError:
+            citations = []
+        return answer, citations
+
+    # Fallback: just SUBMIT with no citations
+    match = re.search(r"SUBMIT:\s*(.*)", action, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip(), []
+
+    return None
 
 
 @dataclass
