@@ -1,6 +1,6 @@
-# RLM Explorer
+# DocTracerRL
 
-Now public repo! An RL environment for training language models to actively explore **document collections** via code execution in a persistent REPL, rather than passively consuming retrieved context. Inspired by this paper: https://arxiv.org/pdf/2512.24601
+An RL environment for training language models to actively explore **document collections** via code execution in a persistent REPL, rather than passively consuming retrieved context. Inspired by this paper: https://arxiv.org/pdf/2512.24601
 
 <img width="1250" height="879" alt="image" src="https://github.com/user-attachments/assets/e905f6e3-8952-4888-896c-45b0afffd451" />
 
