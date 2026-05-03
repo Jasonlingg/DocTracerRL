@@ -142,6 +142,39 @@ Search-R1 showed that **masking retrieved tokens in the policy gradient** is cri
 
 ---
 
+---
+
+## Phase 3 Dev Baseline (MuSiQue dev, 100 questions)
+
+**Run date:** 2026-05-03  
+**Split:** `data/musique/questions/dev_set.json` (100 questions, `validation[:100]`)  
+**Corpus:** MuSiQue (10,340 docs)  
+**Transcript:** `out/run_20260503_165729.json`  
+**Model:** All policies use `claude-haiku-4-5-20251001`
+
+### Corrected results (efficiency bonus removed)
+
+Reward = `0.5 × answer_F1 + 0.25 × citation_precision + 0.25 × citation_recall`. Max = 1.0.
+
+The efficiency bonus was confirmed to invert the ranking: one-shot policies (1.6 avg steps) received +0.168 efficiency bonus vs claude_policy's +0.022 (8.9 avg steps), masking the 4× answer quality advantage of iterative exploration. Removed from `reward.py`.
+
+| Policy | Corrected Reward | Answer F1 | Cit Prec | Cit Recall | Avg Steps |
+|---|---|---|---|---|---|
+| **claude_policy** | **0.179** | **0.157** | 0.222 | 0.179 | 8.9 |
+| context_stuffing | 0.176 | 0.050 | 0.343 | 0.262 | 1.6 |
+| naive_rag | 0.147 | 0.038 | 0.292 | 0.220 | 1.6 |
+| sparse_rag | 0.141 | 0.033 | 0.295 | 0.203 | 1.7 |
+| single_shot | 0.089 | 0.027 | 0.172 | 0.130 | 1.8 |
+
+### Key observations
+
+1. **claude_policy leads on answer F1** (0.157 vs 0.027–0.050). Iterative exploration produces ~4× better answers than one-shot retrieval.
+2. **context_stuffing nearly ties claude_policy** on total reward (0.176 vs 0.179) due to citation precision from top-20 dense retrieval, but its answer F1 (0.050) is 3× worse.
+3. **Absolute F1 is low across all policies** — MuSiQue is hard by design. A Qwen-trained model needs to beat ~0.157 F1 to show improvement over the Claude reference.
+4. **Hop-stratified analysis pending** (Task 3.3). The gap between claude_policy and RAG baselines should grow with hop count.
+
+---
+
 ## 6. Next Steps
 
 ### Immediate

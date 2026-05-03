@@ -1,7 +1,7 @@
 """Verifiable reward functions for the document exploration environment.
 
-Computes answer accuracy (token overlap F1), citation precision/recall,
-and an efficiency bonus. This is what a GRPO training loop would optimize.
+Computes answer accuracy (token overlap F1) and citation precision/recall.
+This is what a GRPO training loop optimizes. Max reward = 1.0.
 """
 
 from __future__ import annotations
@@ -108,13 +108,6 @@ def score_citations(
     return {"precision": precision, "recall": recall, "f1": f1}
 
 
-def efficiency_bonus(steps_taken: int, max_steps: int) -> float:
-    """Small bonus for solving in fewer steps. Range [0, 0.2]."""
-    if max_steps <= 0:
-        return 0.0
-    return max(0.0, (max_steps - steps_taken) / max_steps * 0.2)
-
-
 def compute_reward(
     predicted_answer: str,
     predicted_citations: list[str],
@@ -125,19 +118,20 @@ def compute_reward(
 ) -> RewardBreakdown:
     """Compute the full verifiable reward signal.
 
-    Formula: 0.5 * answer_F1 + 0.25 * citation_precision + 0.25 * citation_recall + efficiency_bonus
+    Formula: 0.5 * answer_F1 + 0.25 * citation_precision + 0.25 * citation_recall
+    Max reward = 1.0. No efficiency bonus — one-shot policies would otherwise
+    dominate exploration policies via step-count discount, inverting the ranking.
     """
     ans = score_answer(predicted_answer, gold_answer)
     cit = score_citations(predicted_citations, gold_citations)
-    eff = efficiency_bonus(steps_taken, max_steps)
 
-    total = 0.5 * ans + 0.25 * cit["precision"] + 0.25 * cit["recall"] + eff
+    total = 0.5 * ans + 0.25 * cit["precision"] + 0.25 * cit["recall"]
 
     return RewardBreakdown(
         answer_score=ans,
         citation_precision=cit["precision"],
         citation_recall=cit["recall"],
         citation_f1=cit["f1"],
-        efficiency_bonus=eff,
+        efficiency_bonus=0.0,
         total=total,
     )
