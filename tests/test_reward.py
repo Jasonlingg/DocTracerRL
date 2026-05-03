@@ -1,6 +1,6 @@
 """Tests for reward scoring functions."""
 
-from src.env.reward import compute_reward, efficiency_bonus, score_answer, score_citations
+from src.env.reward import compute_reward, score_answer, score_citations
 
 
 class TestScoreAnswer:
@@ -52,17 +52,6 @@ class TestScoreCitations:
         assert result["recall"] == 0.0
 
 
-class TestEfficiencyBonus:
-    def test_immediate_solve(self) -> None:
-        assert abs(efficiency_bonus(1, 10) - 0.18) < 0.001
-
-    def test_max_steps(self) -> None:
-        assert efficiency_bonus(10, 10) == 0.0
-
-    def test_midway(self) -> None:
-        assert abs(efficiency_bonus(5, 10) - 0.1) < 0.001
-
-
 class TestComputeReward:
     def test_perfect_submission(self) -> None:
         result = compute_reward(
@@ -76,7 +65,7 @@ class TestComputeReward:
         assert result.answer_score == 1.0
         assert result.citation_precision == 1.0
         assert result.citation_recall == 1.0
-        assert result.total > 1.0  # 1.0 + efficiency bonus
+        assert result.total == 1.0  # max reward with no efficiency bonus
 
     def test_wrong_answer(self) -> None:
         result = compute_reward(
