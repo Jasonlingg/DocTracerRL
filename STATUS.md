@@ -1,6 +1,44 @@
 # RLM Explorer — Status
 
-*Last updated: 2026-03-19*
+*Last updated: 2026-05-03*
+
+---
+
+## De-risking Debrief — Task 3.2 (2026-05-03)
+
+**Trajectories reviewed:** `out/run_20260503_165729.json` (claude_policy, 100 MuSiQue dev questions)
+
+### Summary
+
+The environment is fundamentally healthy. Tools work, corpus has relevant docs, citation IDs match, and 6/100 questions get perfect 1.0 reward. The dominant failure is behavioral: **the agent computes the correct answer inside the REPL using `print()` and then never issues SUBMIT**. Fixable prompt issue, not an env bug.
+
+### Findings
+
+**Critical — 69% no-submit rate:**
+
+| | Count |
+|---|---|
+| Submitted | 31/100 |
+| Never submitted (hit max steps) | 69/100 |
+
+Of the 69 failures, 52 had the computed answer in the last REPL observation — agent printed `"Final Answer: Medieval Latin"` then used the next step to print again rather than SUBMIT. All 69 received the "Submit soon!" step-counter warning and all 69 ignored it.
+
+Root cause: "Submit soon!" is appended to the REPL observation string — the model sees it as code output, not as a user instruction. Fix: make the step warning a proper `UserMessage` (separate from REPL output); strengthen the system prompt to prohibit using `print()` as a substitute for SUBMIT.
+
+**Minor — 22 SyntaxError rollbacks:** Agent writes multi-step code referencing unseen variables. Auto-rollback keeps REPL state intact; steps are wasted but sessions aren't corrupted.
+
+**Not a problem — Citation IDs:** `musique_*` format matches expected citations exactly. No false negatives from ID mismatch.
+
+**Not a problem — Format:** Zero markdown fences in any trajectory.
+
+### Actions Required Before SFT
+
+1. Strengthen system prompt: "NEVER use `print()` to write your answer. The moment you know the answer, your ENTIRE response is the SUBMIT line."
+2. Change step warning from REPL-output appendage to a prominent format the model reads as instruction.
+3. Raise warning threshold: `remaining <= 3` → `remaining <= 5`.
+4. Re-run dev eval and target >60% submit rate before collecting SFT data.
+
+---
 
 ## What's Working
 

@@ -188,10 +188,12 @@ class DocumentExplorationEnv:
 
         # Add step counter so agent knows urgency
         remaining = self.max_steps - self._step_count
-        if remaining <= 3:
-            observation += f"\n\n[Step {self._step_count}/{self.max_steps} — {remaining} steps remaining. Submit soon!]"
+        if remaining <= 1:
+            observation += f"\n\n*** FINAL STEP — you MUST respond with: SUBMIT: <answer> CITATIONS: [...] ***"
+        elif remaining <= 5:
+            observation += f"\n\n[Step {self._step_count}/{self.max_steps} — {remaining} steps left. Run sufficiency check: can you answer now? If yes → SUBMIT immediately.]"
         else:
-            observation += f"\n\n[Step {self._step_count}/{self.max_steps}]"
+            observation += f"\n\n[Step {self._step_count}/{self.max_steps}/{self.max_steps}]"
 
         # Check if max steps reached
         done = self._step_count >= self.max_steps

@@ -29,24 +29,22 @@ from src.env.corpus import Corpus
 from src.env.repl import PersistentREPL
 from src.env.reward import compute_reward, parse_submission
 
-SYSTEM_PROMPT = """You are an agent that explores a document corpus by writing Python code.
+SYSTEM_PROMPT = """You are an agent exploring a document corpus via Python code.
 
-Available tools (already imported into a persistent Python REPL):
-  search(query, top_k=5)              → doc-level keyword search
-  search(query, method="chunk")       → chunk-level search (finds buried facts)
-  read(doc_id)                        → full document text
-  extract(doc_id, regex)              → regex matches from a doc
-  search_within(doc_id, query)        → search inside a specific doc
-  verify(doc_id, claim)               → check if a claim is supported by a doc
-  list_docs()                         → list all docs
+Tools (already imported):
+  search(query, top_k=5)         → [{"doc_id", "title", "chunk", "score"}]
+  search(query, method="chunk")  → chunk-level search for buried facts
+  read(doc_id)                   → full document text
+  extract(doc_id, regex)         → regex matches from a doc
+  search_within(doc_id, query)   → relevant windows inside a specific doc
+  verify(doc_id, claim)          → {"found", "match_ratio", "excerpt"}
+  list_docs()                    → [{"doc_id", "title", "chars"}]
 
-Each assistant turn must be EITHER a single block of executable Python code OR
-a SUBMIT line — never both, never English prose, never markdown fences.
-
+Each turn: write Python code OR a SUBMIT line. Never both. Never prose. Never markdown.
 Variables persist across turns. Use print() to see output.
 
-When you have the answer, respond with ONLY:
-  SUBMIT: <answer> CITATIONS: ["doc_id_1", "doc_id_2"]
+When you have the answer:
+SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]
 """
 
 
