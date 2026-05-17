@@ -108,6 +108,9 @@ def score_citations(
     return {"precision": precision, "recall": recall, "f1": f1}
 
 
+FORMAT_REWARD = 0.1  # given for any SUBMIT, regardless of correctness
+
+
 def compute_reward(
     predicted_answer: str,
     predicted_citations: list[str],
@@ -118,14 +121,15 @@ def compute_reward(
 ) -> RewardBreakdown:
     """Compute the full verifiable reward signal.
 
-    Formula: 0.5 * answer_F1 + 0.25 * citation_precision + 0.25 * citation_recall
-    Max reward = 1.0. No efficiency bonus — one-shot policies would otherwise
-    dominate exploration policies via step-count discount, inverting the ranking.
+    Formula: 0.1 (format) + 0.9 * (0.5 * answer_F1 + 0.25 * cit_P + 0.25 * cit_R)
+    Max reward = 1.0. The 0.1 format bonus ensures GRPO gets gradient signal even
+    on wrong answers — without it, ~60% of rollouts return 0 and training stalls.
     """
     ans = score_answer(predicted_answer, gold_answer)
     cit = score_citations(predicted_citations, gold_citations)
 
-    total = 0.5 * ans + 0.25 * cit["precision"] + 0.25 * cit["recall"]
+    outcome = 0.5 * ans + 0.25 * cit["precision"] + 0.25 * cit["recall"]
+    total = FORMAT_REWARD + (1 - FORMAT_REWARD) * outcome
 
     return RewardBreakdown(
         answer_score=ans,

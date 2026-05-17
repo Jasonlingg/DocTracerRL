@@ -35,7 +35,8 @@ POLICY_ORDER = [
 
 
 def _corrected_reward(r: dict) -> float:
-    return 0.5 * r["answer_score"] + 0.25 * r["citation_precision"] + 0.25 * r["citation_recall"]
+    outcome = 0.5 * r["answer_score"] + 0.25 * r["citation_precision"] + 0.25 * r["citation_recall"]
+    return 0.1 + 0.9 * outcome if r.get("predicted_answer") else 0.0
 
 
 def _count_tools(trajectory: list[dict]) -> dict[str, int]:

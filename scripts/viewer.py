@@ -33,6 +33,9 @@ from src.env.corpus import Corpus
 from src.eval.live_harness import StepEvent, run_parallel
 from src.policies.claude_policy import ClaudePolicy
 from src.policies.naive_rag import NaiveRAGPolicy
+from src.policies.qwen_base_policy import QwenBasePolicy
+from src.policies.qwen_sft_policy import QwenSFTPolicy
+from src.policies.grpo_policy import GRPOPolicy
 from src.policies.single_shot import SingleShotPolicy
 from src.policies.sparse_rag import SparseRAGPolicy
 from src.policies.stuffing import ContextStuffingPolicy
@@ -91,6 +94,9 @@ def build_policies(
         "sparse_rag": lambda: SparseRAGPolicy(corpus=corpus, api_key=api_key),
         "context_stuffing": lambda: ContextStuffingPolicy(corpus=corpus, api_key=api_key),
         "single_shot": lambda: SingleShotPolicy(corpus=corpus, api_key=api_key),
+        "qwen_base_policy": lambda: QwenBasePolicy(),
+        "qwen_sft_policy": lambda: QwenSFTPolicy(),
+        "grpo_policy": lambda: GRPOPolicy(),
     }
     return {n: factories[n]() for n in names if n in factories}
 

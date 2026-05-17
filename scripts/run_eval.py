@@ -19,6 +19,9 @@ from src.eval.harness import run_eval
 from src.eval.report import print_results
 from src.policies.claude_policy import ClaudePolicy
 from src.policies.naive_rag import NaiveRAGPolicy
+from src.policies.qwen_base_policy import QwenBasePolicy
+from src.policies.qwen_sft_policy import QwenSFTPolicy
+from src.policies.grpo_policy import GRPOPolicy
 from src.policies.single_shot import SingleShotPolicy
 from src.policies.sparse_rag import SparseRAGPolicy
 from src.policies.stuffing import ContextStuffingPolicy
@@ -43,6 +46,9 @@ def build_policies(
         "sparse_rag": lambda: SparseRAGPolicy(corpus=corpus),
         "context_stuffing": lambda: ContextStuffingPolicy(corpus=corpus),
         "single_shot": lambda: SingleShotPolicy(corpus=corpus),
+        "qwen_base_policy": lambda: QwenBasePolicy(),
+        "qwen_sft_policy": lambda: QwenSFTPolicy(),
+        "grpo_policy": lambda: GRPOPolicy(),
     }
 
     if policy_names:

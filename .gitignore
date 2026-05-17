@@ -1,6 +1,7 @@
 data/corpus/
 data/musique/corpus/
 out/
+checkpoints/
 __pycache__/
 .env
 *.egg-info/
