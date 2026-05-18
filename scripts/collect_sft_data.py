@@ -7,15 +7,15 @@ conversation (system + alternating user/assistant turns).
 Output: JSONL where each line is {"messages": [...]} ready for trl.SFTTrainer.
 
 Usage:
-  python scripts/collect_sft_data.py out/run_train_*.json --out data/sft/qwen_traj_smoke.jsonl
-  python scripts/collect_sft_data.py out/run_train_*.json --out data/sft/qwen_traj_full.jsonl --min-reward 0.5
+  python scripts/collect_sft_data.py out/run_train_*.json --out data/sft/qwen_traj_full.jsonl
+  python scripts/collect_sft_data.py out/run_train_*.json --out data/sft/qwen_traj_full.jsonl --min-reward 0.4
 """
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -40,21 +40,35 @@ When you have the answer:
 SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]
 """
 
+MAX_TOKENS = 8000  # approx token budget; conversations over this are dropped
+
 
 def _corrected_reward(r: dict) -> float:
     return 0.5 * r["answer_score"] + 0.25 * r["citation_precision"] + 0.25 * r["citation_recall"]
 
 
-def _format_conversation(episode: dict) -> dict | None:
-    """Convert one episode record into a chat-template messages list.
+def _has_prose(action: str) -> bool:
+    """Return True if the action's first non-empty line looks like English prose."""
+    first = action.strip().split("\n")[0].strip()
+    if not first:
+        return False
+    return bool(re.match(
+        r"^(I('ll| will| can| need)|Let me|To |Here|Sure|First|Now|Next|Step|The |This )",
+        first,
+        re.IGNORECASE,
+    ))
 
-    Returns None if the trajectory has no SUBMIT action (incomplete episode).
+
+def _format_conversation(episode: dict) -> dict | None:
+    """Convert one episode into a chat-template messages list.
+
+    Returns None if the trajectory has no SUBMIT, contains prose-contaminated
+    actions, or exceeds the token budget.
     """
     trajectory = episode.get("trajectory", [])
     if not trajectory:
         return None
 
-    # Verify the last action is a SUBMIT — skip episodes that timed out
     last_action = trajectory[-1]["action"].strip()
     if not last_action.upper().startswith("SUBMIT:"):
         return None
@@ -68,13 +82,21 @@ def _format_conversation(episode: dict) -> dict | None:
         action = step["action"].strip()
         observation = step["observation"].strip()
 
+        # Drop conversations where any non-SUBMIT action contains prose
+        if not action.upper().startswith("SUBMIT:") and _has_prose(action):
+            return None
+
         messages.append({"role": "assistant", "content": action})
 
-        # Don't append a user turn after the SUBMIT — the episode ends there.
         if action.upper().startswith("SUBMIT:"):
             break
 
         messages.append({"role": "user", "content": observation})
+
+    # Drop conversations that exceed the token budget (would be silently truncated)
+    approx_tokens = sum(len(m["content"]) for m in messages) // 4
+    if approx_tokens > MAX_TOKENS:
+        return None
 
     return {"messages": messages}
 
@@ -86,40 +108,69 @@ def main(
         help="Minimum corrected reward to include (default 0.5)"),
     policy: str = typer.Option("claude_policy", "--policy",
         help="Policy name to filter (default claude_policy)"),
+    train_only: bool = typer.Option(True, "--train-only/--all-splits",
+        help="Only include train_ question IDs (exclude dev/test leakage)"),
 ) -> None:
-    all_episodes: list[dict] = []
+    # Collect all qualifying episodes, deduplicating by question_id
+    # (keep highest-reward episode when the same question appears in multiple runs)
+    best_by_qid: dict[str, dict] = {}
+
     for path in run_files:
         results = json.loads(path.read_text())
-        filtered = [r for r in results
-                    if r["policy"] == policy and _corrected_reward(r) >= min_reward]
-        console.print(f"  {path.name}: {len(filtered)}/{sum(1 for r in results if r['policy'] == policy)} "
-                      f"{policy} episodes with reward ≥ {min_reward}")
-        all_episodes.extend(filtered)
+        filtered = [
+            r for r in results
+            if r["policy"] == policy and _corrected_reward(r) >= min_reward
+        ]
+        if train_only:
+            filtered = [r for r in filtered if r["question_id"].startswith("train_")]
 
+        for r in filtered:
+            qid = r["question_id"]
+            if qid not in best_by_qid or _corrected_reward(r) > _corrected_reward(best_by_qid[qid]):
+                best_by_qid[qid] = r
+
+        console.print(
+            f"  {path.name}: {len(filtered)}/{sum(1 for r in results if r['policy'] == policy)} "
+            f"{policy} episodes with reward ≥ {min_reward}"
+            + (f" (train only)" if train_only else "")
+        )
+
+    episodes = list(best_by_qid.values())
+    console.print(f"\nAfter dedup: {len(episodes)} unique questions")
+
+    # Format and filter
     conversations = []
-    skipped = 0
-    for ep in all_episodes:
+    dropped = {"no_submit": 0, "prose": 0, "too_long": 0}
+
+    for ep in episodes:
         conv = _format_conversation(ep)
         if conv is None:
-            skipped += 1
+            traj = ep.get("trajectory", [])
+            last = traj[-1]["action"].strip() if traj else ""
+            if not last.upper().startswith("SUBMIT:"):
+                dropped["no_submit"] += 1
+            elif sum(len(m["content"]) for m in []) // 4 > MAX_TOKENS:
+                dropped["too_long"] += 1
+            else:
+                dropped["prose"] += 1
         else:
-            conversations.append(conv)
+            conversations.append((ep["question_id"], conv))
 
-    if skipped:
-        console.print(f"[yellow]Skipped {skipped} episodes with no SUBMIT action[/yellow]")
+    total_dropped = sum(dropped.values())
+    if total_dropped:
+        console.print(f"[yellow]Dropped: prose={dropped['prose']} too_long={dropped['too_long']} no_submit={dropped['no_submit']}[/yellow]")
 
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w") as f:
-        for conv in conversations:
+        for _, conv in conversations:
             f.write(json.dumps(conv) + "\n")
 
     console.print(f"\n[green]Wrote {len(conversations)} conversations to {out}[/green]")
 
-    # Report turn-count distribution
-    lengths = [len([m for m in c["messages"] if m["role"] == "assistant"]) for c in conversations]
+    lengths = [sum(1 for m in c["messages"] if m["role"] == "assistant") for _, c in conversations]
     if lengths:
-        console.print(f"  Avg assistant turns per conversation: {sum(lengths)/len(lengths):.1f}")
-        console.print(f"  Total (question, action) pairs: {sum(lengths)}")
+        console.print(f"  Avg assistant turns: {sum(lengths)/len(lengths):.1f}")
+        console.print(f"  Total training pairs: {sum(lengths)}")
 
 
 if __name__ == "__main__":
