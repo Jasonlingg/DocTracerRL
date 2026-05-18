@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from typing import Callable
 
 from loguru import logger
 
@@ -85,6 +87,51 @@ def run_single(
     )
 
 
+def _run_one_question(
+    corpus: Corpus,
+    questions: list[dict],
+    q_idx: int,
+    policy_name: str,
+    policy_factory: Callable,
+    max_steps: int,
+    use_docker: bool | None,
+    corpus_path: str,
+) -> EvalResult:
+    """Run one question with a fresh env + policy instance (safe for parallel use)."""
+    q = questions[q_idx]
+    env = DocumentExplorationEnv(
+        corpus=corpus,
+        questions=questions,
+        max_steps=max_steps,
+        use_docker=use_docker,
+        corpus_path=corpus_path,
+    )
+    policy = policy_factory()
+    try:
+        result = run_single(env, policy, q_idx)
+        result.policy_name = policy_name
+        return result
+    except Exception as e:
+        logger.error(f"  → FAILED {q['id']}: {e}")
+        return EvalResult(
+            question_id=q["id"],
+            question=q["question"],
+            policy_name=policy_name,
+            reward=0.0,
+            answer_score=0.0,
+            citation_precision=0.0,
+            citation_recall=0.0,
+            efficiency_bonus=0.0,
+            steps=0,
+            duration_seconds=0.0,
+        )
+    finally:
+        try:
+            env.close()
+        except Exception:
+            pass
+
+
 def run_eval(
     corpus: Corpus,
     questions: list[dict],
@@ -93,65 +140,63 @@ def run_eval(
     use_docker: bool | None = None,
     corpus_path: str = "data/corpus",
     question_ids: list[str] | None = None,
+    workers: int = 1,
 ) -> list[EvalResult]:
-    """Run all policies on all (or selected) questions."""
+    """Run all policies on all (or selected) questions.
+
+    Set workers > 1 to parallelize across questions — each worker gets its own
+    env + policy instance so there is no shared mutable state.
+    policy values may be either instances (workers=1) or zero-arg callables
+    (workers >= 1). Instances are wrapped in a lambda automatically.
+    """
     results: list[EvalResult] = []
 
-    # Filter questions if specific IDs requested
     if question_ids:
-        q_indices = [
-            i for i, q in enumerate(questions) if q["id"] in question_ids
-        ]
+        q_indices = [i for i, q in enumerate(questions) if q["id"] in question_ids]
     else:
         q_indices = list(range(len(questions)))
 
-    env = DocumentExplorationEnv(
-        corpus=corpus,
-        questions=questions,
-        max_steps=max_steps,
-        use_docker=use_docker,
-        corpus_path=corpus_path,
-    )
+    # Normalise: wrap plain instances in a factory so parallel path always has a callable.
+    factories: dict[str, Callable] = {}
+    for name, p in policies.items():
+        factories[name] = p if callable(p) and not hasattr(p, "act") else (lambda _p=p: _p)
 
     try:
-        for policy_name, policy in policies.items():
-            logger.info(f"Running policy: {policy_name}")
+        for policy_name, factory in factories.items():
+            logger.info(f"Running policy: {policy_name} (workers={workers})")
 
-            for q_idx in q_indices:
-                q = questions[q_idx]
-                logger.info(f"  Question {q['id']}: {q['question'][:60]}...")
-
-                try:
-                    result = run_single(env, policy, q_idx)
-                    result.policy_name = policy_name
+            if workers <= 1:
+                for q_idx in q_indices:
+                    q = questions[q_idx]
+                    logger.info(f"  Question {q['id']}: {q['question'][:60]}...")
+                    result = _run_one_question(
+                        corpus, questions, q_idx, policy_name, factory,
+                        max_steps, use_docker, corpus_path,
+                    )
                     results.append(result)
                     logger.info(
-                        f"  → reward={result.reward:.3f}, "
-                        f"steps={result.steps}, "
+                        f"  → reward={result.reward:.3f}, steps={result.steps}, "
                         f"time={result.duration_seconds:.1f}s"
                     )
-                except KeyboardInterrupt:
-                    logger.warning("  → Interrupted, saving partial results...")
-                    raise
-                except Exception as e:
-                    logger.error(f"  → FAILED: {e}")
-                    results.append(EvalResult(
-                        question_id=q["id"],
-                        question=q["question"],
-                        policy_name=policy_name,
-                        reward=0.0,
-                        answer_score=0.0,
-                        citation_precision=0.0,
-                        citation_recall=0.0,
-                        efficiency_bonus=0.0,
-                        steps=0,
-                        duration_seconds=0.0,
-                    ))
-                finally:
-                    try:
-                        env.close()
-                    except Exception:
-                        pass
+            else:
+                futures = {}
+                with ThreadPoolExecutor(max_workers=workers) as pool:
+                    for q_idx in q_indices:
+                        fut = pool.submit(
+                            _run_one_question,
+                            corpus, questions, q_idx, policy_name, factory,
+                            max_steps, use_docker, corpus_path,
+                        )
+                        futures[fut] = q_idx
+
+                    for fut in as_completed(futures):
+                        result = fut.result()
+                        results.append(result)
+                        logger.info(
+                            f"  {result.question_id} → reward={result.reward:.3f}, "
+                            f"steps={result.steps}, time={result.duration_seconds:.1f}s"
+                        )
+
     except KeyboardInterrupt:
         logger.warning("Eval interrupted — returning partial results")
 

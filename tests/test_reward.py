@@ -65,7 +65,7 @@ class TestComputeReward:
         assert result.answer_score == 1.0
         assert result.citation_precision == 1.0
         assert result.citation_recall == 1.0
-        assert result.total == 1.0  # max reward with no efficiency bonus
+        assert result.total == 1.0  # 0.1 format + 0.9 * 1.0 outcome = 1.0
 
     def test_wrong_answer(self) -> None:
         result = compute_reward(

@@ -38,8 +38,13 @@ def load_questions(path: str = "data/questions/eval_set.json") -> list[dict]:
 def build_policies(
     corpus: Corpus,
     policy_names: list[str] | None = None,
+    as_factories: bool = False,
 ) -> dict[str, object]:
-    """Build policy instances. If policy_names is None, build all."""
+    """Build policy instances (or factories when as_factories=True).
+
+    Pass as_factories=True when using workers > 1 so each worker thread
+    creates its own fresh instance with no shared mutable state.
+    """
     all_policies = {
         "claude_policy": lambda: ClaudePolicy(),
         "naive_rag": lambda: NaiveRAGPolicy(corpus=corpus),
@@ -51,13 +56,14 @@ def build_policies(
         "grpo_policy": lambda: GRPOPolicy(),
     }
 
-    if policy_names:
-        return {
-            name: factory()
-            for name, factory in all_policies.items()
-            if name in policy_names
-        }
-    return {name: factory() for name, factory in all_policies.items()}
+    selected = {
+        name: factory
+        for name, factory in all_policies.items()
+        if policy_names is None or name in policy_names
+    }
+    if as_factories:
+        return selected
+    return {name: factory() for name, factory in selected.items()}
 
 
 @app.command()
@@ -93,6 +99,9 @@ def main(
     corpus_path: str = typer.Option(
         "data/corpus", "--corpus", help="Path to corpus directory"
     ),
+    workers: int = typer.Option(
+        1, "--workers", "-w", help="Parallel workers (default 1). Set 4-8 for fast data collection."
+    ),
 ) -> None:
     """Run evaluation: policies through the document exploration environment."""
     console.print("[bold]RLM Explorer — Evaluation[/bold]\n")
@@ -120,9 +129,9 @@ def main(
         console.print(f"[yellow]Test mode: using first {test} questions[/yellow]")
     console.print(f"Loaded {len(questions)} questions\n")
 
-    # Build policies
+    # Build policies (factories when parallel so each worker gets a fresh instance)
     policy_names = [policy] if policy else None
-    policies = build_policies(corpus, policy_names)
+    policies = build_policies(corpus, policy_names, as_factories=workers > 1)
     console.print(f"Policies: {', '.join(policies.keys())}\n")
 
     # Filter questions
@@ -134,9 +143,10 @@ def main(
         questions=questions,
         policies=policies,
         max_steps=max_steps,
-        use_docker=None,  # auto-detect: use Docker if rlm-sandbox image exists
+        use_docker=None,
         corpus_path=corpus_path,
         question_ids=question_ids,
+        workers=workers,
     )
 
     # Always print and save, even on partial results
