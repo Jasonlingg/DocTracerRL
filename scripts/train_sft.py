@@ -152,9 +152,23 @@ def sanity_check(
     peft_model = PeftModel.from_pretrained(base, str(model))
     peft_model.eval()
 
-    from scripts.collect_sft_data import SYSTEM_PROMPT
+    _SYSTEM_PROMPT = (
+        "You are an agent exploring a document corpus via Python code.\n\n"
+        "Tools (already imported):\n"
+        "  search(query, top_k=5)         → [{\"doc_id\", \"title\", \"chunk\", \"score\"}]\n"
+        "  search(query, method=\"chunk\")  → chunk-level search for buried facts\n"
+        "  read(doc_id)                   → full document text\n"
+        "  extract(doc_id, regex)         → regex matches from a doc\n"
+        "  search_within(doc_id, query)   → relevant windows inside a specific doc\n"
+        "  verify(doc_id, claim)          → {\"found\", \"match_ratio\", \"excerpt\"}\n"
+        "  list_docs()                    → [{\"doc_id\", \"title\", \"chars\"}]\n\n"
+        "Each turn: write Python code OR a SUBMIT line. Never both. Never prose. Never markdown.\n"
+        "Variables persist across turns. Use print() to see output.\n\n"
+        "When you have the answer:\n"
+        "SUBMIT: <your answer> CITATIONS: [\"doc_id_1\", \"doc_id_2\"]"
+    )
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": _SYSTEM_PROMPT},
         {"role": "user", "content": f"Question: {question}"},
     ]
     text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
