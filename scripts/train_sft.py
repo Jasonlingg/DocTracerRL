@@ -110,7 +110,6 @@ def train(
         logging_steps=10,
         save_steps=100,
         save_total_limit=2,
-        max_seq_length=max_seq_len,
         packing=False,
         report_to="none",
     )
@@ -121,6 +120,7 @@ def train(
         train_dataset=dataset,
         peft_config=lora_config,
         args=sft_config,
+        max_seq_length=max_seq_len,
     )
 
     console.print(f"[bold]Training on {len(dataset)} examples, {epochs} epoch(s)[/bold]")
