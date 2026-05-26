@@ -114,13 +114,14 @@ def train(
         report_to="none",
     )
 
+    tokenizer.model_max_length = max_seq_len
+
     trainer = SFTTrainer(
         model=model,
         processing_class=tokenizer,
         train_dataset=dataset,
         peft_config=lora_config,
         args=sft_config,
-        max_seq_length=max_seq_len,
     )
 
     console.print(f"[bold]Training on {len(dataset)} examples, {epochs} epoch(s)[/bold]")
