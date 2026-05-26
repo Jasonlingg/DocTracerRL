@@ -90,7 +90,7 @@ def train(
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.bfloat16 if not load_in_4bit else None,
+        dtype=torch.bfloat16 if not load_in_4bit else None,
     )
 
     lora_config = LoraConfig(**LORA_CONFIG)
@@ -116,7 +116,7 @@ def train(
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=dataset,
         peft_config=lora_config,
         args=sft_config,
