@@ -147,12 +147,12 @@ def sanity_check(
     base_model = BASE_MODEL
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
     base = AutoModelForCausalLM.from_pretrained(
-        base_model, device_map="auto", torch_dtype=torch.bfloat16, trust_remote_code=True
+        base_model, device_map="auto", dtype=torch.bfloat16, trust_remote_code=True
     )
     peft_model = PeftModel.from_pretrained(base, str(model))
     peft_model.eval()
 
-    from src.env.verifiers_env import SYSTEM_PROMPT
+    from scripts.collect_sft_data import SYSTEM_PROMPT
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"Question: {question}"},
