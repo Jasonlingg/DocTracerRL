@@ -175,21 +175,87 @@ The efficiency bonus was confirmed to invert the ranking: one-shot policies (1.6
 
 ---
 
+---
+
+## Phase 4: SFT + GRPO Training Log
+
+*Last updated: 2026-05-27*
+
+### Reward function (updated)
+`reward = 0.1 + 0.9 × (0.5 × answer_F1 + 0.25 × cit_P + 0.25 × cit_R)` if SUBMIT was called, else 0.0.
+Format bonus of 0.1 added so GRPO gets gradient signal even on wrong answers.
+
+---
+
+### 4.1 SFT Data Collection
+- **Source:** 500 train questions → claude_policy → filtered reward ≥ 0.5
+- **Final dataset:** `data/sft/qwen_traj_full.jsonl` — 114 conversations, 716 training pairs
+- **Quality fixes:** removed 33 duplicates, 19 dev leakage, 10 prose-contaminated, 5 over-length
+- **Bias note:** 89% 2-hop questions (Claude fails 4-hop → structural imitation ceiling)
+
+---
+
+### 4.2 Model Size Decision Log
+
+| Model | Outcome | Reason |
+|---|---|---|
+| Qwen2.5-1.5B-Instruct | ❌ Abandoned | Syntax errors on ~90% of GRPO rollouts at temp=0.8. No valid Python → no reward variance → no gradient signal. |
+| Qwen2.5-3B-Instruct | ⏭ Skipped | Literature (Search-R1, CoSearch, HiPRAG) validates 3B as minimum but results not consistently strong. Went straight to 7B. |
+| **Qwen2.5-7B-Instruct** | ✅ Current | Validated by literature. Sanity check: immediately writes `search()` call, not hallucinated prose. |
+
+**Key evidence for 1.5B failure:** Step 0 GRPO rewards were `[0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0]` — 7/8 rollouts timed out with SyntaxErrors, never submitted. Claude Haiku on same env: 8.9 avg steps, valid Python throughout. Confirmed env is healthy; 1.5B is the bottleneck.
+
+---
+
+### 4.3 SFT Results
+
+#### Qwen2.5-1.5B SFT (smoke, 50 dev questions)
+| Metric | Value |
+|---|---|
+| Avg reward | 0.113 |
+| Answer F1 | 0.033 |
+| Cit Prec/Recall | 0.000 / 0.000 |
+| Avg steps | 1.9 |
+
+Model learned format (gets 0.100 format bonus) but submits immediately without searching. Confirms SFT imitation ≠ exploration behavior.
+
+#### Qwen2.5-7B SFT (2 epochs, 114 conversations)
+- **Checkpoint:** `checkpoints/sft_qwen_7b/final`
+- **Sanity check:** outputs `search("Apex Corp CEO birthplace")` — Python code, not hallucinated prose ✓
+- **Dev eval:** pending
+
+---
+
+### 4.4 GRPO Training
+
+#### GRPO Design Choices (informed by DAPO/DR-GRPO/NotebookLM research)
+| Choice | Value | Reason |
+|---|---|---|
+| group_size | 8 | More rollouts → more reward variance → better gradient signal |
+| beta (KL) | 0.0 | SFT ref too weak to anchor to usefully; saves memory |
+| normalization | fixed 256 tokens | DR-GRPO style; removes length bias |
+| temperature | 0.8 | Higher temp → more diverse rollouts |
+| Skip condition | uniform rewards | Zero std → zero advantage → skip gradient step |
+
+#### Qwen2.5-1.5B GRPO — FAILED
+- Killed at step 0. Syntax errors on 7/8 rollouts per group. No useful gradient.
+
+#### Qwen2.5-7B GRPO — IN PROGRESS
+- **Started:** 2026-05-27
+- **Checkpoint path:** `checkpoints/grpo_qwen_7b/`
+- **Target:** 300 steps
+- Results: TBD
+
+---
+
 ## 6. Next Steps
 
 ### Immediate
-- [ ] Run full MuSiQue eval (200 questions × 4 policies) for complete baseline numbers
-- [ ] Cap `read()` output to encourage `search_within()` usage (observe natural behavior first)
-- [ ] Try Sonnet as agent model to reduce SyntaxError/prose generation rate
+- [ ] Monitor 7B GRPO — watch `recent_avg` for upward trend past 0.113 by step 50
+- [ ] Eval 7B GRPO checkpoint on 50 dev questions at step 50, 100, 300
+- [ ] Eval 7B SFT checkpoint on 50 dev questions (need base comparison)
 
-### Training Phase
-- [ ] Plug in open-weight model (Qwen2.5-7B) as policy
-- [ ] Implement GRPO training on Prime Intellect using the environment's reward signal
-- [ ] Implement retrieved token masking (Search-R1 approach)
-- [ ] Start with outcome-only reward, add process rewards only if agent plateaus
-- [ ] Curriculum: start with 2-hop questions, progress to 4-5 hop
-
-### Evaluation
-- [ ] Compare RL-trained agent vs Claude Haiku baseline on MuSiQue
-- [ ] Measure tool usage distribution shift (does RL agent learn to use `search_within`?)
-- [ ] Transfer test: run RL-trained agent on the synthetic corpus (unseen domain)
+### Final Eval (Phase 6)
+- [ ] Run all policies on test split (200 questions)
+- [ ] Hop-stratified analysis: 2-hop / 3-hop / 4-hop per policy
+- [ ] Three headline numbers: `sft−base`, `grpo−sft`, `grpo−rag`
