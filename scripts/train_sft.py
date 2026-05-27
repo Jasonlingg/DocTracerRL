@@ -24,7 +24,7 @@ from rich.console import Console
 console = Console()
 app = typer.Typer()
 
-BASE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 LORA_CONFIG = {
     "r": 16,

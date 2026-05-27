@@ -36,7 +36,7 @@ from src.env.document_env import DocumentExplorationEnv
 console = Console()
 app = typer.Typer()
 
-BASE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 SYSTEM_PROMPT = """You are an agent exploring a document corpus via Python code.
 
