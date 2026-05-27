@@ -142,64 +142,71 @@ def _collect_rollout(
     return step_data, reward
 
 
-def _episode_log_probs(
-    model: PeftModel, step_data: list[tuple[torch.Tensor, torch.Tensor]]
+def _step_log_prob(
+    model: PeftModel, ctx_ids: torch.Tensor, action_ids: torch.Tensor
 ) -> tuple[torch.Tensor, int]:
-    """Sum of log probs over all assistant tokens. Returns (log_prob_sum, n_tokens)."""
-    device = next(model.parameters()).device
-    log_probs_list: list[torch.Tensor] = []
-    n_tokens = 0
+    """Log prob sum for one (context, action) pair.
 
-    for ctx_ids, action_ids in step_data:
-        if action_ids.numel() == 0:
-            continue
-
-        ctx = ctx_ids.to(device)
-        act = action_ids.to(device)
-        ctx_len = ctx.shape[0]
-        act_len = act.shape[0]
-
-        full_ids = torch.cat([ctx, act]).unsqueeze(0)
-        logits = model(full_ids).logits[0]  # [ctx+act, vocab]
-
-        # logits[ctx_len-1] predicts act[0], ..., logits[ctx_len+act_len-2] predicts act[-1]
-        act_logits = logits[ctx_len - 1 : ctx_len - 1 + act_len]
-        act_log_probs = F.log_softmax(act_logits, dim=-1)
-        token_lp = act_log_probs.gather(1, act.unsqueeze(1)).squeeze(1)
-
-        log_probs_list.append(token_lp.sum())
-        n_tokens += act_len
-
-    if not log_probs_list:
+    Deletes the full logits tensor immediately after slicing — Qwen2.5 vocab is
+    152k so keeping it in the graph wastes ~1GB per forward pass.
+    """
+    if action_ids.numel() == 0:
+        device = next(model.parameters()).device
         return torch.tensor(0.0, device=device, requires_grad=True), 0
-    return sum(log_probs_list), max(n_tokens, 1)  # type: ignore[return-value]
+
+    device = next(model.parameters()).device
+    ctx = ctx_ids.to(device)
+    act = action_ids.to(device)
+    ctx_len = ctx.shape[0]
+    act_len = act.shape[0]
+
+    full_ids = torch.cat([ctx, act]).unsqueeze(0)
+    logits = model(full_ids).logits[0]
+    act_logits = logits[ctx_len - 1 : ctx_len - 1 + act_len].clone()
+    del logits
+    torch.cuda.empty_cache()
+
+    act_log_probs = F.log_softmax(act_logits, dim=-1)
+    token_lp = act_log_probs.gather(1, act.unsqueeze(1)).squeeze(1)
+    return token_lp.sum(), act_len
 
 
-def _grpo_loss(
+def _grpo_update(
     model: PeftModel,
+    optimizer: torch.optim.Optimizer,
     group_step_data: list[list[tuple[torch.Tensor, torch.Tensor]]],
     group_rewards: list[float],
-) -> torch.Tensor:
-    """GRPO loss (no KL penalty — beta=0).
+) -> float:
+    """GRPO gradient accumulation — backward after each (rollout, step) to avoid OOM.
 
-    Uses fixed NORM_TOKENS divisor instead of per-episode token count
-    to avoid length bias (DR-GRPO style).
+    With 7B + 152k vocab, holding all 8×10 computation graphs simultaneously
+    needs ~80GB. Backward per step frees each graph immediately; peak memory
+    drops to 1 forward pass. Gradients accumulate in param.grad across calls.
     """
     rewards = torch.tensor(group_rewards, dtype=torch.float32)
     advantages = ((rewards - rewards.mean()) / (rewards.std() + 1e-8)).tolist()
 
-    losses: list[torch.Tensor] = []
+    n_valid = sum(1 for sd in group_step_data if sd)
+    if n_valid == 0:
+        return 0.0
+
+    optimizer.zero_grad()
+    total_loss = 0.0
+
     for step_data, adv in zip(group_step_data, advantages):
         if not step_data:
             continue
-        lp, _ = _episode_log_probs(model, step_data)
-        # Normalize by fixed constant to remove length bias
-        losses.append(-adv * lp / NORM_TOKENS)
+        for ctx_ids, action_ids in step_data:
+            lp, n_tok = _step_log_prob(model, ctx_ids, action_ids)
+            if n_tok == 0:
+                continue
+            piece = -adv * lp / NORM_TOKENS / n_valid
+            piece.backward()
+            total_loss += piece.item()
+            del lp, piece
+            torch.cuda.empty_cache()
 
-    if not losses:
-        device = next(model.parameters()).device
-        return torch.tensor(0.0, device=device, requires_grad=True)
-    return sum(losses) / len(losses)  # type: ignore[return-value]
+    return total_loss
 
 
 @app.command()
@@ -290,9 +297,7 @@ def train(
             )
             continue
 
-        optimizer.zero_grad()
-        loss = _grpo_loss(model, group_step_data, group_rewards)
-        loss.backward()
+        total_loss = _grpo_update(model, optimizer, group_step_data, group_rewards)
         torch.nn.utils.clip_grad_norm_(
             [p for p in model.parameters() if p.requires_grad], max_norm=1.0
         )
@@ -300,7 +305,7 @@ def train(
 
         recent_avg = sum(reward_window) / len(reward_window)
         logger.info(
-            f"Step {step:03d} | {q_id} | loss={loss.item():.4f} | "
+            f"Step {step:03d} | {q_id} | loss={total_loss:.4f} | "
             f"rewards={[f'{r:.3f}' for r in group_rewards]} | "
             f"recent_avg={recent_avg:.3f}"
         )
