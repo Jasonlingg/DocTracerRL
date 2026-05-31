@@ -108,7 +108,8 @@ def score_citations(
     return {"precision": precision, "recall": recall, "f1": f1}
 
 
-FORMAT_REWARD = 0.1  # given for any SUBMIT, regardless of correctness
+STEP_BONUS = 0.015  # per exploration step before SUBMIT, max 0.12 for 8 steps
+STEP_HIT_REWARD = 0.02  # per step where retrieved content overlaps gold answer (max 3 hits = 0.06)
 
 
 def compute_reward(
@@ -121,21 +122,28 @@ def compute_reward(
 ) -> RewardBreakdown:
     """Compute the full verifiable reward signal.
 
-    Formula: 0.1 (format) + 0.9 * (0.5 * answer_F1 + 0.25 * cit_P + 0.25 * cit_R)
-    Max reward = 1.0. The 0.1 format bonus ensures GRPO gets gradient signal even
-    on wrong answers — without it, ~60% of rollouts return 0 and training stalls.
+    Formula: step_bonus + 0.5 * answer_F1 + 0.25 * cit_P + 0.25 * cit_R
+    step_bonus = 0.015 * min(steps_taken - 1, 8) — rewards exploration depth.
+
+    Replacing the flat format bonus (0.1 for any SUBMIT) with a per-step bonus
+    creates variance within GRPO groups even when all answers are wrong: rollouts
+    that explore 5 steps get 0.06 while 1-step submissions get 0.0. The flat bonus
+    collapsed all wrong-answer rollouts to identical rewards, causing all groups to
+    be skipped and zero gradient updates.
     """
     ans = score_answer(predicted_answer, gold_answer)
     cit = score_citations(predicted_citations, gold_citations)
 
     outcome = 0.5 * ans + 0.25 * cit["precision"] + 0.25 * cit["recall"]
-    total = FORMAT_REWARD + (1 - FORMAT_REWARD) * outcome
+    exploration_steps = max(0, steps_taken - 1)
+    step_bonus = STEP_BONUS * min(exploration_steps, 8)
+    total = outcome + step_bonus
 
     return RewardBreakdown(
         answer_score=ans,
         citation_precision=cit["precision"],
         citation_recall=cit["recall"],
         citation_f1=cit["f1"],
-        efficiency_bonus=0.0,
+        efficiency_bonus=step_bonus,
         total=total,
     )

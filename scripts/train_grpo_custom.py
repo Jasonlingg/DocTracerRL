@@ -223,7 +223,7 @@ def train(
     lr: float = typer.Option(1e-6, "--lr"),
     max_episode_steps: int = typer.Option(10, "--max-episode-steps"),
     save_steps: int = typer.Option(50, "--save-steps"),
-    temperature: float = typer.Option(0.8, "--temperature",
+    temperature: float = typer.Option(1.0, "--temperature",
         help="Higher temperature encourages diverse rollouts"),
 ) -> None:
     """GRPO fine-tuning from the SFT checkpoint using the document exploration env."""
