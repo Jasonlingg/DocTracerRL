@@ -108,8 +108,7 @@ def _collect_rollout(
     ]
 
     step_data: list[tuple[torch.Tensor, torch.Tensor]] = []
-    reward = 0.0
-    done = False
+    total_reward = 0.0
 
     model.eval()
     with torch.no_grad():
@@ -133,13 +132,14 @@ def _collect_rollout(
             action = tokenizer.decode(action_ids, skip_special_tokens=True).strip()
             messages.append({"role": "assistant", "content": action})
 
-            obs, reward, done, _ = env.step(action)
+            obs, step_reward, done, _ = env.step(action)
+            total_reward += step_reward  # accumulates: hit bonuses + final SUBMIT reward
             if done:
                 break
             messages.append({"role": "user", "content": obs})
 
     model.train()
-    return step_data, reward
+    return step_data, total_reward
 
 
 def _step_log_prob(
