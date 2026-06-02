@@ -57,6 +57,10 @@ SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]"""
 
 # Fixed normalization constant — avoids length bias (DR-GRPO style)
 NORM_TOKENS = 256
+# Max context tokens fed into the gradient pass — truncate from left to bound
+# backward memory. At 7B + bfloat16 activations, a 25k-token context needs
+# ~14GB for backward; truncating to 2048 keeps peak usage under ~2GB.
+MAX_CTX_TOKENS = 2048
 
 
 def _bnb_config() -> BitsAndBytesConfig:
@@ -120,7 +124,7 @@ def _collect_rollout(
 
             gen_ids = model.generate(
                 ctx_ids,
-                max_new_tokens=512,
+                max_new_tokens=256,
                 do_sample=True,
                 temperature=temperature,
                 pad_token_id=tokenizer.eos_token_id,
@@ -157,6 +161,11 @@ def _step_log_prob(
     device = next(model.parameters()).device
     ctx = ctx_ids.to(device)
     act = action_ids.to(device)
+
+    # Truncate context from the left to bound backward memory
+    if ctx.shape[0] > MAX_CTX_TOKENS:
+        ctx = ctx[-MAX_CTX_TOKENS:]
+
     ctx_len = ctx.shape[0]
     act_len = act.shape[0]
 
