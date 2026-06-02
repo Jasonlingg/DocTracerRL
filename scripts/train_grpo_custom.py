@@ -19,8 +19,11 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import random
 from pathlib import Path
+
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import torch
 import torch.nn.functional as F
@@ -81,6 +84,7 @@ def _load_model(checkpoint: str, trainable: bool) -> PeftModel:
     )
     if trainable:
         base = prepare_model_for_kbit_training(base)
+        base.enable_input_require_grads()  # PEFT breaks gradient checkpointing hooks without this
     model = PeftModel.from_pretrained(base, checkpoint, is_trainable=trainable)
     if not trainable:
         model.eval()
@@ -120,10 +124,12 @@ def _collect_rollout(
             prompt = tokenizer.apply_chat_template(
                 messages, add_generation_prompt=True, tokenize=False
             )
-            ctx_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+            enc = tokenizer(prompt, return_tensors="pt").to(model.device)
+            ctx_ids = enc.input_ids
 
             gen_ids = model.generate(
                 ctx_ids,
+                attention_mask=enc.attention_mask,
                 max_new_tokens=256,
                 do_sample=True,
                 temperature=temperature,
@@ -236,6 +242,9 @@ def train(
         help="Higher temperature encourages diverse rollouts"),
 ) -> None:
     """GRPO fine-tuning from the SFT checkpoint using the document exploration env."""
+    import os
+    os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
     console.print("[bold]GRPO Training — Document Exploration[/bold]\n")
     console.print(f"group_size={group_size}, steps={steps}, lr={lr}, temp={temperature}")
     console.print("[dim]beta=0 (no KL), DR-GRPO normalization, skip uniform-reward groups[/dim]\n")
