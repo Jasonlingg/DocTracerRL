@@ -75,16 +75,18 @@ def _bnb_config() -> BitsAndBytesConfig:
     )
 
 
-def _load_model(checkpoint: str, trainable: bool) -> PeftModel:
+def _load_model(checkpoint: str, trainable: bool, load_in_4bit: bool = True) -> PeftModel:
     base = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
-        quantization_config=_bnb_config(),
+        quantization_config=_bnb_config() if load_in_4bit else None,
+        torch_dtype=torch.bfloat16,
         device_map="auto",
         trust_remote_code=True,
     )
     if trainable:
-        base = prepare_model_for_kbit_training(base)
-        base.enable_input_require_grads()  # PEFT breaks gradient checkpointing hooks without this
+        if load_in_4bit:
+            base = prepare_model_for_kbit_training(base)
+        base.enable_input_require_grads()
     model = PeftModel.from_pretrained(base, checkpoint, is_trainable=trainable)
     if not trainable:
         model.eval()
@@ -240,6 +242,8 @@ def train(
     save_steps: int = typer.Option(50, "--save-steps"),
     temperature: float = typer.Option(1.0, "--temperature",
         help="Higher temperature encourages diverse rollouts"),
+    load_in_4bit: bool = typer.Option(True, "--4bit/--no-4bit",
+        help="Use 4-bit quantization (disable if PyTorch too old for bitsandbytes)"),
 ) -> None:
     """GRPO fine-tuning from the SFT checkpoint using the document exploration env."""
     import os
@@ -250,7 +254,7 @@ def train(
     console.print("[dim]beta=0 (no KL), DR-GRPO normalization, skip uniform-reward groups[/dim]\n")
 
     console.print("Loading model from SFT checkpoint...")
-    model = _load_model(sft_checkpoint, trainable=True)
+    model = _load_model(sft_checkpoint, trainable=True, load_in_4bit=load_in_4bit)
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
     if tokenizer.pad_token is None:
