@@ -1,11 +1,11 @@
-"""Qwen2.5-1.5B-Instruct baseline (untrained) — isolates training contribution.
+"""Qwen2.5-7B-Instruct baseline (untrained) — isolates training contribution.
 
-Uses Together.ai's OpenAI-compatible endpoint so no local GPU is needed for eval.
-Set TOGETHER_API_KEY in .env (or environment) before running.
+Loads the base model locally (no API key needed). Set BASE_MODEL_PATH to a local
+directory or leave unset to download from HuggingFace.
 
 This policy is structurally identical to qwen_sft_policy / grpo_policy — the only
-difference is the model string (base vs. fine-tuned checkpoint). Having all three
-in the final comparison table is what makes the base → sft → grpo delta credible.
+difference is no LoRA adapter is applied. Having all three in the comparison table
+is what makes the base → sft → grpo delta credible.
 """
 
 from __future__ import annotations
@@ -33,50 +33,70 @@ When you have the answer:
 SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]
 """
 
-# Together.ai model ID for Qwen2.5-1.5B-Instruct
-TOGETHER_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 
 class QwenBasePolicy:
-    """Untrained Qwen2.5-1.5B-Instruct via Together.ai inference API."""
+    """Untrained Qwen2.5-7B-Instruct loaded locally for inference."""
 
     def __init__(
         self,
-        model: str = TOGETHER_MODEL,
+        base_model: str | None = None,
         max_tokens: int = 1024,
         temperature: float = 0.0,
-        api_key: str | None = None,
     ) -> None:
+        model_path = base_model or os.environ.get("BASE_MODEL_PATH") or DEFAULT_BASE_MODEL
+
         try:
-            from openai import OpenAI
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer
         except ImportError as e:
-            raise ImportError("pip install openai") from e
+            raise ImportError("pip install -e '.[training]'") from e
 
-        key = api_key or os.environ.get("TOGETHER_API_KEY")
-        if not key:
-            raise ValueError("Set TOGETHER_API_KEY in .env or environment")
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
 
-        from openai import OpenAI
-        self.client = OpenAI(
-            api_key=key,
-            base_url="https://api.together.xyz/v1",
+        self._tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        if self._tokenizer.pad_token is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
+
+        self._model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+            trust_remote_code=True,
         )
-        self.model = model
-        self.max_tokens = max_tokens
-        self.temperature = temperature
+        self._model.eval()
+
+        self._max_tokens = max_tokens
+        self._temperature = temperature
         self.history: list[dict] = []
 
+        logger.info(f"QwenBasePolicy loaded from {model_path}")
+
     def act(self, observation: str) -> str:
+        import torch
+
         self.history.append({"role": "user", "content": observation})
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + self.history,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}] + self.history
+        text = self._tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
         )
+        inputs = self._tokenizer(text, return_tensors="pt").to(self._model.device)
 
-        action = response.choices[0].message.content or ""
+        with torch.no_grad():
+            out = self._model.generate(
+                **inputs,
+                max_new_tokens=self._max_tokens,
+                do_sample=self._temperature > 0,
+                temperature=self._temperature if self._temperature > 0 else None,
+                pad_token_id=self._tokenizer.eos_token_id,
+            )
+
+        action = self._tokenizer.decode(
+            out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
+        )
         self.history.append({"role": "assistant", "content": action})
         action = self._clean_action(action)
 

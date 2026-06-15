@@ -35,15 +35,16 @@ When you have the answer:
 SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]
 """
 
-BASE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 
 class GRPOPolicy:
-    """GRPO-trained Qwen2.5-1.5B with LoRA adapter, loaded for local inference."""
+    """GRPO-trained Qwen2.5-7B with LoRA adapter, loaded for local inference."""
 
     def __init__(
         self,
         checkpoint_path: str | None = None,
+        base_model: str | None = None,
         max_tokens: int = 1024,
         temperature: float = 0.0,
     ) -> None:
@@ -51,8 +52,10 @@ class GRPOPolicy:
         if not path:
             raise ValueError(
                 "Provide checkpoint_path or set CHECKPOINT_PATH env var "
-                "(e.g. checkpoints/grpo_qwen_1.5b/final)"
+                "(e.g. checkpoints/grpo_qwen_7b/final)"
             )
+
+        base = base_model or os.environ.get("BASE_MODEL_PATH") or DEFAULT_BASE_MODEL
 
         try:
             import torch
@@ -65,17 +68,17 @@ class GRPOPolicy:
         from peft import PeftModel
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
-        self._tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
+        self._tokenizer = AutoTokenizer.from_pretrained(base, trust_remote_code=True)
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
 
-        base = AutoModelForCausalLM.from_pretrained(
-            BASE_MODEL,
+        base_mdl = AutoModelForCausalLM.from_pretrained(
+            base,
             device_map="auto",
             torch_dtype=torch.bfloat16,
             trust_remote_code=True,
         )
-        self._model = PeftModel.from_pretrained(base, path)
+        self._model = PeftModel.from_pretrained(base_mdl, path)
         self._model.eval()
 
         self._max_tokens = max_tokens
