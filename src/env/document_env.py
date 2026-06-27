@@ -7,6 +7,7 @@ Reward: 0 during exploration, verifiable score on submission
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from loguru import logger
@@ -225,7 +226,6 @@ class DocumentExplorationEnv:
         """Return STEP_HIT_REWARD if observation contains gold answer tokens (max 3 times)."""
         if self._episode is None or not self._episode.gold_answer or self._hits_found >= 3:
             return 0.0
-        import re
         gold_tokens = set(re.findall(r"\w+", self._episode.gold_answer.lower()))
         obs_tokens = set(re.findall(r"\w+", observation.lower()))
         if not gold_tokens:

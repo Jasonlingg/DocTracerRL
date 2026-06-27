@@ -122,21 +122,24 @@ def compute_reward(
 ) -> RewardBreakdown:
     """Compute the full verifiable reward signal.
 
-    Formula: step_bonus + 0.5 * answer_F1 + 0.25 * cit_P + 0.25 * cit_R
-    step_bonus = 0.015 * min(steps_taken - 1, 8) — rewards exploration depth.
+    Formula: 0.8 * answer_F1 + 0.1 * cit_P + 0.1 * cit_R + step_bonus (gated)
+    step_bonus = 0.015 * min(steps_taken - 1, 8), only awarded when ans > 0.
 
-    Replacing the flat format bonus (0.1 for any SUBMIT) with a per-step bonus
-    creates variance within GRPO groups even when all answers are wrong: rollouts
-    that explore 5 steps get 0.06 while 1-step submissions get 0.0. The flat bonus
-    collapsed all wrong-answer rollouts to identical rewards, causing all groups to
-    be skipped and zero gradient updates.
+    Citation weight is reduced from 0.25/0.25 to 0.1/0.1 since the model rarely
+    produces citations this early in training (matches VERITAS/R1-Searcher practice
+    of near-zero grounding-reward weight until basic answer competence exists).
+
+    step_bonus is gated on ans > 0 — without this, GRPO training showed the model
+    learning to "bank" exploration reward by submitting early with a wrong answer
+    (observed: rollouts scoring 0.03-0.06 from step bonus alone). Gating matches
+    HiPRAG/GraphRAG-R1's approach of zeroing process rewards when the outcome is wrong.
     """
     ans = score_answer(predicted_answer, gold_answer)
     cit = score_citations(predicted_citations, gold_citations)
 
-    outcome = 0.5 * ans + 0.25 * cit["precision"] + 0.25 * cit["recall"]
+    outcome = 0.8 * ans + 0.1 * cit["precision"] + 0.1 * cit["recall"]
     exploration_steps = max(0, steps_taken - 1)
-    step_bonus = STEP_BONUS * min(exploration_steps, 8)
+    step_bonus = STEP_BONUS * min(exploration_steps, 8) if ans > 0.0 else 0.0
     total = outcome + step_bonus
 
     return RewardBreakdown(

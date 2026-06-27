@@ -20,25 +20,9 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from src.policies.qwen_common import SYSTEM_PROMPT
+
 console = Console()
-
-SYSTEM_PROMPT = """You are an agent exploring a document corpus via Python code.
-
-Tools (already imported):
-  search(query, top_k=5)         → [{"doc_id", "title", "chunk", "score"}]
-  search(query, method="chunk")  → chunk-level search for buried facts
-  read(doc_id)                   → full document text
-  extract(doc_id, regex)         → regex matches from a doc
-  search_within(doc_id, query)   → relevant windows inside a specific doc
-  verify(doc_id, claim)          → {"found", "match_ratio", "excerpt"}
-  list_docs()                    → [{"doc_id", "title", "chars"}]
-
-Each turn: write Python code OR a SUBMIT line. Never both. Never prose. Never markdown.
-Variables persist across turns. Use print() to see output.
-
-When you have the answer:
-SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]
-"""
 
 MAX_TOKENS = 8000  # approx token budget; conversations over this are dropped
 

@@ -18,7 +18,6 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -194,9 +193,9 @@ def side_by_side(results: list[dict], hop_map: dict[str, int], n: int = 3) -> st
 
 def main(
     run_file: Path = typer.Argument(..., help="Path to out/run_*.json transcript"),
-    questions: Optional[Path] = typer.Option(None, "--questions", "-q",
+    questions: Path | None = typer.Option(None, "--questions", "-q",
         help="Questions JSON with hops field (auto-detected if omitted)"),
-    out: Optional[Path] = typer.Option(None, "--out", "-o",
+    out: Path | None = typer.Option(None, "--out", "-o",
         help="Write side-by-side examples to this markdown file"),
 ) -> None:
     results = json.loads(run_file.read_text())

@@ -35,28 +35,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from src.env.corpus import Corpus
 from src.env.document_env import DocumentExplorationEnv
+from src.policies.qwen_common import SYSTEM_PROMPT
 
 console = Console()
 app = typer.Typer()
 
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
-
-SYSTEM_PROMPT = """You are an agent exploring a document corpus via Python code.
-
-Tools (already imported):
-  search(query, top_k=5)         → [{"doc_id", "title", "chunk", "score"}]
-  search(query, method="chunk")  → chunk-level search for buried facts
-  read(doc_id)                   → full document text
-  extract(doc_id, regex)         → regex matches from a doc
-  search_within(doc_id, query)   → relevant windows inside a specific doc
-  verify(doc_id, claim)          → {"found", "match_ratio", "excerpt"}
-  list_docs()                    → [{"doc_id", "title", "chars"}]
-
-Each turn: write Python code OR a SUBMIT line. Never both. Never prose. Never markdown.
-Variables persist across turns. Use print() to see output.
-
-When you have the answer:
-SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]"""
 
 # Fixed normalization constant — avoids length bias (DR-GRPO style)
 NORM_TOKENS = 256
@@ -246,9 +230,6 @@ def train(
         help="Use 4-bit quantization (disable if PyTorch too old for bitsandbytes)"),
 ) -> None:
     """GRPO fine-tuning from the SFT checkpoint using the document exploration env."""
-    import os
-    os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
-
     console.print("[bold]GRPO Training — Document Exploration[/bold]\n")
     console.print(f"group_size={group_size}, steps={steps}, lr={lr}, temp={temperature}")
     console.print("[dim]beta=0 (no KL), DR-GRPO normalization, skip uniform-reward groups[/dim]\n")
