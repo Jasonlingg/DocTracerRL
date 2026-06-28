@@ -9,17 +9,16 @@ from __future__ import annotations
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict, dataclass
 from typing import Callable
 
 from loguru import logger
+from pydantic import BaseModel
 
 from src.env.corpus import Corpus
 from src.env.document_env import DocumentExplorationEnv
 
 
-@dataclass
-class StepEvent:
+class StepEvent(BaseModel):
     policy: str
     question_id: str
     question: str
@@ -37,7 +36,7 @@ class StepEvent:
     elapsed: float
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return self.model_dump()
 
 
 def run_policy_live(

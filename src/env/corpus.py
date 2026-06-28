@@ -3,34 +3,30 @@
 from __future__ import annotations
 
 import json
-import os
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import faiss
 import numpy as np
 from loguru import logger
+from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
 
-@dataclass
-class Chunk:
+class Chunk(BaseModel):
     doc_id: str
     chunk_id: int
     text: str
     title: str
 
 
-@dataclass
-class SearchResult:
+class SearchResult(BaseModel):
     doc_id: str
     chunk_id: int
     chunk: str
     score: float
 
 
-@dataclass
-class DocumentInfo:
+class DocumentInfo(BaseModel):
     doc_id: str
     title: str
     chars: int

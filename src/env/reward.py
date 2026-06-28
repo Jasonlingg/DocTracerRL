@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+
+from pydantic import BaseModel
 
 
 def parse_submission(action: str) -> tuple[str, list[str]] | None:
@@ -43,8 +44,7 @@ def parse_submission(action: str) -> tuple[str, list[str]] | None:
     return None
 
 
-@dataclass
-class RewardBreakdown:
+class RewardBreakdown(BaseModel):
     answer_score: float
     citation_precision: float
     citation_recall: float

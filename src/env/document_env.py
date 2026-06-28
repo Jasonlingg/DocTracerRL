@@ -8,9 +8,9 @@ Reward: 0 during exploration, verifiable score on submission
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
 
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from src.env.corpus import Corpus
 from src.env.repl import PersistentREPL
@@ -31,8 +31,7 @@ __all__ = [
 ]
 
 
-@dataclass
-class StepRecord:
+class StepRecord(BaseModel):
     step: int
     action: str
     observation: str
@@ -40,13 +39,12 @@ class StepRecord:
     done: bool
 
 
-@dataclass
-class EpisodeInfo:
+class EpisodeInfo(BaseModel):
     question_id: str
     question: str
     gold_answer: str
     gold_citations: list[str]
-    trajectory: list[StepRecord] = field(default_factory=list)
+    trajectory: list[StepRecord] = Field(default_factory=list)
     final_reward: RewardBreakdown | None = None
 
 

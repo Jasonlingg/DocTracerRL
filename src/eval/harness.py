@@ -4,17 +4,16 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
 from typing import Callable
 
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from src.env.corpus import Corpus
 from src.env.document_env import DocumentExplorationEnv, StepRecord
 
 
-@dataclass
-class EvalResult:
+class EvalResult(BaseModel):
     question_id: str
     question: str
     policy_name: str
@@ -24,9 +23,9 @@ class EvalResult:
     citation_recall: float
     efficiency_bonus: float
     steps: int
-    trajectory: list[StepRecord] = field(default_factory=list)
+    trajectory: list[StepRecord] = Field(default_factory=list)
     predicted_answer: str = ""
-    predicted_citations: list[str] = field(default_factory=list)
+    predicted_citations: list[str] = Field(default_factory=list)
     duration_seconds: float = 0.0
 
 
