@@ -85,6 +85,24 @@ def _load_model(checkpoint: str, trainable: bool, load_in_4bit: bool = True) -> 
     return model
 
 
+def _old_log_prob_from_scores(scores: tuple[torch.Tensor, ...], action_ids: torch.Tensor) -> float:
+    """Sum log-prob of the sampled tokens from generate()'s returned scores.
+
+    At temperature=1.0 (this script's default), these scores are mathematically
+    identical to raw model logits — safe to use directly as the "old policy"
+    log-prob for the PPO ratio below, with zero extra forward passes versus
+    recomputing from scratch. If temperature is ever changed from 1.0, this
+    assumption breaks and old-log-prob would need to come from a fresh forward
+    pass instead.
+    """
+    n = min(len(scores), action_ids.shape[0])
+    total = 0.0
+    for i in range(n):
+        log_probs = F.log_softmax(scores[i][0], dim=-1)
+        total += log_probs[action_ids[i]].item()
+    return total
+
+
 def _collect_rollout(
     model: PeftModel,
     tokenizer: AutoTokenizer,
@@ -93,10 +111,12 @@ def _collect_rollout(
     q_idx: int,
     max_steps: int = 10,
     temperature: float = 0.8,
-) -> tuple[list[tuple[torch.Tensor, torch.Tensor]], float]:
+) -> tuple[list[tuple[torch.Tensor, torch.Tensor, float]], float]:
     """Run one episode. Returns (step_data, reward).
 
-    step_data: list of (context_ids, action_ids) tensors (CPU) per assistant turn.
+    step_data: list of (context_ids, action_ids, old_log_prob) per assistant turn,
+    where old_log_prob is captured at generation time for the PPO-clip ratio used
+    when a batch of rollouts is reused across multiple gradient updates.
     Higher temperature (0.8) encourages more diverse rollouts so reward varies within a group.
     """
     q = questions[q_idx]
@@ -107,7 +127,7 @@ def _collect_rollout(
         {"role": "user", "content": f"Question: {q['question']}"},
     ]
 
-    step_data: list[tuple[torch.Tensor, torch.Tensor]] = []
+    step_data: list[tuple[torch.Tensor, torch.Tensor, float]] = []
     total_reward = 0.0
 
     model.eval()
@@ -119,17 +139,20 @@ def _collect_rollout(
             enc = tokenizer(prompt, return_tensors="pt").to(model.device)
             ctx_ids = enc.input_ids
 
-            gen_ids = model.generate(
+            gen_out = model.generate(
                 ctx_ids,
                 attention_mask=enc.attention_mask,
                 max_new_tokens=256,
                 do_sample=True,
                 temperature=temperature,
                 pad_token_id=tokenizer.eos_token_id,
+                output_scores=True,
+                return_dict_in_generate=True,
             )
 
-            action_ids = gen_ids[0][ctx_ids.shape[1]:].cpu()
-            step_data.append((ctx_ids[0].cpu(), action_ids))
+            action_ids = gen_out.sequences[0][ctx_ids.shape[1]:].cpu()
+            old_lp = _old_log_prob_from_scores(gen_out.scores, action_ids)
+            step_data.append((ctx_ids[0].cpu(), action_ids, old_lp))
 
             action = tokenizer.decode(action_ids, skip_special_tokens=True).strip()
             messages.append({"role": "assistant", "content": action})
@@ -204,21 +227,34 @@ def _step_log_prob_and_kl(
     return token_lp.sum(), kl_per_token.sum(), act_len
 
 
+# PPO-clip range and epoch count — reusing each batch of (expensive-to-generate)
+# rollouts for multiple gradient updates instead of one. Generation (multi-turn
+# LLM calls + REPL execution) is the real bottleneck here, not backward passes,
+# so this multiplies gradient signal per rollout at near-zero extra cost. After
+# epoch 1 the policy has moved, so later epochs use an importance-sampling ratio
+# against the generation-time ("old") policy, clipped to keep updates conservative
+# — standard PPO/DAPO mechanics, just applied at the per-turn (not per-token) level
+# to match this codebase's existing per-turn-summed log-probs.
+PPO_CLIP_EPS = 0.2
+PPO_EPOCHS = 3
+
+
 def _grpo_update(
     model: PeftModel,
     optimizer: torch.optim.Optimizer,
-    batch_step_data: list[list[list[tuple[torch.Tensor, torch.Tensor]]]],
+    batch_step_data: list[list[list[tuple[torch.Tensor, torch.Tensor, float]]]],
     batch_rewards: list[list[float]],
 ) -> tuple[float, float, int]:
-    """GRPO gradient accumulation across a BATCH of questions.
+    """GRPO gradient accumulation across a BATCH of questions, PPO_EPOCHS times.
 
     batch_step_data[i] / batch_rewards[i] are the group_size rollouts for the i-th
     question in the batch. Advantages are normalized WITHIN each question's own
     group (GRPO requirement) — but all questions' gradients accumulate into a
-    single optimizer.step(), so one update reflects signal from multiple distinct
-    questions instead of just one. This is what fixes the "ping-pong" variance
-    of single-question-per-step training documented in the literature (Search-R1
-    etc. batch 64-512 questions per step; we use a small batch for cost reasons).
+    single optimizer.step() per epoch, so one update reflects signal from multiple
+    distinct questions instead of just one. This is what fixes the "ping-pong"
+    variance of single-question-per-step training documented in the literature
+    (Search-R1 etc. batch 64-512 questions per step; we use a small batch for cost
+    reasons).
 
     With 7B + 152k vocab, holding all computation graphs simultaneously is
     infeasible. Backward per (question, rollout, step) frees each graph
@@ -228,40 +264,60 @@ def _grpo_update(
     gradient automatically (numerator is 0) — no need to skip it outright, and
     skipping would also skip its KL term, which should still regularize the policy.
 
-    Returns (total_loss, mean_kl_per_token, n_uniform_questions) for logging.
+    Returns (last_epoch_loss, last_epoch_mean_kl, n_uniform_questions) for logging.
     """
-    optimizer.zero_grad()
-    total_loss = 0.0
-    total_kl = 0.0
-    total_kl_tokens = 0
     n_uniform = 0
     batch_n = len(batch_rewards)
 
-    for group_step_data, group_rewards in zip(batch_step_data, batch_rewards):
+    batch_advantages: list[list[float]] = []
+    for group_rewards in batch_rewards:
         if len({round(r, 4) for r in group_rewards}) == 1:
             n_uniform += 1
-
         rewards = torch.tensor(group_rewards, dtype=torch.float32)
-        advantages = ((rewards - rewards.mean()) / (rewards.std() + 1e-8)).tolist()
+        batch_advantages.append(
+            ((rewards - rewards.mean()) / (rewards.std() + 1e-8)).tolist()
+        )
 
-        n_valid = sum(1 for sd in group_step_data if sd)
-        if n_valid == 0:
-            continue
+    total_loss = 0.0
+    total_kl = 0.0
+    total_kl_tokens = 0
 
-        for step_data, adv in zip(group_step_data, advantages):
-            if not step_data:
+    for _epoch in range(PPO_EPOCHS):
+        optimizer.zero_grad()
+        total_loss = 0.0
+        total_kl = 0.0
+        total_kl_tokens = 0
+
+        for group_step_data, advantages in zip(batch_step_data, batch_advantages):
+            n_valid = sum(1 for sd in group_step_data if sd)
+            if n_valid == 0:
                 continue
-            for ctx_ids, action_ids in step_data:
-                lp, kl, n_tok = _step_log_prob_and_kl(model, ctx_ids, action_ids)
-                if n_tok == 0:
+
+            for step_data, adv in zip(group_step_data, advantages):
+                if not step_data:
                     continue
-                piece = (-adv * lp + KL_BETA * kl) / NORM_TOKENS / n_valid / batch_n
-                piece.backward()
-                total_loss += piece.item()
-                total_kl += kl.item()
-                total_kl_tokens += n_tok
-                del lp, kl, piece
-                torch.cuda.empty_cache()
+                for ctx_ids, action_ids, old_lp in step_data:
+                    lp, kl, n_tok = _step_log_prob_and_kl(model, ctx_ids, action_ids)
+                    if n_tok == 0:
+                        continue
+
+                    ratio = torch.exp(lp - old_lp)
+                    surr1 = ratio * adv
+                    surr2 = torch.clamp(ratio, 1 - PPO_CLIP_EPS, 1 + PPO_CLIP_EPS) * adv
+                    policy_loss = -torch.min(surr1, surr2)
+
+                    piece = (policy_loss + KL_BETA * kl) / NORM_TOKENS / n_valid / batch_n
+                    piece.backward()
+                    total_loss += piece.item()
+                    total_kl += kl.item()
+                    total_kl_tokens += n_tok
+                    del lp, kl, piece, ratio, surr1, surr2, policy_loss
+                    torch.cuda.empty_cache()
+
+        torch.nn.utils.clip_grad_norm_(
+            [p for p in model.parameters() if p.requires_grad], max_norm=1.0
+        )
+        optimizer.step()
 
     mean_kl = total_kl / total_kl_tokens if total_kl_tokens > 0 else 0.0
     return total_loss, mean_kl, n_uniform
@@ -360,10 +416,6 @@ def train(
 
         total_loss, mean_kl, n_uniform = _grpo_update(model, optimizer, batch_step_data, batch_rewards)
         total_uniform += n_uniform
-        torch.nn.utils.clip_grad_norm_(
-            [p for p in model.parameters() if p.requires_grad], max_norm=1.0
-        )
-        optimizer.step()
 
         recent_avg = sum(reward_window) / len(reward_window)
         q_ids = [questions[i]["id"] for i in q_indices]

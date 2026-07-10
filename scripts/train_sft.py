@@ -111,6 +111,11 @@ def train(
         save_total_limit=2,
         packing=False,
         report_to="none",
+        # Without this, loss is computed over the entire sequence — including the
+        # long tool-output text (search results, REPL prints) in user turns, which
+        # the model never needs to generate. Qwen2.5 is in TRL's supported model
+        # list, so the chat template is auto-patched with {% generation %} markers.
+        assistant_only_loss=True,
     )
 
     tokenizer.model_max_length = max_seq_len
