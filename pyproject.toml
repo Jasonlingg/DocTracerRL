@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "rlm-explorer"
 version = "0.1.0"
 description = "Gym-compatible RL environment for training LLMs to explore document collections via code execution"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
     "anthropic>=0.39.0",
