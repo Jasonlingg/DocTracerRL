@@ -1,0 +1,118 @@
+# Code Triage Router — Design Spec
+
+## One-line pitch
+
+Train a small open model (Qwen2.5-7B-Instruct, LoRA) with GRPO to triage AI-generated code diffs — deciding whether to ship, verify (tests/lint), escalate to a stronger model, or flag a human — using verifiable, cost-aware rewards. The task is a demonstration instance of a general recipe: taking a hard, ambiguous classification/routing decision and making it RL-trainable via reward design, not a one-off code-review tool.
+
+## Motivation
+
+This project fills a specific gap in the author's track record: prior work (Preference Model — designed RL *environments* for other models to act in; Assort Health — built the *pipeline* around an entity-resolution decision) never included personally training an RL *policy* end-to-end and showing it learned something. This project closes that gap while reusing and extending both threads: RL-environment design (Preference Model) and cost-aware routing on a real judgment call (Assort Health).
+
+A prior project (DocTracerRL/rlm-explorer) attempted GRPO on multi-hop QA and stalled — flat reward curves with 21 SFT examples, sparse/fuzzy trajectory-level reward (F1 across a whole multi-step episode), and a task that was likely beyond a 7B LoRA model's raw capability ceiling. This project is deliberately designed to avoid both failure modes (see "Why this avoids the prior failure mode" below).
+
+## Why this task, not another one
+
+Considered and rejected during brainstorming:
+- **Binary accept/escalate on synthetic garbled voice entities** — thin decision space (1 bit), required building a synthetic TTS→telephony→STT pipeline from scratch, thinner research backing.
+- **Chess via GRPO** — well-documented research finding that general-purpose LLMs plateau far below expert play because pretraining gives them little real chess competence; RL cannot instill capability that pretraining never provided. Same failure shape as DocTracerRL, just relocated.
+- **Negotiation / Werewolf social deduction** — genuinely research-backed (RLVR negotiation papers, ICML Werewolf paper) and high clickbait ceiling, but orphaned from the author's resume narrative and a larger build (multi-agent loops) for a ~1 month timeline.
+
+Code triage was selected because:
+1. It is something the author does mentally, every day, when using AI coding assistants — labeled data (git history: was a commit followed by a fix shortly after?) is free and self-renewing, and the tool remains useful after the project ends.
+2. The underlying judgment ("does this diff look right given the task and cheap mechanical signals") is within a 7B instruct model's existing general-reasoning competence — unlike chess, this is not asking the model to exercise a narrow skill pretraining never gave it.
+3. It extends to a richer, multi-way action space (see below) rather than a binary decision, without requiring capability the base model lacks.
+4. It is directly relevant to a voice-AI/healthcare-agent employer (Assort Health) as well as to general "RL for agent infrastructure" roles.
+
+## Why this avoids the prior project's failure mode
+
+| DocTracerRL failure cause | How this project is designed differently |
+|---|---|
+| Reward was sparse/fuzzy (F1 across a 10-step trajectory) — hard credit assignment | Reward is computed per single-turn decision, binary-gated on mechanical, unambiguous signals (test pass/fail, lint pass/fail) |
+| SFT warm-start was 21 examples — model had near-zero competence, so GRPO groups were mostly all-zero-reward (no gradient) | SFT warm-start target is ≥300 examples; a cheap GRPO diagnostic (15-20 steps) is run and inspected *before* committing to the full run, specifically to catch a repeat of the all-zero-reward cold start early |
+| Task (multi-hop QA synthesis) may have exceeded the base model's raw capability ceiling | Task (triage judgment from evidence) is within general-reasoning competence a 7B instruct model already has, evidenced by the routing/classification literature below |
+| No clear "why did it fail" diagnosis available afterward | A known research finding (xRouter: small open models often collapse to simple strategies rather than sophisticated orchestration) gives an interpretable, citable explanation if the result is weak, rather than an ambiguous null result |
+
+## Research grounding
+
+- **[xRouter (Salesforce AI Research, arXiv 2510.08439)](https://arxiv.org/abs/2510.08439)** — the direct methodological anchor. Trains Qwen2.5-7B-Instruct with a GRPO-style algorithm (DAPO) and reward `R_final = R_binary × (K − λC)`: binary task success gates everything, cost only matters when the answer was right. Achieves near-GPT-5 accuracy at ~1/8th cost on Olympiad Bench. Documents a key limitation directly relevant here: *"complex orchestration behaviors... do not naturally emerge from standard RL training"* for small open models, and that Qwen2.5 trains more effectively as a router than newer Qwen3 variants (which bias toward internal reasoning over tool use). Open training code and reward implementation available at [SalesforceAIResearch/xRouter](https://github.com/SalesforceAIResearch/xRouter) (Apache 2.0), built on `verl`.
+- **[Rewards as Labels: Revisiting RLVR from a Classification Perspective (Zhai et al., Feb 2026, arXiv 2602.05630)](https://arxiv.org/pdf/2602.05630)** — formalizes RLVR as classification: verifiable outcome rewards partition rollouts into correct/incorrect sets, functioning as binary labels. This is the theoretical grounding for the project's core claim — that RL is a general recipe for training hard classification/routing decisions, not something specific to this task.
+- **[TruthRL (Wei et al., 2025, arXiv 2509.25760)](https://arxiv.org/pdf/2509.25760)** and multi-reward GRPO literature — precedent for ternary/multi-way reward shaping (correct / abstain-or-escalate / wrong) with asymmetric penalties, which this project's cost-aware multi-action reward extends.
+- **[SWE-PRBench](https://www.researchgate.net/publication/403262187_SWE-PRBench_Benchmarking_AI_Code_Review_Quality_Against_Pull_Request_Feedback)** (350 human-annotated PRs) and **[SWE-Review-Bench](https://arxiv.org/pdf/2607.06065)** (built on SWE-bench Verified, multi-quality candidate PRs with executable tests) — establish that frontier models catch only 15-31% of human-flagged issues on diff-only review, giving a documented, citable context for the eval (not the primary claim to beat, but the honest backdrop).
+- **Learned routing vs. fixed thresholds** — well-established that trained routers beat static confidence-threshold cascades ([RouteLLM](https://arxiv.org/pdf/2410.13284), routing survey [arXiv 2603.04445](https://arxiv.org/html/2603.04445v2)), with a documented caveat that learned routers can underperform under distribution shift — motivating the entity-disjoint train/test split used here.
+- **Known counter-example, explicitly out of scope for comparison:** general-purpose LLM chess via GRPO plateaus far below expert level because pretraining does not give the model real chess competence ([arXiv 2507.00726](https://arxiv.org/html/2507.00726v2)). Cited here only to justify why code triage (general reasoning) was chosen over a narrow-skill domain (chess).
+
+## What is NOT proven, stated honestly
+
+- No published work has shown RL specifically (vs. supervised fine-tuning) winning on a *single-shot* routing/triage decision at small scale — most production routers are supervised classifiers. This project's SFT-vs-GRPO comparison is the genuinely open part of the experiment, not a guaranteed win.
+- Whether a 3-7B model can reliably distinguish "task-diff mismatch" from "looks fine but is subtly wrong" using only diff + mechanical signals (no code execution beyond existing tests) is untested at this scale specifically.
+
+## The decision (task definition)
+
+Given `(task_description, diff, mechanical_signals)` where `mechanical_signals` = lint pass/fail, type-check pass/fail, existing test suite pass/fail — output one action:
+
+| Action | Meaning | Relative cost |
+|---|---|---|
+| `SHIP` | Trust it, ship as-is | ~0 |
+| `RUN_TESTS` | Run the test suite before deciding (if not already run) | low |
+| `LINT_TYPECHECK` | Run static analysis before deciding | low |
+| `ESCALATE_STRONG_MODEL` | Send to a stronger model to redo/review | high |
+
+v1 scope is these four actions. `ASK_CLARIFY` (task was ambiguous) and `FLAG_HUMAN` (high-stakes change) are explicitly deferred to a v2 stretch goal — they require fuzzier ground truth (ambiguity, "high-stakes" labeling) that is harder to verify mechanically, and adding them to v1 risks repeating DocTracerRL's mistake of stacking multiple unverified risks at once.
+
+## Reward design
+
+```
+reward = task_success_indicator × (K − λ · cost(action)) − format_penalty
+```
+
+- `task_success_indicator` ∈ {0, 1}: did the final resolved code (after whatever action was taken) actually pass tests / match the task? Binary-gated exactly as in xRouter — a wrong `SHIP` is a hard failure regardless of how cheap it was.
+- `cost(action)`: fixed, ordered cost per action (SHIP cheapest, ESCALATE most expensive), following xRouter's `λC` term.
+- `format_penalty`: applied if output is unparseable (lesson carried over from DocTracerRL's reward-banking incident — never let a malformed action be free).
+
+## Data pipeline
+
+1. Generate ≥500 `(task, diff)` pairs, primarily by running a cheap coding model against SWE-bench-style tasks (controllable difficulty, executable tests already exist, no dependency on having enough personal git history). The author's own git history (commit followed by a same-day fix commit as a free negative label; no follow-up as a free positive label) is used as a secondary, smaller supplementary set to ground the eval in real daily-use examples, not as the primary source.
+2. Label each pair mechanically: run existing tests + lint + type-check, record pass/fail. No model-as-judge labeling for ground truth.
+3. Split train/eval by task/repo (not by individual diff) to avoid leakage, mirroring the entity-disjoint-split lesson from routing literature.
+4. Generate ≥300 SFT reasoning traces (Claude-labeled hindsight-optimal action + short justification) for warm-start, avoiding the 21-example mistake from DocTracerRL.
+
+## Training
+
+- Base model: Qwen2.5-7B-Instruct (matches xRouter exactly, de-risking "does this model work as a router at all").
+- SFT warm-start with `assistant_only_loss=True` (lesson carried over from the prior project).
+- GRPO via TRL's `GRPOTrainer` (not a hand-rolled loop — the custom PPO-clip/KL loop from DocTracerRL was never fully verified end-to-end; TRL's implementation is proven and removes one full axis of infrastructure risk).
+- Infra: existing RunPod + pinned-`requirements.txt` workflow (proven in prior project; no new infra risk introduced).
+- **Mandatory gate:** a 15-20 step, ≤$5 diagnostic run before committing to the full budget. If reward is flat (repeating the all-zero-advantage-group failure), stop and diagnose before spending further — this check did not exist early enough in the prior project.
+
+## Evaluation
+
+Five-policy comparison on held-out, task-disjoint data: always-SHIP, always-ESCALATE, tuned lint/test-pass threshold rule, SFT-only, GRPO. Primary metric: accuracy (task success under the chosen action) vs. cost, plotted as a frontier. Secondary, contextual (not the primary claim): compare against SWE-PRBench's documented 15-31% frontier-model diff-review catch rate, to honestly frame what kind of gap this is and is not closing.
+
+## Success criteria (see SMART goals for schedule)
+
+- **Must-have:** GRPO (or SFT, reported honestly either way) beats the tuned threshold baseline on the accuracy-cost frontier on held-out data.
+- **Stretch:** GRPO measurably beats SFT-only, evidencing that the binary-gated cost-aware reward adds something supervised learning on hindsight labels does not.
+- **Failure is still reportable:** if GRPO collapses to a simple strategy (e.g., always escalates or always ships once tests pass), this replicates xRouter's own documented small-model finding and is written up as such — not as an unexplained null result.
+
+## Deliverables
+
+1. Training + eval code, in a new repository (not inside rlm-explorer — see Approach C from brainstorming: TRL's proven loop, fresh dependency set, no coupling to the unfinished DocTracerRL project).
+2. Results write-up: five-policy frontier table/plot, honest statement of what was and wasn't beaten, explicit framing as "one instance of a general RL-for-classification recipe" (citing the Rewards-as-Labels paper) rather than a claim to have solved code review.
+3. A Claude Code skill (e.g. `/ship-check`) wrapping the best-performing checkpoint, usable on a real diff. MCP server wrapper is an explicit stretch goal, not required for v1.
+
+## SMART goals / schedule (4 weeks)
+
+1. **Data pipeline** — ≥500 labeled `(task, diff, signals)` triples, class balance checked. *End of week 1.*
+2. **Baselines** — always-SHIP / always-ESCALATE / tuned-threshold scored on held-out data. *End of week 1.*
+3. **SFT warm-start** — ≥300 reasoning traces, `assistant_only_loss=True`, checkpoint beats always-SHIP baseline. *End of week 2.*
+4. **Cheap GRPO diagnostic** — 15-20 steps, ≤$5, explicit go/no-go decision recorded before further spend. *Start of week 3.*
+5. **Full GRPO run** — 75-150 steps, ≤$50 total budget. *End of week 3.*
+6. **Final eval** — five-policy frontier table; one true, specific sentence written about the result either way. *End of week 3.*
+7. **Ship the artifact** — Claude Code skill, used by the author on at least one real PR. *End of week 4.*
+8. **Write-up** — README/post citing xRouter, Rewards-as-Labels, and TruthRL; states the result honestly; frames the recipe as generalizable beyond code triage. *End of week 4.*
+
+## Risks
+
+- **Base rate of usable diffs may be skewed** (e.g., cheap models mostly succeed or mostly fail on the chosen tasks), leaving too little class balance for a real decision boundary — mitigated by explicitly checking class balance in goal 1 and adjusting task difficulty/model choice if skewed.
+- **RL may not beat SFT** — the genuinely open part of the experiment; treated as a legitimate reportable outcome, not a failure of the project.
+- **TRL version/dependency conflicts** — the prior project lost significant time to unpinned dependency resolution on the training pod; this project starts with a pinned `requirements.txt` from day one rather than discovering the need for one mid-project.
