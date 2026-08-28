@@ -1052,6 +1052,28 @@ git add scripts/generate_dataset.py tests/test_generate_dataset_script.py
 git commit -m "add end-to-end dataset generation script with class balance gate"
 ```
 
+- [ ] **Step 6: Manual eval-integrity sanity check — REQUIRED before trusting the pipeline at scale**
+
+A self-built eval is only as trustworthy as its construction (see spec eval-integrity discussion). Mechanical labels can still be wrong — e.g. a flaky test, a test that passes for the wrong reason, or a `hindsight_label` mapping that doesn't match how a human would actually judge the example. Before generating the full 500+ example dataset, run the pipeline on a small batch (~20-30 examples) and manually read every one:
+
+```bash
+python scripts/generate_dataset.py --swebench-tasks data/sample_tasks.json \
+  --git-history-repo /Users/jasonling/Documents/GitHub/rlm-explorer \
+  --output-dir data/sanity_check
+```
+
+For each of the ~20-30 examples in `data/sanity_check/train.jsonl` and `eval.jsonl`, read the `task_description`, `diff`, `signals`, and `label` together and ask: "would I have made this same call?" Record the fraction you disagree with in `docs/eval_sanity_check.md` (a plain note, not code). If disagreement is high (rough guideline: more than ~10-15% of examples), the `hindsight_label` mapping in `src/data/swebench_source.py` (Task 4) or the mechanical labeling in `src/data/labeling.py` (Task 3) needs revisiting — fix before proceeding to full-scale generation in Step 7 below, not after.
+
+Only proceed to generating the full dataset once this check passes.
+
+- [ ] **Step 7: Generate the full dataset**
+
+```bash
+python scripts/generate_dataset.py --swebench-tasks data/full_tasks.json \
+  --git-history-repo /Users/jasonling/Documents/GitHub/rlm-explorer \
+  --output-dir data/generated
+```
+
 ---
 
 ## Task 8: Baseline policies
