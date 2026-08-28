@@ -100,6 +100,19 @@ Five-policy comparison on held-out, task-disjoint data: always-SHIP, always-ESCA
 2. Results write-up: five-policy frontier table/plot, honest statement of what was and wasn't beaten, explicit framing as "one instance of a general RL-for-classification recipe" (citing the Rewards-as-Labels paper) rather than a claim to have solved code review.
 3. A Claude Code skill (e.g. `/ship-check`) wrapping the best-performing checkpoint, usable on a real diff. MCP server wrapper is an explicit stretch goal, not required for v1.
 
+## Demo & write-up assets
+
+Decided during scoping to make the result legible and shareable, not just correct. These are deliverables, not afterthoughts — the logging requirements below must be in place *before* the full GRPO run and final eval (goals 5-6), since transcripts cannot be reconstructed after the fact.
+
+- **Lead with the failure rate, not the model.** Open the write-up with SWE-PRBench's documented number (frontier models catch only 15-31% of human-flagged issues on diff-only review) before introducing the router — sets up the problem as bigger than the reader expects.
+- **Name the comparison models concretely** in the write-up (e.g. "catches what Claude Opus / GPT-5 misses reviewing its own generated code"), not "a frontier model," so the claim is specific and checkable.
+- **Frame the premise as the problem**, not just the fix: AI-written code is routinely reviewed only by more AI (often the same model), with no independent check — state this plainly as the setup being indicted.
+- **Terminal recording (~15 seconds):** a real diff, the skill flags it live, its reasoning printed — captured once the Claude Code skill (goal 7) exists. This is the single highest-priority asset; a claim people can watch happen beats a claim they have to trust.
+- **Logging requirement (applies to goals 5 and 6):** save full transcripts, not just pass/fail, for every eval example during the final five-policy eval — enables mining a "gallery of catches" (2-3 vivid, individually-explainable real cases) after the fact without re-running training or eval.
+- **Fixed test case(s), frozen before training starts:** pick 1-2 representative examples specifically to re-run through every checkpoint (always-SHIP baseline, SFT-only, GRPO) for a before/after transcript showing the judgment visibly improving across training stages.
+- **Mine real embarrassing bugs**, not only synthetic ones, from the author's own git-history supplementary set (data pipeline step 1) as headline examples — "here's a bug that cost real time, that the router would have caught" is a stronger hook than an aggregate statistic.
+- **Give the project a short, memorable name** (not "the code triage router") before the write-up is published, so it reads as a named thing rather than a generic description.
+
 ## SMART goals / schedule (4 weeks)
 
 1. **Data pipeline** — ≥500 labeled `(task, diff, signals)` triples, class balance checked. *End of week 1.*
