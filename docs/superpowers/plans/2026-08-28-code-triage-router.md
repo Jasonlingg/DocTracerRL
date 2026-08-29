@@ -1668,6 +1668,65 @@ Expected cost: <=$50 total for the project's training budget (spec SMART goal 5)
 
 ---
 
+## Task 11.5 (OPTIONAL, stretch): Qwen2.5-Coder-3B ablation
+
+**Only attempt this task after Task 11 Step 7 has produced a working `checkpoints/grpo_full` with a non-flat reward curve.** This is a bonus ablation for the write-up, not required for the project's must-have success criteria (spec §Success criteria) — do not let it delay Tasks 12-14.
+
+**Rationale:** research surfaced during planning found that fine-tuned Qwen2.5-Coder-3B matches larger 7B variants specifically on tool-invocation/routing-style tasks (arXiv 2603.05515), making it a cheap, informative second data point — same pipeline, smaller and more code-specialized base model. Qwen2.5-7B-Instruct remains the primary model (it is the exact model xRouter validated for this task shape, per spec §Research grounding) — this ablation does not replace it.
+
+**Files:**
+- No new files. Reuses `scripts/run_sft.py` (Task 10) and `scripts/run_grpo.py` (Task 11) with a different `--base-model` value.
+
+- [ ] **Step 1: Add a `--base-model` CLI option to `scripts/run_sft.py` and `scripts/run_grpo.py`**
+
+In both scripts, change the hardcoded `_BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"` to a `typer.Option` with that value as the default, e.g.:
+
+```python
+@app.command()
+def main(
+    # ...existing options...
+    base_model: str = typer.Option("Qwen/Qwen2.5-7B-Instruct", "--base-model"),
+) -> None:
+```
+
+and pass `base_model` through to the `AutoModelForCausalLM.from_pretrained(...)` / `SFTTrainer(model=base_model, ...)` calls in place of the module-level constant.
+
+- [ ] **Step 2: Run SFT warm-start on Qwen2.5-Coder-3B**
+
+```bash
+python scripts/run_sft.py --base-model Qwen/Qwen2.5-Coder-3B-Instruct \
+  --output-dir checkpoints/sft_qwen_coder_3b
+```
+
+- [ ] **Step 3: Run the same $5 diagnostic gate as Task 11 Step 6, on the 3B checkpoint**
+
+```bash
+python scripts/run_grpo.py --base-model Qwen/Qwen2.5-Coder-3B-Instruct \
+  --sft-checkpoint checkpoints/sft_qwen_coder_3b \
+  --steps 20 --group-size 4 --output-dir checkpoints/grpo_coder_3b_diagnostic
+```
+
+Same go/no-go rule as Task 11 Step 6 applies. If flat, stop here and report only the 7B result — this ablation is optional precisely so a negative result here costs nothing.
+
+- [ ] **Step 4: Full run on the 3B model (only after Step 3's go decision)**
+
+```bash
+python scripts/run_grpo.py --base-model Qwen/Qwen2.5-Coder-3B-Instruct \
+  --sft-checkpoint checkpoints/sft_qwen_coder_3b \
+  --steps 150 --group-size 8 --output-dir checkpoints/grpo_coder_3b_full
+```
+
+- [ ] **Step 5: Add the 3B result as a sixth row in the eval harness (Task 12) frontier table**, alongside the five 7B-based policies, so the write-up (Task 14) can honestly compare model sizes on the same eval set.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add scripts/run_sft.py scripts/run_grpo.py
+git commit -m "add --base-model option for Qwen2.5-Coder-3B ablation"
+```
+
+---
+
 ## Task 12: Five-policy eval harness with transcript logging
 
 **Files:**
