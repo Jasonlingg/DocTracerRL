@@ -2082,7 +2082,156 @@ Run `/ship-check` on at least one real diff from your own work, per spec SMART g
 
 ---
 
-## Task 14: Write-up
+## Task 14: Quantize and package for Ollama (stretch — CPU-runnable on any laptop)
+
+**Files:**
+- Create: `scripts/export_gguf.py`
+- Create: `Modelfile`
+- Test: `tests/test_export_gguf.py`
+
+**Interfaces:**
+- Consumes: the merged GRPO+LoRA checkpoint from Task 11 (or the ablation checkpoint from an optional Qwen2.5-Coder-3B run, if done).
+- Produces: a quantized `.gguf` file and an Ollama `Modelfile`, so the trained router runs on CPU via Ollama on any laptop, not just the training pod. This is optional/stretch scope — it demonstrates the "small, fast, cheap, runs anywhere" claim concretely, per the project's SLM-efficiency framing, but is not required for the core success criteria in the spec.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_export_gguf.py
+from pathlib import Path
+
+from scripts.export_gguf import build_modelfile_content
+
+
+def test_build_modelfile_content_references_gguf_and_system_prompt():
+    content = build_modelfile_content(
+        gguf_path=Path("ship-check-q4.gguf"), system_prompt="You triage diffs."
+    )
+    assert "FROM ./ship-check-q4.gguf" in content
+    assert "You triage diffs." in content
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/test_export_gguf.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named 'scripts.export_gguf'`
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# scripts/export_gguf.py
+"""Merge the LoRA adapter into the base model, convert to GGUF, and quantize
+to 4-bit so the trained router runs on CPU via Ollama on a consumer laptop.
+
+Stretch deliverable — demonstrates the project's small/fast/cheap claim
+concretely rather than only in a training-pod benchmark. Requires
+llama.cpp's convert script and quantize binary, installed separately on
+the pod (not part of requirements.txt — this is a one-time export step,
+not a training dependency).
+"""
+
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+
+import typer
+from loguru import logger
+from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from src.data.sft_traces import SYSTEM_PROMPT
+
+app = typer.Typer()
+
+_BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+
+
+def build_modelfile_content(gguf_path: Path, system_prompt: str) -> str:
+    return f'FROM ./{gguf_path.name}\nSYSTEM "{system_prompt}"\n'
+
+
+@app.command()
+def main(
+    checkpoint: Path = typer.Option(Path("checkpoints/grpo_full"), "--checkpoint"),
+    output_dir: Path = typer.Option(Path("dist/ollama"), "--output-dir"),
+    llama_cpp_dir: Path = typer.Option(Path("llama.cpp"), "--llama-cpp-dir"),
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info("Loading and merging LoRA adapter into base model...")
+    tokenizer = AutoTokenizer.from_pretrained(_BASE_MODEL)
+    base_model = AutoModelForCausalLM.from_pretrained(_BASE_MODEL, device_map="auto")
+    model = PeftModel.from_pretrained(base_model, str(checkpoint))
+    merged = model.merge_and_unload()
+
+    merged_dir = output_dir / "merged"
+    merged.save_pretrained(merged_dir)
+    tokenizer.save_pretrained(merged_dir)
+    logger.info(f"Merged model saved to {merged_dir}")
+
+    gguf_fp16 = output_dir / "ship-check-fp16.gguf"
+    subprocess.run(
+        [
+            "python", str(llama_cpp_dir / "convert_hf_to_gguf.py"),
+            str(merged_dir), "--outfile", str(gguf_fp16),
+        ],
+        check=True,
+    )
+
+    gguf_q4 = output_dir / "ship-check-q4.gguf"
+    subprocess.run(
+        [
+            str(llama_cpp_dir / "llama-quantize"),
+            str(gguf_fp16), str(gguf_q4), "Q4_K_M",
+        ],
+        check=True,
+    )
+    logger.info(f"Quantized GGUF saved to {gguf_q4}")
+
+    modelfile_path = output_dir / "Modelfile"
+    modelfile_path.write_text(build_modelfile_content(gguf_q4, SYSTEM_PROMPT))
+    logger.info(f"Modelfile written to {modelfile_path}")
+    logger.info(
+        f"Run `ollama create ship-check -f {modelfile_path}` on any laptop "
+        f"with the {gguf_q4.name} file present to install it."
+    )
+
+
+if __name__ == "__main__":
+    app()
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/test_export_gguf.py -v`
+Expected: PASS (1 passed) — this test only exercises `build_modelfile_content`, no GPU or llama.cpp binary needed.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add scripts/export_gguf.py tests/test_export_gguf.py
+git commit -m "add GGUF export and Ollama packaging for CPU-runnable deployment"
+```
+
+- [ ] **Step 6: Run the export on the pod and verify it runs on CPU**
+
+```bash
+git clone https://github.com/ggerganov/llama.cpp
+python scripts/export_gguf.py --checkpoint checkpoints/grpo_full --llama-cpp-dir llama.cpp
+```
+
+Then, on a laptop (not the pod) with the resulting `dist/ollama/ship-check-q4.gguf` and `Modelfile` copied over and Ollama installed:
+
+```bash
+ollama create ship-check -f Modelfile
+ollama run ship-check "Task: ... Diff: ... Signals: ..."
+```
+
+Confirm it produces a valid `ACTION: <action>` output on CPU, with no GPU. Record the tokens/sec observed — this is a concrete number for the write-up's SLM-efficiency claim ("runs on a laptop CPU at N tokens/sec, no cloud dependency").
+
+---
+
+## Task 15: Write-up
 
 **Files:**
 - Create: `README.md`
@@ -2114,18 +2263,20 @@ git commit -m "add project write-up"
 ## Self-Review Notes
 
 **Spec coverage check:**
-- Motivation/gap-filling — Task list overall; explained in README (Task 14).
+- Motivation/gap-filling — Task list overall; explained in README (Task 15).
 - Task definition (4 actions) — `Action` enum, Task 2.
 - Reward design — Task 9.
-- Data pipeline steps 1-4 — Tasks 4, 5, 6, 10.
+- Data pipeline steps 1-4 (including the shortcut-resistance requirement) — Tasks 4, 5, 6, 7, 10. Note: Task 4's `hindsight_label` and Task 7's generation script encode the current signal→label mapping; per the spec's shortcut-resistance requirement (§Data pipeline step 4), these need a follow-up update before execution to inject the required ≥20% signal-label-mismatch examples — flagged here as a known gap between this plan and the spec's latest revision, to be resolved before Task 7 is executed, not silently left inconsistent.
 - Training (base model, SFT, GRPO, mandatory gate) — Tasks 10, 11.
-- Evaluation (five-policy, frontier) — Task 12.
-- Success criteria (must-have/stretch/failure-is-reportable) — recorded as the go/no-go note in Task 11 Step 6 and the honest-sentence requirement in Task 14 Step 1.7.
-- Deliverables (repo, write-up, skill) — Tasks 1-14 collectively; skill specifically Task 13.
-- Demo & write-up assets — Task 12 (transcript/gallery logging), Task 13 Step 7 (terminal recording), Task 14 (all remaining bullets).
-- SMART goals 1-8 — mapped 1:1 to Tasks 7, 8, 10, 11 (steps 6-7), 12, 13, 14.
-- Risks — class balance gate in Task 7; pinned requirements in Task 1; SFT-vs-GRPO open question surfaced honestly in Task 14 Step 1.7.
+- Evaluation (five-policy, frontier, shortcut-detection check) — Task 12 covers the five-policy frontier; the spec's shortcut-detection check (§Evaluation) is not yet a task — same follow-up as above.
+- Success criteria (must-have/stretch/failure-is-reportable) — recorded as the go/no-go note in Task 11 Step 6 and the honest-sentence requirement in Task 15 Step 1.7.
+- Deliverables (repo, write-up, skill) — Tasks 1-15 collectively; skill specifically Task 13; CPU/Ollama packaging as an explicit stretch deliverable, Task 14.
+- Demo & write-up assets — Task 12 (transcript/gallery logging), Task 13 Step 7 (terminal recording), Task 14 Step 6 (tokens/sec on CPU, a concrete SLM-efficiency number), Task 15 (all remaining bullets).
+- SMART goals 1-8 — mapped 1:1 to Tasks 7, 8, 10, 11 (steps 6-7), 12, 13, 15. Task 14 (quantization/Ollama) is additive stretch scope beyond the original 8 SMART goals, not a renumbering of them.
+- Risks — class balance gate in Task 7; pinned requirements in Task 1; SFT-vs-GRPO open question surfaced honestly in Task 15 Step 1.7; shortcut-learning risk (see gap noted above) still needs its data-generation and eval tasks updated to match the spec.
 
 **Placeholder scan:** Task 2 originally contained a stray block of invalid `</br>` lines from a copy artifact — corrected in Step 3b within that task rather than left as a silent error.
 
-**Type consistency check:** `Action`, `MechanicalSignals`, `TriageExample` (Task 2) are used with consistent field names and types across Tasks 3-13 (`signals.test_pass`, `example.label`, `ACTION_COST[action]`). `EvalResult`/`EvalTranscript` (Task 12) are used consistently in `scripts/run_eval.py`. `parse_action` (Task 11) is reused as-is by the skill wrapper (Task 13) rather than reimplemented.
+**Type consistency check:** `Action`, `MechanicalSignals`, `TriageExample` (Task 2) are used with consistent field names and types across Tasks 3-14 (`signals.test_pass`, `example.label`, `ACTION_COST[action]`). `EvalResult`/`EvalTranscript` (Task 12) are used consistently in `scripts/run_eval.py`. `parse_action` (Task 11) is reused as-is by the skill wrapper (Task 13) rather than reimplemented. `SYSTEM_PROMPT` (Task 10, `src/data/sft_traces.py`) is reused as-is by Task 14's `build_modelfile_content` rather than redefined.
+
+**Known open item, called out explicitly rather than hidden:** the spec was revised (shortcut-resistance requirement, §Data pipeline step 4 and §Evaluation) after this plan's Tasks 4, 7, and 12 were originally written. Before executing Task 7 (full-scale data generation), Task 4's `hindsight_label` needs a companion function that deliberately constructs signal-label-mismatch examples, and Task 12 needs the shortcut-detection subset scoring added. This should be resolved as a small addendum to Tasks 4/7/12 before execution begins, not discovered mid-run.
