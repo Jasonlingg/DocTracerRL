@@ -4,10 +4,17 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 
+# An exported-but-EMPTY key shadows .env: load_dotenv() defaults to
+# override=False and treats "" as already-set, so the blank value wins and
+# every downstream key check fails with a confusing "missing API key".
+for _k in ("ANTHROPIC_API_KEY", "DEMO_API_KEY"):
+    if os.environ.get(_k, None) == "":
+        del os.environ[_k]
 load_dotenv()
 
 import typer

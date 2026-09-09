@@ -11,6 +11,8 @@ Key design choices (informed by DAPO/DR-GRPO/Search-R1 literature):
 - beta=0.001 KL penalty against frozen base weights (adapter disabled) — prevents
   late-stage format collapse documented when training from an Instruct model with beta=0.
 - Fixed token normalization: avoids length bias from per-episode normalization
+- Per-token PPO clipping: avoids exponential variance collapse of turn-summed ratios
+- Fresh forward pass for rollout action log-probs to eliminate logits warper distortion
 - A question's group naturally gets zero advantage-driven gradient when all its
   rewards are identical — no explicit skip needed, and skipping would also skip
   its KL term, which should still regularize the policy.
@@ -26,25 +28,28 @@ from __future__ import annotations
 
 import json
 import os
-import random
 from pathlib import Path
+import random
+from typing import TYPE_CHECKING, Any
 
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
+from loguru import logger
+from rich.console import Console
 import torch
 import torch.nn.functional as F
-import typer
-from loguru import logger
-from peft import PeftModel, prepare_model_for_kbit_training
-from rich.console import Console
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+import typer
 
 from src.env.corpus import Corpus
 from src.env.document_env import DocumentExplorationEnv
 from src.policies.qwen_common import SYSTEM_PROMPT
 
+if TYPE_CHECKING:
+    from peft import PeftModel
+
 console = Console()
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_enable=False)
 
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
@@ -65,7 +70,9 @@ def _bnb_config() -> BitsAndBytesConfig:
     )
 
 
-def _load_model(checkpoint: str, trainable: bool, load_in_4bit: bool = True) -> PeftModel:
+def _load_model(checkpoint: str, trainable: bool, load_in_4bit: bool = True) -> Any:
+    from peft import PeftModel, prepare_model_for_kbit_training
+
     base = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
         quantization_config=_bnb_config() if load_in_4bit else None,
@@ -85,39 +92,52 @@ def _load_model(checkpoint: str, trainable: bool, load_in_4bit: bool = True) -> 
     return model
 
 
-def _old_log_prob_from_scores(scores: tuple[torch.Tensor, ...], action_ids: torch.Tensor) -> float:
-    """Sum log-prob of the sampled tokens from generate()'s returned scores.
+def _prepare_ctx(ctx_ids: torch.Tensor) -> torch.Tensor:
+    """Truncate context from the left to bound backward memory consistently."""
+    if ctx_ids.shape[0] > MAX_CTX_TOKENS:
+        return ctx_ids[-MAX_CTX_TOKENS:]
+    return ctx_ids
 
-    At temperature=1.0 (this script's default), these scores are mathematically
-    identical to raw model logits — safe to use directly as the "old policy"
-    log-prob for the PPO ratio below, with zero extra forward passes versus
-    recomputing from scratch. If temperature is ever changed from 1.0, this
-    assumption breaks and old-log-prob would need to come from a fresh forward
-    pass instead.
+
+@torch.no_grad()
+def _compute_token_log_probs(
+    model: Any, ctx_ids: torch.Tensor, action_ids: torch.Tensor
+) -> torch.Tensor:
+    """Compute exact per-token log-probs for action tokens given context.
+
+    Uses a clean forward pass rather than generate()'s scores, avoiding any
+    distortion from temperature, top-k, top-p, or other logits warpers.
     """
-    n = min(len(scores), action_ids.shape[0])
-    total = 0.0
-    for i in range(n):
-        log_probs = F.log_softmax(scores[i][0], dim=-1)
-        total += log_probs[action_ids[i]].item()
-    return total
+    if action_ids.numel() == 0:
+        return torch.empty(0)
+
+    device = next(model.parameters()).device
+    ctx = _prepare_ctx(ctx_ids).to(device)
+    act = action_ids.to(device)
+    ctx_len = ctx.shape[0]
+    act_len = act.shape[0]
+
+    full_ids = torch.cat([ctx, act]).unsqueeze(0)
+    logits = model(full_ids).logits[0]
+    act_logits = logits[ctx_len - 1 : ctx_len - 1 + act_len]
+    act_log_probs = F.log_softmax(act_logits, dim=-1)
+    token_lp = act_log_probs.gather(1, act.unsqueeze(1)).squeeze(1)
+    return token_lp.detach().cpu()
 
 
 def _collect_rollout(
-    model: PeftModel,
+    model: Any,
     tokenizer: AutoTokenizer,
     env: DocumentExplorationEnv,
     questions: list[dict],
     q_idx: int,
     max_steps: int = 10,
     temperature: float = 0.8,
-) -> tuple[list[tuple[torch.Tensor, torch.Tensor, float]], float]:
+) -> tuple[list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], float]:
     """Run one episode. Returns (step_data, reward).
 
-    step_data: list of (context_ids, action_ids, old_log_prob) per assistant turn,
-    where old_log_prob is captured at generation time for the PPO-clip ratio used
-    when a batch of rollouts is reused across multiple gradient updates.
-    Higher temperature (0.8) encourages more diverse rollouts so reward varies within a group.
+    step_data: list of (context_ids, action_ids, old_token_log_probs) per assistant turn,
+    where old_token_log_probs is captured via clean forward pass for the PPO-clip ratio.
     """
     q = questions[q_idx]
     env.reset(question_idx=q_idx)
@@ -127,7 +147,7 @@ def _collect_rollout(
         {"role": "user", "content": f"Question: {q['question']}"},
     ]
 
-    step_data: list[tuple[torch.Tensor, torch.Tensor, float]] = []
+    step_data: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = []
     total_reward = 0.0
 
     model.eval()
@@ -146,13 +166,15 @@ def _collect_rollout(
                 do_sample=True,
                 temperature=temperature,
                 pad_token_id=tokenizer.eos_token_id,
-                output_scores=True,
                 return_dict_in_generate=True,
             )
 
             action_ids = gen_out.sequences[0][ctx_ids.shape[1]:].cpu()
-            old_lp = _old_log_prob_from_scores(gen_out.scores, action_ids)
-            step_data.append((ctx_ids[0].cpu(), action_ids, old_lp))
+            if action_ids.numel() > 0:
+                old_token_lp = _compute_token_log_probs(model, ctx_ids[0], action_ids)
+            else:
+                old_token_lp = torch.empty(0)
+            step_data.append((ctx_ids[0].cpu(), action_ids, old_token_lp))
 
             action = tokenizer.decode(action_ids, skip_special_tokens=True).strip()
             messages.append({"role": "assistant", "content": action})
@@ -175,9 +197,9 @@ KL_BETA = 0.001
 
 
 def _step_log_prob_and_kl(
-    model: PeftModel, ctx_ids: torch.Tensor, action_ids: torch.Tensor
+    model: Any, ctx_ids: torch.Tensor, action_ids: torch.Tensor
 ) -> tuple[torch.Tensor, torch.Tensor, int]:
-    """Log prob sum and KL-vs-reference sum for one (context, action) pair.
+    """Per-token log prob (with grad) and per-token KL-vs-reference sum for one (context, action) pair.
 
     Reference log-probs come from the same model with the LoRA adapter disabled
     (frozen base weights) — avoids loading a second full model copy. Uses the k3
@@ -188,16 +210,12 @@ def _step_log_prob_and_kl(
     """
     if action_ids.numel() == 0:
         device = next(model.parameters()).device
-        zero = torch.tensor(0.0, device=device, requires_grad=True)
-        return zero, torch.tensor(0.0, device=device), 0
+        zero = torch.empty(0, device=device, requires_grad=True)
+        return zero, torch.empty(0, device=device), 0
 
     device = next(model.parameters()).device
-    ctx = ctx_ids.to(device)
+    ctx = _prepare_ctx(ctx_ids).to(device)
     act = action_ids.to(device)
-
-    # Truncate context from the left to bound backward memory
-    if ctx.shape[0] > MAX_CTX_TOKENS:
-        ctx = ctx[-MAX_CTX_TOKENS:]
 
     ctx_len = ctx.shape[0]
     act_len = act.shape[0]
@@ -224,48 +242,37 @@ def _step_log_prob_and_kl(
     log_ratio = ref_token_lp - token_lp
     kl_per_token = torch.exp(log_ratio) - log_ratio - 1
 
-    return token_lp.sum(), kl_per_token.sum(), act_len
+    return token_lp, kl_per_token, act_len
 
 
 # PPO-clip range and epoch count — reusing each batch of (expensive-to-generate)
-# rollouts for multiple gradient updates instead of one. Generation (multi-turn
-# LLM calls + REPL execution) is the real bottleneck here, not backward passes,
-# so this multiplies gradient signal per rollout at near-zero extra cost. After
-# epoch 1 the policy has moved, so later epochs use an importance-sampling ratio
-# against the generation-time ("old") policy, clipped to keep updates conservative
-# — standard PPO/DAPO mechanics, just applied at the per-turn (not per-token) level
-# to match this codebase's existing per-turn-summed log-probs.
+# rollouts for multiple gradient updates instead of one.
 PPO_CLIP_EPS = 0.2
 PPO_EPOCHS = 3
 
 
 def _grpo_update(
-    model: PeftModel,
+    model: Any,
     optimizer: torch.optim.Optimizer,
-    batch_step_data: list[list[list[tuple[torch.Tensor, torch.Tensor, float]]]],
+    batch_step_data: list[list[list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]]],
     batch_rewards: list[list[float]],
+    step_num: int = 0,
 ) -> tuple[float, float, int]:
     """GRPO gradient accumulation across a BATCH of questions, PPO_EPOCHS times.
 
-    batch_step_data[i] / batch_rewards[i] are the group_size rollouts for the i-th
-    question in the batch. Advantages are normalized WITHIN each question's own
-    group (GRPO requirement) — but all questions' gradients accumulate into a
-    single optimizer.step() per epoch, so one update reflects signal from multiple
-    distinct questions instead of just one. This is what fixes the "ping-pong"
-    variance of single-question-per-step training documented in the literature
-    (Search-R1 etc. batch 64-512 questions per step; we use a small batch for cost
-    reasons).
-
-    With 7B + 152k vocab, holding all computation graphs simultaneously is
-    infeasible. Backward per (question, rollout, step) frees each graph
-    immediately; peak memory stays at ~1 forward pass regardless of batch_size.
-
-    A question whose group has uniform reward contributes zero advantage-driven
-    gradient automatically (numerator is 0) — no need to skip it outright, and
-    skipping would also skip its KL term, which should still regularize the policy.
-
-    Returns (last_epoch_loss, last_epoch_mean_kl, n_uniform_questions) for logging.
+    Per-token PPO clipping formulation:
+    ratio_t = exp(token_lp_t - old_token_lp_t)
+    loss = - sum_t min(ratio_t * adv, clip(ratio_t, 1 - eps, 1 + eps) * adv)
     """
+    # Dropout MUST be off here. `_collect_rollout` captures old_token_lp under
+    # model.eval() and then leaves the model in train() mode on the way out. If the
+    # update ran in train mode, LoRA dropout (p=0.05) would perturb this forward pass
+    # relative to the one that produced old_token_lp, so ratio != 1 even at step 0
+    # with identical weights — silently breaking PPO's importance-sampling assumption
+    # that "old" and "new" are comparable. eval() disables dropout WITHOUT disabling
+    # gradients (only torch.no_grad() does that), so backward still works.
+    model.eval()
+
     n_uniform = 0
     batch_n = len(batch_rewards)
 
@@ -296,22 +303,35 @@ def _grpo_update(
             for step_data, adv in zip(group_step_data, advantages):
                 if not step_data:
                     continue
-                for ctx_ids, action_ids, old_lp in step_data:
-                    lp, kl, n_tok = _step_log_prob_and_kl(model, ctx_ids, action_ids)
+                for ctx_ids, action_ids, old_token_lp in step_data:
+                    token_lp, kl_per_token, n_tok = _step_log_prob_and_kl(model, ctx_ids, action_ids)
                     if n_tok == 0:
                         continue
 
-                    ratio = torch.exp(lp - old_lp)
-                    surr1 = ratio * adv
-                    surr2 = torch.clamp(ratio, 1 - PPO_CLIP_EPS, 1 + PPO_CLIP_EPS) * adv
-                    policy_loss = -torch.min(surr1, surr2)
+                    old_token_lp = old_token_lp.to(token_lp.device)
+                    # Per-token importance ratio:
+                    ratio = torch.exp(token_lp - old_token_lp)
 
-                    piece = (policy_loss + KL_BETA * kl) / NORM_TOKENS / n_valid / batch_n
+                    # Diagnostic assertion: at epoch 0 of step 0 before any optimizer update,
+                    # forward pass on current weights must match generation forward pass exactly.
+                    if _epoch == 0 and step_num == 0:
+                        assert torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3), (
+                            f"Step 0 Epoch 0 ratio mismatch! Mean ratio: {ratio.mean().item():.4f}, "
+                            f"Min: {ratio.min().item():.4f}, Max: {ratio.max().item():.4f}"
+                        )
+
+                    surr1 = ratio * adv
+                    surr2 = torch.clamp(ratio, 1.0 - PPO_CLIP_EPS, 1.0 + PPO_CLIP_EPS) * adv
+                    # Standard per-token PPO clipping surrogate loss:
+                    policy_loss = -torch.min(surr1, surr2).sum()
+                    kl_sum = kl_per_token.sum()
+
+                    piece = (policy_loss + KL_BETA * kl_sum) / NORM_TOKENS / n_valid / batch_n
                     piece.backward()
                     total_loss += piece.item()
-                    total_kl += kl.item()
+                    total_kl += kl_sum.item()
                     total_kl_tokens += n_tok
-                    del lp, kl, piece, ratio, surr1, surr2, policy_loss
+                    del token_lp, kl_per_token, piece, ratio, surr1, surr2, policy_loss
                     torch.cuda.empty_cache()
 
         torch.nn.utils.clip_grad_norm_(
@@ -414,7 +434,9 @@ def train(
         if len(reward_window) > 80:
             reward_window = reward_window[-80:]
 
-        total_loss, mean_kl, n_uniform = _grpo_update(model, optimizer, batch_step_data, batch_rewards)
+        total_loss, mean_kl, n_uniform = _grpo_update(
+            model, optimizer, batch_step_data, batch_rewards, step_num=step
+        )
         total_uniform += n_uniform
 
         recent_avg = sum(reward_window) / len(reward_window)

@@ -18,7 +18,7 @@ def corpus() -> Corpus:
 
 def test_document_count(corpus: Corpus) -> None:
     docs = corpus.list_documents()
-    assert len(docs) == 28
+    assert len(docs) == 43
 
 
 def test_search_returns_results(corpus: Corpus) -> None:

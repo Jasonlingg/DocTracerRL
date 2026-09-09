@@ -22,6 +22,14 @@ import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+# An exported-but-EMPTY key shadows .env: load_dotenv() defaults to
+# override=False and treats "" as already-set, so the blank value wins and
+# every downstream key check fails with a confusing "missing API key".
+# Drop empties first, so .env fills them without stomping real values.
+for _k in ("ANTHROPIC_API_KEY", "DEMO_API_KEY"):
+    if os.environ.get(_k, None) == "":
+        del os.environ[_k]
 load_dotenv()
 
 import typer
@@ -42,6 +50,9 @@ from src.policies.stuffing import ContextStuffingPolicy
 
 OUT_DIR = Path(__file__).parent.parent / "out"
 TEMPLATE_DIR = Path(__file__).parent / "templates"
+
+# True when serving on loopback only; enables the ANTHROPIC_API_KEY fallback.
+_LOCAL_ONLY = True
 REPLAY_DIR = Path(__file__).parent / "replays"
 
 app = FastAPI(title="RLM Explorer — Trajectory Viewer")
@@ -243,6 +254,11 @@ async def live_eval(ws: WebSocket) -> None:
         api_key = msg.get("api_key") or None
         if not api_key:
             api_key = os.environ.get("DEMO_API_KEY")
+        if not api_key and _LOCAL_ONLY:
+            # Local dev convenience: use the developer's own key from .env.
+            # Gated on binding to loopback so a network-exposed instance can
+            # never spend a personal key on behalf of an anonymous visitor.
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             await ws.send_json({"type": "error", "message": "Please provide an Anthropic API key."})
             return
@@ -292,10 +308,22 @@ async def live_eval(ws: WebSocket) -> None:
 
 
 @cli.command()
-def main(port: int = typer.Option(8000, help="Port to serve on")) -> None:
+def main(
+    port: int = typer.Option(8000, help="Port to serve on"),
+    host: str = typer.Option(
+        "127.0.0.1", help="Bind address. Use 0.0.0.0 to expose on your network."
+    ),
+) -> None:
     """Launch the trajectory viewer."""
-    typer.echo(f"RLM Explorer Viewer -> http://0.0.0.0:{port}")
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+    global _LOCAL_ONLY
+    _LOCAL_ONLY = host in ("127.0.0.1", "localhost", "::1")
+    if not _LOCAL_ONLY:
+        typer.echo(
+            "WARNING: binding to a non-loopback address. The ANTHROPIC_API_KEY\n"
+            "         fallback is disabled; visitors must supply their own key."
+        )
+    typer.echo(f"RLM Explorer Viewer -> http://{host}:{port}")
+    uvicorn.run(app, host=host, port=port, log_level="warning")
 
 
 if __name__ == "__main__":
