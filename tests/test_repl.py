@@ -1,8 +1,10 @@
 """Tests for the persistent REPL."""
 
 import pytest
+import subprocess
+import sys
 
-from src.env.repl import LocalREPL, PersistentREPL
+from src.env.repl import DockerREPL, LocalREPL, PersistentREPL
 
 
 @pytest.fixture
@@ -70,3 +72,67 @@ def test_auto_select_local() -> None:
     output = repl.execute("print(1 + 1)")
     assert "2" in output
     repl.kill_session()
+
+
+def test_large_previous_output_does_not_hide_current_step(repl: LocalREPL) -> None:
+    repl.execute('print("x" * 9000)')
+    assert repl.execute('print("CURRENT_STEP_SENTINEL")').strip() == "CURRENT_STEP_SENTINEL"
+
+
+@pytest.mark.parametrize("code", [
+    'raise ValueError("old failure")',
+    '1 / 0',
+    'if broken syntax',
+    'import sys; sys.exit(3)',
+])
+def test_failed_step_rolls_back_and_next_action_runs(repl: LocalREPL, code: str) -> None:
+    repl.execute("x = 42")
+    repl.execute(code)
+    assert repl.execute('print("RECOVERED", x)').strip() == "RECOVERED 42"
+
+
+def test_timeout_does_not_poison_next_action(repl: LocalREPL) -> None:
+    repl.execute("import time; time.sleep(10)", timeout=1)
+    assert repl.execute('print("RECOVERED")', timeout=2).strip() == "RECOVERED"
+
+
+def test_old_stderr_is_not_replayed_and_printed_errors_are_not_failures(repl: LocalREPL) -> None:
+    repl.execute('import sys; print("old warning", file=sys.stderr); x = 7')
+    assert repl.execute('print(x)').strip() == "7"
+    repl.execute('print("SyntaxError"); x = 9')
+    assert repl.execute('print(x)').strip() == "9"
+
+
+def test_docker_transport_preserves_output_and_recovers(monkeypatch):
+    """Exercise Docker's script transport/output logic with a local process.
+
+    This is not a real Docker isolation or resource-limit test.
+    """
+    original_run = subprocess.run
+    script = ""
+
+    def docker_run(args, **kwargs):
+        nonlocal script
+        if args[1] == "create":
+            return subprocess.CompletedProcess(args, 0, "test-container", "")
+        if args[1] in {"start", "rm"}:
+            return subprocess.CompletedProcess(args, 0, "", "")
+        if args[-1] == "cat > /tmp/step.py":
+            script = kwargs["input"]
+            return subprocess.CompletedProcess(args, 0, "", "")
+        assert "timeout" in args and "--signal=KILL" in args
+        return original_run([sys.executable, "-c", script], capture_output=True,
+                            text=True, timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(subprocess, "run", docker_run)
+    repl = DockerREPL()
+    repl.start_session()
+    try:
+        repl.execute('print("x" * 9000); x = 7')
+        assert repl.execute('print(x)').strip() == "7"
+        repl.execute('raise ValueError("bad")')
+        assert repl.execute('print(x)').strip() == "7"
+        # A literal heredoc delimiter is data, not a shell command boundary.
+        assert "SCRIPT_EOF" in repl.execute('print("""\nSCRIPT_EOF\n""")')
+    finally:
+        repl.kill_session()

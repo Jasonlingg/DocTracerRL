@@ -429,7 +429,10 @@ function renderTrajectory(idx) {
   const d = currentData[idx];
   const r = d.reward, rc = rewardClass(r);
   const as = d.answer_score||0, cp = d.citation_precision||0, cr = d.citation_recall||0, eff = d.efficiency_bonus||0;
-  const total = as*0.5+cp*0.25+cr*0.25+eff;
+  const weights = d.reward_weights;
+  // Old artifacts lack known weights; display raw component scores for them.
+  const aw = weights?.answer ?? 1, pw = weights?.citation_precision ?? 1, rw = weights?.citation_recall ?? 1;
+  const total = as*aw+cp*pw+cr*rw+eff;
   const scale = total > 0 ? 100/Math.max(total,1) : 0;
   let html = `<div class="traj-header">
     <div class="traj-question">${d.question}</div>
@@ -440,12 +443,13 @@ function renderTrajectory(idx) {
       <span><span class="text2">Time:</span> <span class="value">${d.duration_seconds?.toFixed(1)||'?'}s</span></span>
     </div>
     <div class="reward-bar">
-      <div class="segment seg-answer" style="width:${as*0.5*scale}%"></div>
-      <div class="segment seg-cit-p" style="width:${cp*0.25*scale}%"></div>
-      <div class="segment seg-cit-r" style="width:${cr*0.25*scale}%"></div>
+      <div class="segment seg-answer" style="width:${as*aw*scale}%"></div>
+      <div class="segment seg-cit-p" style="width:${cp*pw*scale}%"></div>
+      <div class="segment seg-cit-r" style="width:${cr*rw*scale}%"></div>
       <div class="segment seg-eff" style="width:${eff*scale}%"></div>
     </div>
     <div class="reward-legend">
+      <span>${weights ? 'Weighted reward components' : 'Raw scores · historical weights unavailable'}</span>
       <span class="leg-answer">Answer ${as.toFixed(2)}</span>
       <span class="leg-cit-p">Cite P ${cp.toFixed(2)}</span>
       <span class="leg-cit-r">Cite R ${cr.toFixed(2)}</span>

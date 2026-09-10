@@ -11,6 +11,9 @@ import re
 
 from pydantic import BaseModel
 
+REWARD_VERSION = "outcome-v1"
+REWARD_WEIGHTS = {"answer": 0.8, "citation_precision": 0.1, "citation_recall": 0.1}
+
 
 def parse_submission(action: str) -> tuple[str, list[str]] | None:
     """Parse a SUBMIT action into (answer, citations).
@@ -51,6 +54,7 @@ class RewardBreakdown(BaseModel):
     citation_f1: float
     efficiency_bonus: float
     total: float
+    reward_version: str = REWARD_VERSION
 
 
 def _tokenize(text: str) -> list[str]:
@@ -108,10 +112,6 @@ def score_citations(
     return {"precision": precision, "recall": recall, "f1": f1}
 
 
-STEP_BONUS = 0.015  # per exploration step before SUBMIT, max 0.12 for 8 steps
-STEP_HIT_REWARD = 0.02  # per step where retrieved content overlaps gold answer (max 3 hits = 0.06)
-
-
 def compute_reward(
     predicted_answer: str,
     predicted_citations: list[str],
@@ -120,33 +120,25 @@ def compute_reward(
     steps_taken: int,
     max_steps: int,
 ) -> RewardBreakdown:
-    """Compute the full verifiable reward signal.
+    """Outcome-only baseline: 0.8 * answer F1 + 0.1 * citation P + 0.1 * citation R.
 
-    Formula: 0.8 * answer_F1 + 0.1 * cit_P + 0.1 * cit_R + step_bonus (gated)
-    step_bonus = 0.015 * min(steps_taken - 1, 8), only awarded when ans > 0.
-
-    Citation weight is reduced from 0.25/0.25 to 0.1/0.1 since the model rarely
-    produces citations this early in training (matches VERITAS/R1-Searcher practice
-    of near-zero grounding-reward weight until basic answer competence exists).
-
-    step_bonus is gated on ans > 0 — without this, GRPO training showed the model
-    learning to "bank" exploration reward by submitting early with a wrong answer
-    (observed: rollouts scoring 0.03-0.06 from step bonus alone). Gating matches
-    HiPRAG/GraphRAG-R1's approach of zeroing process rewards when the outcome is wrong.
+    Step arguments and efficiency_bonus remain for caller/artifact compatibility.
+    Extra actions never earn reward; process metrics are recorded separately.
     """
     ans = score_answer(predicted_answer, gold_answer)
     cit = score_citations(predicted_citations, gold_citations)
 
-    outcome = 0.8 * ans + 0.1 * cit["precision"] + 0.1 * cit["recall"]
-    exploration_steps = max(0, steps_taken - 1)
-    step_bonus = STEP_BONUS * min(exploration_steps, 8) if ans > 0.0 else 0.0
-    total = outcome + step_bonus
+    outcome = (
+        REWARD_WEIGHTS["answer"] * ans
+        + REWARD_WEIGHTS["citation_precision"] * cit["precision"]
+        + REWARD_WEIGHTS["citation_recall"] * cit["recall"]
+    )
 
     return RewardBreakdown(
         answer_score=ans,
         citation_precision=cit["precision"],
         citation_recall=cit["recall"],
         citation_f1=cit["f1"],
-        efficiency_bonus=step_bonus,
-        total=total,
+        efficiency_bonus=0.0,
+        total=outcome,
     )

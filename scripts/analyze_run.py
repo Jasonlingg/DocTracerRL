@@ -22,6 +22,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.table import Table
+from src.eval.artifacts import outcome_reward
 
 console = Console()
 
@@ -34,8 +35,7 @@ POLICY_ORDER = [
 
 
 def _corrected_reward(r: dict) -> float:
-    outcome = 0.5 * r["answer_score"] + 0.25 * r["citation_precision"] + 0.25 * r["citation_recall"]
-    return 0.1 + 0.9 * outcome if r.get("predicted_answer") else 0.0
+    return outcome_reward(r)
 
 
 def _count_tools(trajectory: list[dict]) -> dict[str, int]:

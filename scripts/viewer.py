@@ -126,7 +126,7 @@ def list_runs() -> JSONResponse:
     runs = sorted(OUT_DIR.glob("run_*.json"), reverse=True)
     return JSONResponse([
         {"name": r.stem, "path": r.name, "size_kb": round(r.stat().st_size / 1024, 1)}
-        for r in runs
+        for r in runs if not r.name.endswith(".manifest.json")
     ])
 
 

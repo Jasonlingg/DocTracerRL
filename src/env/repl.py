@@ -10,7 +10,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import time
 from abc import ABC, abstractmethod
 
 from loguru import logger
@@ -39,6 +38,22 @@ def _extract_step_output(raw_output: str) -> str:
             + output[-half:]
         )
     return output
+
+
+def _process_output(result: subprocess.CompletedProcess) -> str:
+    # stdout and stderr are captured separately; remove replayed output from
+    # each stream BEFORE combining them or imposing an observation limit.
+    stdout = result.stdout.rsplit(STEP_MARKER, 1)[-1].lstrip("\n")
+    stderr = result.stderr.rsplit(STEP_MARKER, 1)[-1].lstrip("\n")
+    return stdout + ("\nSTDERR:\n" + stderr if stderr else "")
+
+
+def _step_marker() -> str:
+    return (
+        f'\nprint("{STEP_MARKER}", flush=True)\n'
+        f'__import__("sys").stderr.write("{STEP_MARKER}\\n")\n'
+        '__import__("sys").stderr.flush()\n'
+    )
 
 
 class BaseREPL(ABC):
@@ -72,6 +87,7 @@ class DockerREPL(BaseREPL):
         self._container_id: str | None = None
         self._cumulative_script: str = ""
         self._step: int = 0
+        self._last_execution_failed = False
 
     @staticmethod
     def _resolve_container_corpus_dir(corpus_path: str) -> str:
@@ -114,23 +130,22 @@ class DockerREPL(BaseREPL):
         logger.debug(f"Preamble output: {output[:200]}")
 
     def execute(self, code: str, timeout: int = 30) -> str:
-        """Append code to cumulative script and execute. Rollback on SyntaxError."""
+        """Execute a candidate step; retain it only when the process succeeds."""
         if self._container_id is None:
             raise RuntimeError("No active session — call start_session() first")
 
         self._step += 1
         previous_script = self._cumulative_script
         # Insert marker before this step's code so we can isolate its output
-        marker_line = f'\nprint("{STEP_MARKER}")\n'
+        marker_line = _step_marker()
         self._cumulative_script += f"\n# --- Step {self._step} ---{marker_line}{code}\n"
         output = self._run_script(self._cumulative_script, timeout=timeout)
 
         # Extract only the latest step's output (after the marker)
         output = _extract_step_output(output)
 
-        # Rollback if this step introduced a SyntaxError
-        if "SyntaxError" in output:
-            logger.warning(f"Step {self._step} caused SyntaxError — rolling back")
+        if self._last_execution_failed:
+            logger.warning(f"Step {self._step} failed — rolling back")
             self._cumulative_script = previous_script
 
         return output
@@ -140,27 +155,31 @@ class DockerREPL(BaseREPL):
         assert self._container_id is not None
 
         # Write script to temp file inside container
-        escaped = script.replace("'", "'\\''")
-        subprocess.run(
+        written = subprocess.run(
             ["docker", "exec", "-i", self._container_id,
-             "sh", "-c", f"cat > /tmp/step.py << 'SCRIPT_EOF'\n{script}\nSCRIPT_EOF"],
-            capture_output=True, text=True, timeout=10,
+             "sh", "-c", "cat > /tmp/step.py"],
+            input=script, capture_output=True, text=True, timeout=10,
         )
+        if written.returncode:
+            self._last_execution_failed = True
+            return f"ERROR: Failed to write step script: {written.stderr}"
 
         # Execute the script
         try:
             result = subprocess.run(
                 ["docker", "exec", "-i", self._container_id,
-                 "python3", "/tmp/step.py"],
-                capture_output=True, text=True, timeout=timeout,
+                 "timeout", "--signal=KILL", str(timeout), "python3", "/tmp/step.py"],
+                capture_output=True, text=True, timeout=timeout + 5,
             )
-            output = result.stdout
-            if result.stderr:
-                output += "\nSTDERR:\n" + result.stderr
+            self._last_execution_failed = result.returncode != 0
+            output = _process_output(result)
+            if result.returncode in (124, 137):
+                output += f"\nERROR: Execution timed out after {timeout}s"
         except subprocess.TimeoutExpired:
+            self._last_execution_failed = True
             output = f"ERROR: Execution timed out after {timeout}s"
 
-        return output[:MAX_OUTPUT_CHARS]
+        return output
 
     def kill_session(self) -> None:
         """Remove the Docker container."""
@@ -186,6 +205,7 @@ class LocalREPL(BaseREPL):
         self._cumulative_script: str = ""
         self._step: int = 0
         self._tmpdir: tempfile.TemporaryDirectory | None = None
+        self._last_execution_failed = False
 
     def start_session(self) -> None:
         """Initialize the local REPL session with tool preamble."""
@@ -198,19 +218,20 @@ class LocalREPL(BaseREPL):
         logger.debug(f"Preamble output: {output[:200]}")
 
     def execute(self, code: str, timeout: int = 30) -> str:
-        """Append code to cumulative script and execute. Rollback on SyntaxError."""
+        """Execute a candidate step; retain it only when the process succeeds."""
+        if self._tmpdir is None:
+            raise RuntimeError("No active session — call start_session() first")
         self._step += 1
         previous_script = self._cumulative_script
-        marker_line = f'\nprint("{STEP_MARKER}")\n'
+        marker_line = _step_marker()
         self._cumulative_script += f"\n# --- Step {self._step} ---{marker_line}{code}\n"
         output = self._run_script(self._cumulative_script, timeout=timeout)
 
         # Extract only the latest step's output (after the marker)
         output = _extract_step_output(output)
 
-        # Rollback if this step introduced a SyntaxError
-        if "SyntaxError" in output:
-            logger.warning(f"Step {self._step} caused SyntaxError — rolling back")
+        if self._last_execution_failed:
+            logger.warning(f"Step {self._step} failed — rolling back")
             self._cumulative_script = previous_script
 
         return output
@@ -233,13 +254,13 @@ class LocalREPL(BaseREPL):
                 capture_output=True, text=True, timeout=timeout,
                 env=env,
             )
-            output = result.stdout
-            if result.stderr:
-                output += "\nSTDERR:\n" + result.stderr
+            self._last_execution_failed = result.returncode != 0
+            output = _process_output(result)
         except subprocess.TimeoutExpired:
+            self._last_execution_failed = True
             output = f"ERROR: Execution timed out after {timeout}s"
 
-        return output[:MAX_OUTPUT_CHARS]
+        return output
 
     def kill_session(self) -> None:
         """Clean up temp directory."""

@@ -7,15 +7,12 @@ Reward: 0 during exploration, verifiable score on submission
 
 from __future__ import annotations
 
-import re
-
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.env.corpus import Corpus
 from src.env.repl import PersistentREPL
 from src.env.reward import (
-    STEP_HIT_REWARD,
     RewardBreakdown,
     compute_reward,
     parse_submission,
@@ -89,7 +86,6 @@ class DocumentExplorationEnv:
         self._step_count: int = 0
         self._done: bool = False
         self._question_idx: int = 0
-        self._hits_found: int = 0
 
     def reset(self, question_idx: int | None = None) -> str:
         """Start a new episode. Returns initial observation (question + tools)."""
@@ -112,7 +108,6 @@ class DocumentExplorationEnv:
         )
         self._step_count = 0
         self._done = False
-        self._hits_found = 0
 
         # Start fresh REPL
         self.repl = PersistentREPL(
@@ -203,10 +198,9 @@ class DocumentExplorationEnv:
             self._done = True
             logger.warning(f"Max steps ({self.max_steps}) reached — episode timeout")
 
-        # Retrieval hit reward: small bonus when retrieved content overlaps gold answer.
-        # Creates GRPO variance independent of step count — rollouts that retrieve
-        # relevant content score higher than those that don't, even with wrong final answers.
-        step_reward = self._retrieval_hit_reward(observation)
+        # Arbitrary stdout, errors, and our own hints are not verified evidence.
+        # The baseline rewards only the final submitted answer and citations.
+        step_reward = 0.0
 
         record = StepRecord(
             step=self._step_count,
@@ -219,20 +213,6 @@ class DocumentExplorationEnv:
 
         info = {"step": self._step_count, "code": action, "output": observation}
         return observation, step_reward, done, info
-
-    def _retrieval_hit_reward(self, observation: str) -> float:
-        """Return STEP_HIT_REWARD if observation contains gold answer tokens (max 3 times)."""
-        if self._episode is None or not self._episode.gold_answer or self._hits_found >= 3:
-            return 0.0
-        gold_tokens = set(re.findall(r"\w+", self._episode.gold_answer.lower()))
-        obs_tokens = set(re.findall(r"\w+", observation.lower()))
-        if not gold_tokens:
-            return 0.0
-        recall = len(gold_tokens & obs_tokens) / len(gold_tokens)
-        if recall >= 0.5:
-            self._hits_found += 1
-            return STEP_HIT_REWARD
-        return 0.0
 
     def get_trajectory(self) -> list[StepRecord]:
         """Return the full trajectory for this episode."""

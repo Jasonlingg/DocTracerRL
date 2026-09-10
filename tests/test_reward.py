@@ -65,7 +65,7 @@ class TestComputeReward:
         assert result.answer_score == 1.0
         assert result.citation_precision == 1.0
         assert result.citation_recall == 1.0
-        assert result.total == 1.0  # 0.1 format + 0.9 * 1.0 outcome = 1.0
+        assert result.total == 1.0
 
     def test_wrong_answer(self) -> None:
         result = compute_reward(
@@ -78,3 +78,9 @@ class TestComputeReward:
         )
         assert result.answer_score < 0.5
         assert result.citation_precision == 1.0
+
+    def test_extra_steps_do_not_increase_reward(self) -> None:
+        scores = [compute_reward("answer", ["doc"], "answer", ["doc"], n, 10)
+                  for n in (1, 5, 10)]
+        assert all(s.total == 1.0 and s.efficiency_bonus == 0.0 for s in scores)
+        assert all(s.reward_version == "outcome-v1" for s in scores)
