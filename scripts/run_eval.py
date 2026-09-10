@@ -6,6 +6,10 @@ import json
 from datetime import datetime
 import os
 from pathlib import Path
+import platform
+import random
+import subprocess
+from uuid import uuid4
 
 from dotenv import load_dotenv
 
@@ -23,6 +27,8 @@ from rich.console import Console
 
 from src.env.corpus import Corpus
 from src.eval.harness import run_eval
+from src.eval.artifacts import content_hash, configuration_hash
+from src.env.reward import REWARD_VERSION, REWARD_WEIGHTS
 from src.eval.report import print_results
 from src.policies.claude_policy import ClaudePolicy
 from src.policies.naive_rag import NaiveRAGPolicy
@@ -109,9 +115,24 @@ def main(
     workers: int = typer.Option(
         1, "--workers", "-w", help="Parallel workers (default 1). Set 4-8 for fast data collection."
     ),
+    output: Path | None = typer.Option(None, "--output", help="Exact transcript output path"),
+    run_label: str | None = typer.Option(None, "--run-label", help="Checkpoint comparison label"),
+    seed: int = typer.Option(42, "--seed"),
 ) -> None:
     """Run evaluation: policies through the document exploration environment."""
     console.print("[bold]RLM Explorer — Evaluation[/bold]\n")
+    if output is not None and (output.exists() or output.with_suffix(".manifest.json").exists()):
+        raise typer.BadParameter(f"Output already exists: {output}")
+    random.seed(seed)
+    import numpy as np
+    np.random.seed(seed)
+    # Seed optional local torch inference as well as Python/NumPy.
+    try:
+        import torch
+    except ImportError:
+        torch = None
+    if torch is not None:
+        torch.manual_seed(seed)
 
     # MuSiQue overrides corpus + questions paths
     if musique:
@@ -134,11 +155,17 @@ def main(
     if test > 0:
         questions = questions[:test]
         console.print(f"[yellow]Test mode: using first {test} questions[/yellow]")
+    if question:
+        questions = [q for q in questions if q["id"] == question]
+    if not questions:
+        raise typer.BadParameter("No questions selected")
     console.print(f"Loaded {len(questions)} questions\n")
 
     # Build policies (factories when parallel so each worker gets a fresh instance)
     policy_names = [policy] if policy else None
     policies = build_policies(corpus, policy_names, as_factories=workers > 1)
+    if not policies:
+        raise typer.BadParameter(f"Unknown policy: {policy}")
     console.print(f"Policies: {', '.join(policies.keys())}\n")
 
     # Filter questions
@@ -160,16 +187,59 @@ def main(
     console.print()
     if results:
         print_results(results, verbose=verbose)
-    save_transcripts(results)
+    protocol = {
+        "question_ids": [q["id"] for q in questions],
+        "questions_sha256": content_hash(Path(questions_path)),
+        "corpus_sha256": content_hash(Path(corpus_path)),
+        "max_steps": max_steps, "seed": seed, "reward_version": REWARD_VERSION,
+        "workers": workers,
+        "decoding": sorted({
+            json.dumps({"max_tokens": getattr(p, "_max_tokens", None),
+                        "temperature": getattr(p, "_temperature", None)}, sort_keys=True)
+            for p in policies.values()
+        }),
+    }
+    manifest = {
+        **protocol,
+        "comparison_id": configuration_hash(protocol),
+        "split": split if musique else questions_path,
+        "checkpoint_id": os.environ.get("CHECKPOINT_PATH"),
+        "base_model": os.environ.get("BASE_MODEL_PATH", "Qwen/Qwen2.5-7B-Instruct")
+        if policy in {"qwen_base_policy", "qwen_sft_policy", "grpo_policy"} else None,
+        "git_commit": subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+        ).stdout.strip(),
+        "git_status": subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True,
+        ).stdout.splitlines(),
+        "python": platform.python_version(), "platform": platform.platform(),
+        "torch": torch.__version__ if torch is not None else None,
+        "gpu": torch.cuda.get_device_name() if torch is not None and torch.cuda.is_available() else None,
+        "workers": workers,
+        "policy_settings": {
+            name: {"max_tokens": getattr(p, "_max_tokens", None),
+                   "temperature": getattr(p, "_temperature", None),
+                   "base_revision": getattr(getattr(getattr(p, "_model", None),
+                                                    "config", None), "_commit_hash", None)}
+            for name, p in policies.items()
+        },
+    }
+    save_transcripts(results, output=output, run_label=run_label, manifest=manifest)
+    if len(results) != len(questions) * len(policies) or any(r.status == "error" for r in results):
+        raise typer.Exit(1)
 
 
-def save_transcripts(results: list) -> None:
+def save_transcripts(
+    results: list, output: Path | None = None, run_label: str | None = None,
+    manifest: dict | None = None,
+) -> Path:
     """Save eval results and trajectories as JSON transcripts to out/."""
-    out_dir = Path("out")
-    out_dir.mkdir(exist_ok=True)
-
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = out_dir / f"run_{timestamp}.json"
+    run_id = f"{timestamp}_{uuid4().hex[:12]}"
+    out_path = output or Path("out") / f"run_{run_id}.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest = {**(manifest or {}), "run_id": run_id, "run_label": run_label,
+                "reward_version": REWARD_VERSION, "reward_weights": REWARD_WEIGHTS}
 
     transcripts = []
     for r in results:
@@ -177,7 +247,18 @@ def save_transcripts(results: list) -> None:
             "question_id": r.question_id,
             "question": r.question,
             "policy": r.policy_name,
+            "run_id": run_id,
+            "run_label": run_label or r.policy_name,
+            "checkpoint_id": manifest.get("checkpoint_id"),
+            "comparison_id": manifest.get("comparison_id"),
             "reward": r.reward,
+            "outcome_reward": r.outcome_reward,
+            "shaping_reward": r.shaping_reward,
+            "episode_return": r.episode_return,
+            "reward_version": r.reward_version,
+            "reward_weights": REWARD_WEIGHTS,
+            "status": r.status,
+            "error": r.error,
             "answer_score": r.answer_score,
             "citation_precision": r.citation_precision,
             "citation_recall": r.citation_recall,
@@ -198,10 +279,13 @@ def save_transcripts(results: list) -> None:
             ],
         })
 
-    with open(out_path, "w") as f:
+    with open(out_path, "x") as f:
         json.dump(transcripts, f, indent=2)
+    with out_path.with_suffix(".manifest.json").open("x") as f:
+        json.dump(manifest, f, indent=2)
 
     console.print(f"\n[bold green]Transcript saved to {out_path}[/bold green]")
+    return out_path
 
 
 if __name__ == "__main__":

@@ -1,15 +1,7 @@
-"""Summarize eval transcripts into the comparison table this project never produced.
+"""Summarize explicit checkpoint transcripts without merging distinct runs.
 
-Reads out/run_*.json transcripts, groups by policy, and reports the three deltas
-that decide whether DocTracerRL's training actually did anything:
-
-    sft - base      did supervised warm-start help?
-    grpo50 - sft    did 50 steps of GRPO add anything on top?
-    grpo - sft      same, for the other GRPO checkpoint
-
-Usage:
-    python scripts/summarize_eval.py                 # newest transcripts
-    python scripts/summarize_eval.py out/run_*.json  # explicit files
+Usage: python scripts/summarize_eval.py out/eval_*/1_base.json ...
+Historical artifacts keep their original reward semantics and separate file identity.
 """
 
 from __future__ import annotations
@@ -20,114 +12,74 @@ from collections import defaultdict
 from pathlib import Path
 from statistics import mean
 
-# Documented dev baseline — RESULTS.md, Phase 3, 100 MuSiQue dev questions.
-REFERENCE = {
-    "claude_policy": 0.179,
-    "context_stuffing": 0.176,
-    "naive_rag": 0.147,
-    "sparse_rag": 0.141,
-    "single_shot": 0.089,
-}
+from src.eval.artifacts import comparison_key, outcome_reward
+
+# Compatibility for existing imports; this does not rescore historical answers.
+corrected_reward = outcome_reward
 
 
 def load(paths: list[Path]) -> dict[str, list[dict]]:
-    by_policy: dict[str, list[dict]] = defaultdict(list)
-    for p in paths:
-        try:
-            rows = json.loads(p.read_text())
-        except (json.JSONDecodeError, OSError) as e:
-            print(f"  ! skipping {p.name}: {e}")
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for path in paths:
+        if path.name.endswith(".manifest.json"):
             continue
-        for r in rows:
-            by_policy[r["policy"]].append(r)
-    return by_policy
-
-
-def corrected_reward(row: dict) -> float:
-    """Reward with the efficiency bonus removed.
-
-    The saved `reward` field is the UNCORRECTED value. RESULTS.md:159 documents
-    that the efficiency bonus inverted the policy ranking — one-shot policies
-    (1.6 avg steps) banked +0.168 against claude_policy's +0.022 (8.9 steps),
-    masking a 4x answer-quality advantage — and it was removed from reward.py.
-    Transcripts written before that change still carry it, so subtract it here
-    or the comparison reproduces the exact distortion this project already fixed.
-
-        corrected = 0.5*answer_F1 + 0.25*cit_P + 0.25*cit_R
-    """
-    return row["reward"] - row.get("efficiency_bonus", 0.0)
+        rows = json.loads(path.read_text())
+        if not isinstance(rows, list):
+            raise ValueError(f"Expected a transcript list: {path}")
+        for row in rows:
+            groups[comparison_key(row, str(path.resolve()))].append(row)
+    for key, rows in groups.items():
+        ids = [r["question_id"] for r in rows]
+        if len(ids) != len(set(ids)):
+            raise ValueError(f"Duplicate question IDs in {key}; pass each transcript only once")
+    return groups
 
 
 def submitted(row: dict) -> bool:
-    """A row counts as submitted if it produced a non-empty answer.
-
-    The dominant DocTracerRL failure was computing the answer and never issuing
-    SUBMIT (69/100 in the Task 3.2 debrief), so this is tracked separately from
-    reward — a policy can improve a lot on this axis before reward moves.
-    """
     return bool((row.get("predicted_answer") or "").strip())
 
 
+def paired_delta(a: list[dict], b: list[dict]) -> float:
+    """Require a shared recorded protocol before reporting an outcome delta."""
+    a_ids = {r["question_id"] for r in a}
+    b_ids = {r["question_id"] for r in b}
+    protocols = {r.get("comparison_id") for r in a + b}
+    versions = {r.get("reward_version") for r in a + b}
+    if a_ids != b_ids or len(protocols) != 1 or None in protocols or len(versions) != 1:
+        raise ValueError("Question IDs, protocol, and reward version must match")
+    if any(r.get("status") == "error" for r in a + b):
+        raise ValueError("Execution errors must be resolved before comparing checkpoints")
+    return mean(outcome_reward(r) for r in a) - mean(outcome_reward(r) for r in b)
+
+
 def main() -> None:
-    args = [Path(a) for a in sys.argv[1:]]
-    paths = args or sorted(Path("out").glob("run_*.json"))
-    if not paths:
-        print("No transcripts found in out/")
-        raise SystemExit(1)
-
-    print(f"Reading {len(paths)} transcript(s)")
-    print("reward = efficiency bonus removed (RESULTS.md:159); raw = as saved\n")
-    by_policy = load(paths)
-    if not by_policy:
-        print("No rows parsed.")
-        raise SystemExit(1)
-
-    hdr = (f"{'policy':<22}{'n':>5}{'reward':>9}{'raw':>8}{'answerF1':>10}"
-           f"{'citP':>7}{'citR':>7}{'steps':>7}{'submit%':>9}")
-    print(hdr)
-    print("-" * len(hdr))
-
-    scores: dict[str, float] = {}
-    for name, rows in sorted(by_policy.items()):
-        r = mean(corrected_reward(x) for x in rows)
-        scores[name] = r
+    paths = [Path(a) for a in sys.argv[1:]] or sorted(Path("out").glob("run_*.json"))
+    groups = load(paths)
+    if not groups:
+        raise SystemExit("No transcripts found")
+    print("Outcome = recorded terminal outcome; legacy = saved reward minus saved bonus.")
+    print("Different reward versions are not interchangeable. Each run stays separate.\n")
+    labels: dict[str, list[list[dict]]] = defaultdict(list)
+    for key, rows in sorted(groups.items()):
+        labels[rows[0].get("run_label", rows[0]["policy"])].append(rows)
+        print(f"{key}\n  checkpoint={rows[0].get('checkpoint_id') or '(base/unspecified)'}")
         print(
-            f"{name:<22}{len(rows):>5}{r:>9.3f}"
-            f"{mean(x['reward'] for x in rows):>8.3f}"
-            f"{mean(x['answer_score'] for x in rows):>10.3f}"
-            f"{mean(x['citation_precision'] for x in rows):>7.3f}"
-            f"{mean(x['citation_recall'] for x in rows):>7.3f}"
-            f"{mean(x['steps'] for x in rows):>7.1f}"
-            f"{100 * mean(submitted(x) for x in rows):>8.0f}%"
+            f"  n={len(rows)} outcome={mean(outcome_reward(r) for r in rows):.3f}"
+            f" answerF1={mean(r['answer_score'] for r in rows):.3f}"
+            f" citP={mean(r['citation_precision'] for r in rows):.3f}"
+            f" citR={mean(r['citation_recall'] for r in rows):.3f}"
+            f" steps={mean(r['steps'] for r in rows):.1f}"
+            f" submit={100 * mean(submitted(r) for r in rows):.0f}%"
+            f" errors={sum(r.get('status') == 'error' for r in rows)}"
+            f" version={rows[0].get('reward_version', 'legacy/unversioned')}"
         )
-
-    print("\nreference (RESULTS.md Phase 3, 100 dev questions):")
-    for k, v in REFERENCE.items():
-        got = scores.get(k)
-        delta = f"   (this run: {got:.3f}, {got - v:+.3f})" if got is not None else ""
-        print(f"  {k:<20}{v:.3f}{delta}")
-
-    print("\nthe three numbers that matter:")
-    base = scores.get("qwen_base_policy")
-    sft = scores.get("qwen_sft_policy")
-    grpo = scores.get("grpo_policy")
-
-    def delta(label: str, a: float | None, b: float | None) -> None:
-        if a is None or b is None:
-            print(f"  {label:<16} — missing ({'/'.join(n for n, v in [('a', a), ('b', b)] if v is None)})")
-        else:
-            verdict = "training helped" if a - b > 0.01 else "flat or worse"
-            print(f"  {label:<16}{a - b:+.3f}   {verdict}")
-
-    delta("sft - base", sft, base)
-    delta("grpo - sft", grpo, sft)
-
-    if grpo is not None and len(by_policy.get("grpo_policy", [])) > 0:
-        print(
-            "\nnote: both GRPO checkpoints report as 'grpo_policy'. Summarize their\n"
-            "      transcripts separately (pass the specific run_*.json files) to tell\n"
-            "      the 50-step checkpoint apart from the other one."
-        )
+    for a, b in [("2_sft", "1_base"), ("3_grpo50", "2_sft"), ("4_grpo", "2_sft")]:
+        if len(labels[a]) == len(labels[b]) == 1:
+            try:
+                delta = paired_delta(labels[a][0], labels[b][0])
+                print(f"\n{a} - {b}: {delta:+.3f} outcome (descriptive; no significance claim)")
+            except ValueError as error:
+                print(f"\n{a} - {b}: comparison withheld: {error}")
 
 
 if __name__ == "__main__":

@@ -14,9 +14,9 @@ set -euo pipefail
 
 N="${1:-5}"
 SPLIT="${SPLIT:-dev}"
-STAMP="$(date +%Y%m%d_%H%M%S)"
-LOGDIR="out/eval_${STAMP}"
-mkdir -p "$LOGDIR"
+mkdir -p out
+LOGDIR="$(mktemp -d out/eval_XXXXXXXX)"
+TRANSCRIPTS=()
 
 BASE_SFT="jasonlingg/doctracerrl-sft-qwen2.5-7b"
 BASE_GRPO_50="jasonlingg/doctracerrl-grpo-qwen2.5-7b-50steps"
@@ -34,12 +34,15 @@ run() {
   local start=$SECONDS
   if [ -n "$ckpt" ]; then
     CHECKPOINT_PATH="$ckpt" python scripts/run_eval.py \
-      --musique --split "$SPLIT" -t "$N" -p "$policy" 2>&1 | tee "$LOGDIR/${name}.log"
+      --musique --split "$SPLIT" -t "$N" -p "$policy" \
+      --run-label "$name" --output "$LOGDIR/${name}.json" 2>&1 | tee "$LOGDIR/${name}.log"
   else
     python scripts/run_eval.py \
-      --musique --split "$SPLIT" -t "$N" -p "$policy" 2>&1 | tee "$LOGDIR/${name}.log"
+      --musique --split "$SPLIT" -t "$N" -p "$policy" \
+      --run-label "$name" --output "$LOGDIR/${name}.json" 2>&1 | tee "$LOGDIR/${name}.log"
   fi
   echo "[$name done in $((SECONDS - start))s]" | tee -a "$LOGDIR/${name}.log"
+  TRANSCRIPTS+=("$LOGDIR/${name}.json")
 }
 
 # Untrained base first. If this errors, nothing downstream is worth running,
@@ -53,10 +56,8 @@ echo
 echo "=============================================="
 echo " RESULTS"
 echo "=============================================="
-# Summarize from the saved JSON transcripts, not console scraping. The summarizer
-# subtracts the efficiency bonus (RESULTS.md:159) and is validated to reproduce
-# the documented Phase 3 baseline exactly.
-python scripts/summarize_eval.py $(ls -t out/run_*.json | head -4) | tee "$LOGDIR/SUMMARY.txt"
+# Only these exact files belong to this comparison.
+python scripts/summarize_eval.py "${TRANSCRIPTS[@]}" | tee "$LOGDIR/SUMMARY.txt"
 
 echo
 echo "Summary saved to $LOGDIR/SUMMARY.txt"

@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from src.env.corpus import Corpus
 from src.env.document_env import DocumentExplorationEnv, StepRecord
+from src.env.reward import REWARD_VERSION
 
 
 class EvalResult(BaseModel):
@@ -27,6 +28,12 @@ class EvalResult(BaseModel):
     predicted_answer: str = ""
     predicted_citations: list[str] = Field(default_factory=list)
     duration_seconds: float = 0.0
+    outcome_reward: float = 0.0
+    shaping_reward: float = 0.0
+    episode_return: float = 0.0
+    reward_version: str = REWARD_VERSION
+    status: str = "completed"
+    error: str | None = None
 
 
 def run_single(
@@ -44,6 +51,8 @@ def run_single(
     start = time.time()
     steps = 0
     reward = 0.0
+    episode_return = 0.0
+    outcome_reward = 0.0
     predicted_answer = ""
     predicted_citations: list[str] = []
     answer_score = 0.0
@@ -55,6 +64,7 @@ def run_single(
     while not done:
         action = policy.act(obs)
         obs, reward, done, info = env.step(action)
+        episode_return += reward
         steps += 1
 
         if done and "reward_breakdown" in info:
@@ -63,6 +73,7 @@ def run_single(
             cit_p = rb.citation_precision
             cit_r = rb.citation_recall
             eff = rb.efficiency_bonus
+            outcome_reward = rb.total - rb.efficiency_bonus
             predicted_answer = info.get("predicted_answer", "")
             predicted_citations = info.get("predicted_citations", [])
 
@@ -83,6 +94,9 @@ def run_single(
         predicted_answer=predicted_answer,
         predicted_citations=predicted_citations,
         duration_seconds=duration,
+        outcome_reward=outcome_reward,
+        shaping_reward=episode_return - outcome_reward,
+        episode_return=episode_return,
     )
 
 
@@ -105,8 +119,8 @@ def _run_one_question(
         use_docker=use_docker,
         corpus_path=corpus_path,
     )
-    policy = policy_factory()
     try:
+        policy = policy_factory()
         result = run_single(env, policy, q_idx)
         result.policy_name = policy_name
         return result
@@ -123,6 +137,9 @@ def _run_one_question(
             efficiency_bonus=0.0,
             steps=0,
             duration_seconds=0.0,
+            trajectory=env.get_trajectory(),
+            status="error",
+            error=f"{type(e).__name__}: {e}",
         )
     finally:
         try:
