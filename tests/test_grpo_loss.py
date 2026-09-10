@@ -1,9 +1,11 @@
 """Unit tests for custom GRPO loss calculation and clipping mechanics."""
 
+import contextlib
 from contextlib import contextmanager
 from types import SimpleNamespace
 
 import torch
+from typer.testing import CliRunner
 
 from scripts.train_grpo_custom import (
     MAX_CTX_TOKENS,
@@ -177,3 +179,112 @@ def test_dropout_in_train_mode_would_break_the_ratio() -> None:
         "train-mode dropout should perturb the ratio — if this passes, the fake "
         "model no longer exercises the failure mode and the guard is vacuous"
     )
+
+
+# --- regression: truncation must not evict the system prompt ----------------
+
+
+def test_prepare_ctx_preserves_system_prompt_head() -> None:
+    """Naive tail-slicing drops the head, where the tool documentation lives.
+
+    A read() of a 5k-char document is ~1.2k tokens and MAX_OUTPUT_CHARS=8000
+    permits ~2k, so a multi-turn episode passes MAX_CTX_TOKENS within a turn or
+    two. If truncation took the tail only, training would compute log-probs on a
+    context with no tool definitions in it.
+    """
+    import scripts.train_grpo_custom as G
+
+    head_len = 250
+    prev = G._PROMPT_HEAD_TOKENS
+    G._PROMPT_HEAD_TOKENS = head_len
+    try:
+        # sentinel head values 0..head_len-1, then filler, then recent tail
+        ctx = torch.arange(MAX_CTX_TOKENS * 2)
+        out = G._prepare_ctx(ctx)
+
+        assert out.shape[0] == MAX_CTX_TOKENS
+        # head survives, in order
+        assert torch.equal(out[:head_len], ctx[:head_len]), "system prompt was evicted"
+        # most recent tokens survive
+        assert torch.equal(out[head_len:], ctx[-(MAX_CTX_TOKENS - head_len):])
+        # and it is genuinely different from the naive tail slice
+        assert not torch.equal(out, ctx[-MAX_CTX_TOKENS:])
+    finally:
+        G._PROMPT_HEAD_TOKENS = prev
+
+
+def test_prepare_ctx_falls_back_when_head_unmeasured() -> None:
+    """If _set_prompt_head_len was never called, behave like the old tail slice."""
+    import scripts.train_grpo_custom as G
+
+    prev = G._PROMPT_HEAD_TOKENS
+    G._PROMPT_HEAD_TOKENS = 0
+    try:
+        ctx = torch.arange(MAX_CTX_TOKENS * 2)
+        assert torch.equal(G._prepare_ctx(ctx), ctx[-MAX_CTX_TOKENS:])
+    finally:
+        G._PROMPT_HEAD_TOKENS = prev
+
+
+# --- KL reference selection --------------------------------------------------
+
+
+class _FakeAdapterModel(_FakeLoRAModel):
+    """Adds PEFT-ish adapter switching so _reference_adapter can be exercised."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.active_adapters = ["default"]
+        self.set_adapter_calls: list = []
+
+    def set_adapter(self, name) -> None:  # noqa: ANN001
+        self.set_adapter_calls.append(name)
+        self.active_adapters = [name] if isinstance(name, str) else list(name)
+
+
+def test_reference_adapter_base_disables_adapter() -> None:
+    from scripts.train_grpo_custom import _reference_adapter
+
+    m = _FakeAdapterModel()
+    with _reference_adapter(m, "base"):
+        assert m._adapter_on is False, "base reference must run on pre-SFT weights"
+    assert m._adapter_on is True
+    assert m.set_adapter_calls == [], "base path must not touch adapter selection"
+
+
+def test_reference_adapter_sft_switches_and_restores() -> None:
+    """The frozen SFT copy is activated for the reference pass, then restored.
+
+    Restoring matters: leaking the frozen adapter would silently make the *policy*
+    forward pass use non-trainable weights, and the step-0 ratio check would not
+    catch it because both passes would then agree.
+    """
+    from scripts.train_grpo_custom import REF_ADAPTER, _reference_adapter
+
+    m = _FakeAdapterModel()
+    with _reference_adapter(m, "sft"):
+        assert m.active_adapters == [REF_ADAPTER]
+        assert m._adapter_on is True, "sft reference must NOT disable the adapter"
+    assert m.active_adapters == ["default"], "policy adapter must be restored"
+
+
+def test_reference_adapter_restores_on_exception() -> None:
+    from scripts.train_grpo_custom import _reference_adapter
+
+    m = _FakeAdapterModel()
+    with contextlib.suppress(RuntimeError), _reference_adapter(m, "sft"):
+        raise RuntimeError("boom")
+    assert m.active_adapters == ["default"], "must restore even when the block raises"
+
+
+def test_base_reference_is_refused_at_high_beta(monkeypatch) -> None:
+    """Exercise the CLI guard before it reaches model or corpus loading."""
+    import scripts.train_grpo_custom as G
+
+    monkeypatch.setattr(G, "KL_BETA", 0.15)
+    result = CliRunner().invoke(G.app, ["--sft-checkpoint", "unused"])
+
+    assert result.exit_code == 2
+    assert "KL_BETA=0.15" in result.output
+    assert "exceeds the configured" in result.output
+    assert "guardrail" in result.output

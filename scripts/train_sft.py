@@ -110,6 +110,7 @@ def train(
         save_steps=100,
         save_total_limit=2,
         packing=False,
+        max_length=max_seq_len,
         report_to="none",
         # Without this, loss is computed over the entire sequence — including the
         # long tool-output text (search results, REPL prints) in user turns, which
