@@ -24,7 +24,7 @@ env.step(code)       →  Agent computes aggregations, verifies findings
 env.step(SUBMIT)     →  Agent submits answer + citations → receives reward
 ```
 
-Each episode spawns a persistent Python session. Variables, DataFrames, and helper functions survive across steps — like a Jupyter notebook the agent controls. The reward signal is verifiable: token overlap F1 for answer accuracy, precision/recall for citations, and an efficiency bonus.
+Each episode reconstructs Python state by replaying successful actions. Variables and helper functions are available across steps; failed actions are removed from subsequent replay. External side effects are not rolled back. The reward signal measures answer token overlap F1 and citation precision/recall.
 
 ## Agent Tools
 
@@ -61,7 +61,7 @@ src/
 │   ├── document_env.py   # Gym-compatible environment: reset(), step(), reward()
 │   ├── repl.py           # Persistent REPL: Docker sandbox + local fallback
 │   ├── corpus.py         # Load docs, chunk, embed, FAISS index
-│   ├── reward.py         # Verifiable reward: answer F1, citation P/R, efficiency
+│   ├── reward.py         # Verifiable reward: answer F1 and citation P/R
 │   └── tools.py          # Tool preamble: search(), read(), extract(), search_within(), verify()
 ├── policies/
 │   ├── claude_policy.py  # Reference policy: Claude explores iteratively
@@ -106,13 +106,19 @@ python scripts/run_eval.py --hard --max-steps 15
 The reward is designed for GRPO training:
 
 ```
-reward = 0.5 × answer_F1 + 0.25 × citation_precision + 0.25 × citation_recall + efficiency_bonus
+reward = 0.8 × answer_F1 + 0.1 × citation_precision + 0.1 × citation_recall
 ```
 
 - **Answer F1**: Token overlap between predicted and gold answer
 - **Citation Precision**: Fraction of cited documents that are correct
 - **Citation Recall**: Fraction of required documents that were cited
-- **Efficiency Bonus**: Up to 0.2 extra for solving in fewer steps
+
+Current reward version: `outcome-v1`. Exploration actions receive zero reward;
+printing answer words or taking extra steps earns no bonus. New transcripts store
+outcome reward, shaping reward (currently zero), episode return, and reward weights.
+Historical results use earlier reward versions and are not directly comparable.
+
+See [GPU readiness and fixes](docs/GPU_TRAINING_READINESS.md) before launching training.
 
 ## Question Types
 

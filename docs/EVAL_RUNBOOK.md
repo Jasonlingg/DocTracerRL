@@ -1,5 +1,13 @@
 # Runbook: evaluate the June checkpoints
 
+## September 10 correctness update
+
+The dependency conflict, REPL recovery/output handling, rollout/scoring context
+mismatch, stdout-based shaping, and checkpoint-summary identity have been repaired.
+New runs use `outcome-v1` (0.8 answer F1 + 0.1 citation P + 0.1 citation R, no bonuses).
+Historical rewards below use older formulas and must not be treated as a common baseline.
+See [the readiness assessment](GPU_TRAINING_READINESS.md) for verification and remaining gates.
+
 ## Why
 
 Three checkpoints were trained on 2026-06-15 and pushed to HF. **None were ever evaluated.**
@@ -34,36 +42,47 @@ at `/workspace/models/qwen2.5-7b` (a dead pod path) — harmless, the policies o
 
 ## Pod setup
 
-RTX 4090 (24GB, ~$0.34/hr) is enough — 7B in bf16 is ~16GB. Allow **~60GB disk**: base model
-~15GB, MuSiQue corpus, FAISS index.
+Use a Linux x86_64/Python 3.11 CUDA environment. Model weights alone do not establish
+peak VRAM requirements: measure the five-question smoke evaluation before selecting
+a larger run. Training also needs a separate backward/save/reload smoke test.
 
 ```bash
 git clone <this repo> && cd rlm-explorer
-pip install -r requirements-pod.txt      # pinned; do NOT resolve fresh
-pip install -e .
+pip install -r requirements-pod.lock
+pip install -e . --no-deps
 
-# Question splits are committed. The corpus is not — rebuild it (deterministic:
-# examples[skip : skip+n] over the answerable subset, no shuffle).
-python scripts/setup_musique.py
+# Restore the exact corpus used to construct the committed question splits.
+# The default setup_musique.py invocation alone has NOT been validated to do this.
 ```
 
 ## Run
 
 ```bash
-./scripts/eval_checkpoints.sh 5     # smoke test — catches load/OOM errors for pennies
+./scripts/eval_checkpoints.sh 5     # smoke test — inspect failures before expanding
 ./scripts/eval_checkpoints.sh 50    # the real run
 ```
 
 Smoke first, always. A failed adapter load or an OOM costs the same to discover on 5 questions
 as on 50, and the whole point of this run is that nobody checked cheaply last time.
 
-Docker isn't available inside most pods, so `PersistentREPL` falls back to `LocalREPL`. Fine
-here — we are running our own checkpoints, not defending against an adversarial agent.
+Docker is optional for these training/evaluation scripts. In automatic mode,
+`PersistentREPL` uses Docker only if the engine is reachable and `rlm-sandbox`
+exists; otherwise it executes generated Python locally with the parent process's
+access. Use a disposable, restricted environment for local execution. Ownership
+of a checkpoint does not guarantee safe generated code. See [Docker's role and
+validation status](DOCKER.md) for the backend choices and what was actually tested.
+
+The runner writes four explicitly named transcripts plus manifests in a unique
+`out/eval_*` directory, and summarizes only those exact files. Any execution error
+or incomplete evaluation returns a nonzero status after saving diagnostic results.
+The manifests include data hashes, selected IDs, decoding metadata, seed, reward
+version, and git state. A requested remote adapter name is recorded; pin or archive
+the adapter revision before publishing a reproducible result.
 
 ## Cost
 
-~30-60 min per policy for 50 questions (up to 10 steps/question, ~1024 tokens/step).
-Four policies ≈ 2-4 hours ≈ **$1-1.50** on a 4090.
+No GPU runtime or cost was measured in this repair pass. Estimate the larger run
+from observed seconds per question and the actual machine's hourly price.
 
 ## Reading the result
 
