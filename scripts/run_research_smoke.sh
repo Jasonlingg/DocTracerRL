@@ -17,7 +17,7 @@ if [[ -e "$research_output" ]]; then
   exit 1
 fi
 
-# Fail before making model calls if the snapshot or sandbox is unavailable.
+# Fail before making model calls if the snapshot is unavailable.
 "$research_python" - "$research_snapshot" <<'PY'
 import sys
 from pathlib import Path
@@ -25,7 +25,6 @@ from src.research.agent import load_snapshot
 manifest, docs = load_snapshot(Path(sys.argv[1]))
 print(f"Snapshot verified: {len(docs)} papers; {manifest['corpus_hash']}")
 PY
-docker image inspect rlm-sandbox >/dev/null
 mkdir -p "$research_output"
 
 for research_question in research_01 research_04 research_11; do

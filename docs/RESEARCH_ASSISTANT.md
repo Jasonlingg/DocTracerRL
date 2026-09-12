@@ -17,8 +17,8 @@ or RL. The existing MuSiQue training and rewards remain a separate experimental 
 - Immutable snapshots contain original downloaded HTML, normalized paragraph text, section
   offsets, paper URLs/versions/dates, extraction coverage, and checksums. A failed download is
   recorded; missing full text is explicitly marked `abstract_only`.
-- A CPU-only passage search command, plus a multi-turn model-driven search/read/submit runner
-  using the existing Python REPL. No embedding download is needed for the lexical baseline.
+- A CPU-only passage search command, plus a multi-turn model-driven search/read/submit runner.
+  No embedding download is needed for the lexical baseline.
 - A chat-completions client for a Qwen server such as vLLM. The research prompt and submission
   schema are separate from the MuSiQue policy prompts.
 - Each model run saves actions, observations, failure status, question/snapshot identities,
@@ -103,10 +103,10 @@ the hardware description for a comparison. Token limits are per action; context 
 across turns. If the server's context limit is reached, the run records the failure rather than
 silently dropping evidence.
 
-Docker execution is required by default and uses the existing `rlm-sandbox` image. The supplied
-snapshot corpus is mounted read-only, with container networking disabled. For an explicitly
-trusted local experiment, `--local-repl` uses the existing local subprocess runner; it executes
-model-generated Python with the host user's permissions and is not a security sandbox.
+The research model emits one validated JSON action per turn. The application exposes only four
+read-only operations—list papers, search passages, inspect paper metadata, and read a bounded
+passage—and rejects unknown actions or extra arguments. Qwen does not write or execute Python.
+The older MuSiQue RLM environment still uses its separate Python REPL and Docker sandbox.
 
 The JSON contains the full trajectory; the adjacent `.md` file contains the answer, quotations,
 source links, and review fields. `submitted` means syntactically valid submission, not a correct
@@ -214,7 +214,9 @@ backend as scripted and is not evidence of model answer quality.
 The first live Qwen3-8B run submitted an answer and used a valid snapshot span, but it repeated
 actions, hit a Python syntax failure, covered only one of the requested comparison approaches,
 and has not received semantic human review. That is a protocol/provenance signal, not evidence of
-research quality. The disposable RunPod GPU was stopped after the run.
+research quality. That run used the superseded `research-evidence-v1` Python-action protocol; the
+current `research-tools-v2` protocol was introduced to remove that syntax failure mode. The
+disposable RunPod GPU was stopped after the run.
 
 Still needed: run and review the eight-question base pilot; expand and lock the final held-out
 paper set; create reviewed training trajectories from disjoint papers; then compare base and SFT

@@ -44,19 +44,17 @@ def main():
     ask.add_argument("--seed", type=int, default=42)
     ask.add_argument("--max-steps", type=int, default=10)
     ask.add_argument("--max-tokens", type=int, default=1800)
-    ask.add_argument("--local-repl", action="store_true",
-                     help="Execute model Python locally instead of Docker (no isolation)")
     ask.add_argument("--output", type=Path, required=True, help="New .json run artifact")
     args = parser.parse_args()
     try:
         if args.command == "inspect":
-            import os
-
-            from src.research.tools_runtime import search_papers
+            from src.research.tools_runtime import ResearchTools
 
             load_snapshot(args.snapshot)
-            os.environ["CORPUS_DIR"] = str((args.snapshot / "corpus").resolve())
-            print(json.dumps(search_papers(args.query, args.top_k), indent=2, ensure_ascii=False))
+            tools = ResearchTools(args.snapshot / "corpus")
+            print(json.dumps(
+                tools.search_papers(args.query, args.top_k), indent=2, ensure_ascii=False
+            ))
             return 0
         if args.command == "snapshot":
             sources = json.loads(args.sources.read_text())
@@ -87,9 +85,14 @@ def main():
         policy = EndpointPolicy(
             args.endpoint, args.model, args.revision, args.seed, args.max_tokens,
         )
-        result = run_question(args.snapshot, question, policy, args.output,
-                              max_steps=args.max_steps, use_docker=not args.local_repl,
-                              server_hardware=args.server_hardware)
+        result = run_question(
+            args.snapshot,
+            question,
+            policy,
+            args.output,
+            max_steps=args.max_steps,
+            server_hardware=args.server_hardware,
+        )
         print(f"Status: {result['status']}; review: {args.output.with_suffix('.md')}")
         return 0 if result["status"] == "submitted" else 1
     except Exception as exc:

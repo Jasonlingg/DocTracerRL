@@ -20,12 +20,11 @@ fi
 
 "$research_python" scripts/research_benchmark.py validate \
   --benchmark "$research_benchmark" --snapshot "$research_snapshot"
-docker image inspect rlm-sandbox >/dev/null
 mkdir -p "$research_output/runs"
 
 for research_question in pilot_01 pilot_02 pilot_03 pilot_04 pilot_05 pilot_06 pilot_07 pilot_08; do
   echo "Running $research_question"
-  "$research_python" scripts/research.py ask \
+  if ! "$research_python" scripts/research.py ask \
     --snapshot "$research_snapshot" \
     --questions "$research_benchmark" \
     --question-id "$research_question" \
@@ -34,7 +33,16 @@ for research_question in pilot_01 pilot_02 pilot_03 pilot_04 pilot_05 pilot_06 p
     --revision "$RESEARCH_MODEL_REVISION" \
     --server-hardware "$RESEARCH_SERVER_HARDWARE" \
     --max-steps 10 --max-tokens 1800 --seed 42 \
-    --output "$research_output/runs/$research_question.json"
+    --output "$research_output/runs/$research_question.json"; then
+    research_status=$("$research_python" -c \
+      'import json,sys; print(json.load(open(sys.argv[1]))["status"])' \
+      "$research_output/runs/$research_question.json")
+    echo "$research_question ended with status $research_status"
+    if [[ "$research_status" == "error" ]]; then
+      echo "Stopping the batch after a server or runner error."
+      break
+    fi
+  fi
 done
 
 "$research_python" scripts/research_benchmark.py score \

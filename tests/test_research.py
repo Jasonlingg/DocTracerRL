@@ -10,9 +10,10 @@ from src.research.agent import (
     SYSTEM_PROMPT,
     EndpointPolicy,
     check_submission,
+    execute_tool_action,
     load_snapshot,
     materialize_evidence,
-    normalize_submission_action,
+    parse_action,
     run_question,
 )
 from src.research.papers import build_snapshot, discover
@@ -113,14 +114,33 @@ def test_empty_claims_do_not_receive_perfect_score(snapshot):
     assert result["reward"] is None
 
 
-def test_protocol_requires_printed_tools_and_normalizes_only_valid_bare_submission(snapshot):
+def test_protocol_uses_validated_json_actions_and_accepts_legacy_bare_submission(snapshot):
     _, docs = load_snapshot(snapshot)
     doc = next(iter(docs.values()))
     bare = json.dumps(submission(evidence(doc)))
-    not_submission = '{"ordinary": "code-like data"}'
-    assert "MUST be Python code containing print(...)" in SYSTEM_PROMPT
-    assert normalize_submission_action(bare) == "SUBMIT: " + bare
-    assert normalize_submission_action(not_submission) == not_submission
+    assert "no markdown or Python" in SYSTEM_PROMPT
+    assert parse_action(bare) == {"action": "submit", "answer": json.loads(bare)}
+    assert parse_action('{"action":"papers","arguments":{}}') == {
+        "action": "papers", "arguments": {}
+    }
+    with pytest.raises(ValueError, match="never Python"):
+        parse_action('print(search_papers("search"))')
+    with pytest.raises(ValueError, match="unknown action"):
+        parse_action('{"action":"shell","arguments":{"command":"ls"}}')
+    with pytest.raises(ValueError, match="invalid arguments"):
+        parse_action('{"action":"papers","arguments":{"path":"/tmp"}}')
+
+
+def test_validated_dispatch_calls_only_readonly_research_tools(snapshot):
+    from src.research.tools_runtime import ResearchTools
+
+    tools = ResearchTools(snapshot / "corpus")
+    listed = execute_tool_action({"action": "papers", "arguments": {}}, tools)
+    assert listed[0]["doc_id"] == "arxiv_2503_09516v1"
+    found = execute_tool_action({
+        "action": "search_papers", "arguments": {"query": "search", "top_k": 1}
+    }, tools)
+    assert len(found) == 1 and found[0]["quote"]
 
 
 def test_snapshot_materializes_omitted_quote_and_rejects_a_wrong_model_quote(snapshot):
@@ -154,22 +174,29 @@ def test_multiturn_search_read_submit_and_review(snapshot, tmp_path):
         def act(self, observation):
             self.step += 1
             if self.step == 1:
-                return 'found = search_papers("search", top_k=2); print(found)'
+                return json.dumps({
+                    "action": "search_papers",
+                    "arguments": {"query": "search", "top_k": 2},
+                })
             if self.step == 2:
                 assert doc["doc_id"] in observation
-                return 'selected = found[0]["doc_id"]; print(passage(selected, 0, 16))'
+                return json.dumps({
+                    "action": "passage",
+                    "arguments": {"doc_id": doc["doc_id"], "start": 0, "length": 16},
+                })
             assert "We study search." in observation
-            return "SUBMIT: " + json.dumps(submission(evidence(doc)))
+            return json.dumps({"action": "submit", "answer": submission(evidence(doc))})
 
     output = tmp_path / "run.json"
     result = run_question(snapshot, {"id": "test", "question": "What was studied?"},
-                          ScriptedPolicy(), output, max_steps=3, use_docker=False)
+                          ScriptedPolicy(), output, max_steps=3)
     assert result["status"] == "submitted"
+    assert result["execution"] == "validated_tool_dispatch"
     assert len(result["trajectory"]) == 3
     assert result["checks"]["claims_with_valid_source_spans"] == 1
     assert "NOT been reviewed" in output.with_suffix(".md").read_text()
     with pytest.raises(FileExistsError):
-        run_question(snapshot, result["question"], ScriptedPolicy(), output, use_docker=False)
+        run_question(snapshot, result["question"], ScriptedPolicy(), output)
 
 
 def test_policy_failure_still_saves_artifacts(snapshot, tmp_path):
@@ -181,7 +208,7 @@ def test_policy_failure_still_saves_artifacts(snapshot, tmp_path):
 
     output = tmp_path / "failure.json"
     result = run_question(snapshot, {"id": "test", "question": "What?"},
-                          BrokenPolicy(), output, use_docker=False)
+                          BrokenPolicy(), output)
     assert result["status"] == "error"
     assert json.loads(output.read_text())["submission"] is None
     assert "server offline" in output.with_suffix(".md").read_text()

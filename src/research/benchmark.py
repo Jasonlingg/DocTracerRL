@@ -204,7 +204,7 @@ def score_benchmark(benchmark: dict, runs_dir: Path, reviews: dict | None = None
             if isinstance(item.get("doc_id"), str)
         }
         required = set(expected["required_doc_ids"])
-        actions = [str(step.get("action", "")) for step in run.get("trajectory", [])]
+        actions = [step.get("action") for step in run.get("trajectory", [])]
         outputs = [str(step.get("output", "")) for step in run.get("trajectory", [])]
         rows.append({
             "question_id": question_id,
@@ -218,22 +218,47 @@ def score_benchmark(benchmark: dict, runs_dir: Path, reviews: dict | None = None
             "required_doc_count": len(required),
             "trajectory_steps": len(run.get("trajectory", [])),
             "tool_action_steps": sum(
-                bool(re.search(r"\b(?:papers|search_papers|paper|passage)\s*\(", action))
+                (
+                    isinstance(action, dict)
+                    and action.get("action") in {"papers", "search_papers", "paper", "passage"}
+                )
+                or (
+                    isinstance(action, str)
+                    and bool(
+                        re.search(r"\b(?:papers|search_papers|paper|passage)\s*\(", action)
+                    )
+                )
                 for action in actions
             ),
             "execution_error_steps": sum(
-                "Traceback" in output or "SyntaxError" in output for output in outputs
+                "Traceback" in output
+                or "SyntaxError" in output
+                or output.startswith("Action rejected:")
+                or output.startswith("Tool error:")
+                for output in outputs
             ),
         })
     claim_count = sum(row["claim_count"] for row in rows)
     source_valid = sum(row["claims_with_valid_source_spans"] for row in rows)
     required_count = sum(row["required_doc_count"] for row in rows)
+    identities = {
+        "protocols": sorted({str(run.get("protocol", "unknown")) for run in runs}),
+        "policy_configuration_hashes": sorted({
+            configuration_hash(run.get("policy", {})) for run in runs
+        }),
+        "prompt_hashes": sorted({str(run.get("prompt_hash", "unknown")) for run in runs}),
+        "max_steps": sorted({run.get("max_steps") for run in runs}, key=str),
+    }
+    mixed = {name: values for name, values in identities.items() if len(values) > 1}
+    if mixed:
+        raise ValueError(f"run directory mixes experiment configurations: {mixed}")
     result = {
         "schema_version": SCORE_SCHEMA_VERSION,
         "benchmark_id": benchmark["benchmark_id"],
         "benchmark_hash": configuration_hash(benchmark),
         "run_count": len(rows),
         "missing_run_ids": missing,
+        "experiment_identity": identities,
         "automatic": {
             "coverage": _ratio(len(rows), len(benchmark["questions"])),
             "submission_rate": _ratio(sum(row["submitted"] for row in rows), len(rows)),
@@ -310,7 +335,7 @@ def score_markdown(score: dict) -> str:
         f"- Claims with valid source spans: {_percent(automatic['source_valid_claim_rate'])}",
         f"- Required-document recall: {_percent(automatic['required_document_recall'])}",
         f"- Source-count requirement: {_percent(automatic['source_count_requirement_rate'])}",
-        f"- Execution-error step rate: {_percent(automatic['execution_error_step_rate'])}",
+        f"- Rejected/error step rate: {_percent(automatic['execution_error_step_rate'])}",
         "",
         automatic["note"],
         "",

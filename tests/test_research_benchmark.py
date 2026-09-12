@@ -37,10 +37,16 @@ def run_artifact():
     return {
         "question": {"id": "pilot_01"},
         "corpus_hash": "a" * 64,
+        "protocol": "research-tools-v2",
+        "policy": {"model": "test", "seed": 42},
+        "prompt_hash": "prompt-a",
+        "max_steps": 10,
         "status": "submitted",
         "trajectory": [
-            {"action": 'hits = search_papers("test"); print(hits)', "output": "[]"},
-            {"action": "SUBMIT: {}"},
+            {"action": {
+                "action": "search_papers", "arguments": {"query": "test", "top_k": 3}
+            }, "output": "[]"},
+            {"action": {"action": "submit", "answer": {}}},
         ],
         "submission": {
             "claims": [{
@@ -88,6 +94,8 @@ def test_score_separates_provenance_from_human_support(tmp_path):
     automatic = score_benchmark(data, runs)
     assert automatic["automatic"]["source_valid_claim_rate"] == 1.0
     assert automatic["automatic"]["required_document_recall"] == 1.0
+    assert automatic["questions"][0]["tool_action_steps"] == 1
+    assert automatic["experiment_identity"]["protocols"] == ["research-tools-v2"]
     assert automatic["human"] is None
 
     reviews = make_review_template(data, runs)

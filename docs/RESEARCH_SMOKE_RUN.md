@@ -35,6 +35,10 @@ Artifacts are under `out/research/gpu-smoke-20260912/`; the final corrected file
 `source-span-retry-research_01.json` and `.md`. This result supports continuing the benchmark
 pipeline, not a claim that Qwen is already a good research agent.
 
+This historical run used `research-evidence-v1`, where Qwen wrote Python actions. The current
+`research-tools-v2` runner accepts only validated JSON research actions and executes the four
+read-only tools in the application. Replaying the current pilot therefore does not require Docker.
+
 ## Resources and current state
 
 - Code is committed locally at `3eff49e` (`pivot to ai research`).
@@ -98,10 +102,9 @@ awake. The small test is supervised; unattended remote orchestration is not impl
 
 ## Run the local agent against the GPU server
 
-Build the sandbox locally and forward the pod's loopback server to the laptop:
+Forward the pod's loopback server to the laptop:
 
 ```bash
-docker build -t rlm-sandbox .
 ssh -N -L 8000:127.0.0.1:8000 -p POD_SSH_PORT root@POD_HOST
 ```
 
@@ -113,10 +116,10 @@ export RESEARCH_SERVER_HARDWARE='1x RTX 4090 24GB; BF16; vLLM 0.10.2; context 16
 bash scripts/run_research_smoke.sh
 ```
 
-Replace the hardware description with the actual serving configuration if it differs. The
-runner checks the snapshot and sandbox image before making model calls. Model-generated Python
-runs inside local Docker with the corpus mounted read-only; the GPU pod only serves inference.
-The runner stops on a non-submitted episode and preserves the episode's error artifact.
+Replace the hardware description with the actual serving configuration if it differs. The runner
+checks the snapshot before making model calls. Model-generated JSON is validated against an
+allowlist, and the local application executes only bounded read-only research tools; the GPU pod
+only serves inference. The runner stops on a non-submitted episode and preserves its error artifact.
 
 Review each answer and its full trace. Record unsupported claims, missing evidence, practical
 usefulness, date/coverage disclosure, and tool failures. Then save the outputs and stop the pod
