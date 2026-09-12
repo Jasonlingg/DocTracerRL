@@ -1,5 +1,11 @@
 # GPT-6 Astra improvement brief
 
+> September 12 direction update: the user approved a focused AI-paper research assistant.
+> [The research runbook](RESEARCH_ASSISTANT.md) records the current milestone: establish a
+> useful retrieval baseline, review failures, then choose an intervention. The MuSiQue
+> evidence and training cautions below remain relevant to the legacy experiment; its
+> checkpoint comparison is still unexecuted and is not evidence of research-agent quality.
+
 > September 10 update: the subsequent audit reproduced correctness failures and
 > the user authorized repairing them before checkpoint evaluation. Read the
 > [readiness report and completed repair pass](GPU_TRAINING_READINESS.md) first.

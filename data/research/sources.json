@@ -1,0 +1,11 @@
+{
+  "purpose": "Historical starter papers on retrieval and tool-using agents; not a latest-research collection. Versions verified during the 2026-09-12 download. Create a separate source list and snapshot for refreshed papers.",
+  "papers": [
+    {"arxiv_id": "2005.11401v4", "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"},
+    {"arxiv_id": "2210.03629v3", "title": "ReAct: Synergizing Reasoning and Acting in Language Models"},
+    {"arxiv_id": "2310.11511v1", "title": "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"},
+    {"arxiv_id": "2401.15884v3", "title": "Corrective Retrieval Augmented Generation"},
+    {"arxiv_id": "2403.14403v2", "title": "Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity"},
+    {"arxiv_id": "2503.09516v5", "title": "Search-R1: Training LLMs to Reason and Leverage Search Engines with Reinforcement Learning"}
+  ]
+}

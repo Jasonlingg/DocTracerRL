@@ -1,5 +1,12 @@
 # DocTracerRL
 
+**Current direction:** an evidence-backed assistant for researching retrieval and tool-using
+AI agents. It searches versioned papers, inspects passages across turns, and produces a review
+artifact with exact source quotations. Start with the [research assistant runbook](docs/RESEARCH_ASSISTANT.md).
+The prototype includes six starter papers and 20 draft development questions. Model quality and
+training improvements have not yet been established. The MuSiQue setup below remains available
+as the earlier experimental track.
+
 An RL environment for training language models to actively explore **document collections** via code execution in a persistent REPL, rather than passively consuming retrieved context. Inspired by this paper: https://arxiv.org/pdf/2512.24601
 
 <img width="1250" height="879" alt="image" src="https://github.com/user-attachments/assets/e905f6e3-8952-4888-896c-45b0afffd451" />

@@ -77,12 +77,13 @@ class DockerREPL(BaseREPL):
         image: str = "rlm-sandbox",
         memory_limit: str = "512m",
         corpus_path: str = "data/corpus",
+        extra_preamble: str = "",
     ) -> None:
         self.image = image
         self.memory_limit = memory_limit
         self.corpus_path = os.path.abspath(corpus_path)
-        # Map host corpus_path to container path for the CORPUS_DIR env var.
-        # Data is baked into the image under /workspace/data/.
+        self.extra_preamble = extra_preamble
+        # Mount this exact host corpus at the path exposed through CORPUS_DIR.
         self._container_corpus_dir = self._resolve_container_corpus_dir(corpus_path)
         self._container_id: str | None = None
         self._cumulative_script: str = ""
@@ -100,14 +101,15 @@ class DockerREPL(BaseREPL):
     def start_session(self) -> None:
         """Create and start a Docker container, inject tool preamble.
 
-        Corpus data is baked into the image at build time (COPY data/ /workspace/data/).
-        CORPUS_DIR env var tells the tool preamble which corpus to use.
+        The supplied host corpus is mounted read-only over any baked-in corpus.
+        CORPUS_DIR tells the tool preamble which mounted corpus to use.
         """
         result = subprocess.run(
             [
                 "docker", "create",
                 "--memory", self.memory_limit,
                 "--network", "none",
+                "--mount", f"type=bind,src={self.corpus_path},dst={self._container_corpus_dir},readonly",
                 "-e", f"CORPUS_DIR={self._container_corpus_dir}",
                 "-i", self.image,
                 "python3", "-i",
@@ -124,7 +126,7 @@ class DockerREPL(BaseREPL):
         )
         logger.info(f"Docker container started: {self._container_id[:12]}")
 
-        self._cumulative_script = TOOL_PREAMBLE
+        self._cumulative_script = TOOL_PREAMBLE + "\n" + self.extra_preamble
         self._step = 0
         output = self._run_script(self._cumulative_script)
         logger.debug(f"Preamble output: {output[:200]}")
@@ -200,8 +202,9 @@ class LocalREPL(BaseREPL):
     Fallback when Docker is unavailable.
     """
 
-    def __init__(self, corpus_path: str = "data/corpus") -> None:
+    def __init__(self, corpus_path: str = "data/corpus", extra_preamble: str = "") -> None:
         self.corpus_path = os.path.abspath(corpus_path)
+        self.extra_preamble = extra_preamble
         self._cumulative_script: str = ""
         self._step: int = 0
         self._tmpdir: tempfile.TemporaryDirectory | None = None
@@ -210,7 +213,7 @@ class LocalREPL(BaseREPL):
     def start_session(self) -> None:
         """Initialize the local REPL session with tool preamble."""
         self._tmpdir = tempfile.TemporaryDirectory()
-        self._cumulative_script = TOOL_PREAMBLE
+        self._cumulative_script = TOOL_PREAMBLE + "\n" + self.extra_preamble
         self._step = 0
 
         output = self._run_script(self._cumulative_script)
@@ -281,6 +284,7 @@ class PersistentREPL:
         image: str = "rlm-sandbox",
         memory_limit: str = "512m",
         corpus_path: str = "data/corpus",
+        extra_preamble: str = "",
     ) -> None:
         if use_docker is None:
             use_docker = self._docker_available(image)
@@ -289,10 +293,11 @@ class PersistentREPL:
             logger.info("Using Docker REPL")
             self._impl: BaseREPL = DockerREPL(
                 image=image, memory_limit=memory_limit, corpus_path=corpus_path,
+                extra_preamble=extra_preamble,
             )
         else:
             logger.info("Docker unavailable — using local REPL fallback")
-            self._impl = LocalREPL(corpus_path=corpus_path)
+            self._impl = LocalREPL(corpus_path=corpus_path, extra_preamble=extra_preamble)
 
     @staticmethod
     def _docker_available(image: str) -> bool:
