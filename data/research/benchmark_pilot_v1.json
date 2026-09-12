@@ -1,0 +1,123 @@
+{
+  "schema_version": "research-benchmark-v1",
+  "benchmark_id": "ai-paper-research-pilot-v1",
+  "status": "Pipeline pilot locked before SFT data collection; not the final headline test set.",
+  "domain": "Retrieval and tool-using AI agents",
+  "corpus_hash": "ca28990a801741357e84438b36685c8f521817d941b203bbbd8735aba884d2aa",
+  "reserved_doc_ids": [
+    "arxiv_2005_11401v4",
+    "arxiv_2210_03629v3",
+    "arxiv_2310_11511v1",
+    "arxiv_2401_15884v3",
+    "arxiv_2403_14403v2",
+    "arxiv_2503_09516v5"
+  ],
+  "training_exclusion": "Do not use these papers, these questions, or paraphrases of their grader notes in SFT, preference, or RL data.",
+  "questions": [
+    {
+      "id": "pilot_01",
+      "split": "pilot_evaluation",
+      "focus": "training mechanics",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2503_09516v5"],
+      "question": "Why does Search-R1 exclude retrieved passage tokens from its policy-gradient loss, and what experiment in the paper supports that choice? Keep the paper's finding separate from advice for our agent.",
+      "grader_notes": [
+        "The answer should distinguish model-generated action tokens from retrieved source tokens.",
+        "The masking ablation is evidence about Search-R1 training, not proof it improves research synthesis."
+      ]
+    },
+    {
+      "id": "pilot_02",
+      "split": "pilot_evaluation",
+      "focus": "retrieval routing",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2403_14403v2"],
+      "question": "Describe Adaptive-RAG's three query-complexity routes and one limitation of how its routing labels are created. What would we need to validate before using the idea in our paper assistant?",
+      "grader_notes": [
+        "The three routes are no retrieval, single-step retrieval, and iterative retrieval.",
+        "The automatically constructed complexity labels may contain errors."
+      ]
+    },
+    {
+      "id": "pilot_03",
+      "split": "pilot_evaluation",
+      "focus": "retrieval correction",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2401_15884v3"],
+      "question": "What actions does Corrective RAG trigger for correct, incorrect, and ambiguous retrieval results? Explain which part would need adaptation if our project must stay entirely within a private local corpus.",
+      "grader_notes": [
+        "Correct refines retrieved documents; incorrect replaces them with web search; ambiguous combines both.",
+        "Replacing public web search with an approved local fallback is a project inference."
+      ]
+    },
+    {
+      "id": "pilot_04",
+      "split": "pilot_evaluation",
+      "focus": "evidence limits",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2310_11511v1"],
+      "question": "Does Self-RAG establish that its generated claims are always supported by its citations? Answer from the paper and explain why citation validity and citation support must be scored separately in our benchmark.",
+      "grader_notes": [
+        "The paper explicitly says outputs can still be not fully supported by citations.",
+        "A real source span proves provenance but does not by itself prove entailment."
+      ]
+    },
+    {
+      "id": "pilot_05",
+      "split": "pilot_evaluation",
+      "focus": "unsupported deployment constraint",
+      "expected_answerability": "insufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2310_11511v1"],
+      "question": "Do the supplied papers establish that our exact Qwen3-8B research agent will fit on one 24GB GPU and answer every question in under two seconds? Cite what is known and abstain from any unsupported guarantee.",
+      "grader_notes": [
+        "Self-RAG reports hardware for its own training and inference setup, not this Qwen3 agent.",
+        "The collection does not establish an under-two-second latency guarantee."
+      ]
+    },
+    {
+      "id": "pilot_06",
+      "split": "pilot_evaluation",
+      "focus": "comparability",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 2,
+      "required_doc_ids": ["arxiv_2310_11511v1", "arxiv_2503_09516v5"],
+      "question": "Can we choose Search-R1 over Self-RAG for this project by directly comparing a headline score from each paper? Identify the relevant differences in training objective or evaluation setup and give a defensible comparison plan.",
+      "grader_notes": [
+        "Do not treat scores from different tasks and experimental settings as a controlled comparison.",
+        "Recommend a common corpus, question IDs, tool budget, decoding setup, and scoring rubric."
+      ]
+    },
+    {
+      "id": "pilot_07",
+      "split": "pilot_evaluation",
+      "focus": "prompting versus training",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 2,
+      "required_doc_ids": ["arxiv_2210_03629v3", "arxiv_2503_09516v5"],
+      "question": "Compare how ReAct elicits tool use through prompting with how Search-R1 trains search behavior. Which result from each paper is relevant, and what does neither paper establish about AI-paper citation support?",
+      "grader_notes": [
+        "ReAct interleaves reasoning and actions using few-shot prompting in its reported setup.",
+        "Search-R1 uses reinforcement learning with search and outcome reward.",
+        "Neither result directly evaluates this project's claim-to-passage support rubric."
+      ]
+    },
+    {
+      "id": "pilot_08",
+      "split": "pilot_evaluation",
+      "focus": "freshness abstention",
+      "expected_answerability": "insufficient",
+      "minimum_distinct_sources": 0,
+      "required_doc_ids": [],
+      "question": "What work published after March 2025 proves the best current method for evidence-grounded AI-paper research? Use only this snapshot and clearly state what cannot be established.",
+      "grader_notes": [
+        "The selected historical snapshot cannot establish exhaustive post-March-2025 coverage or a best current method.",
+        "A good response should abstain and recommend a bounded, dated literature search."
+      ]
+    }
+  ]
+}

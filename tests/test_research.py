@@ -6,7 +6,15 @@ import subprocess
 import pytest
 
 from src.env.repl import DockerREPL
-from src.research.agent import EndpointPolicy, check_submission, load_snapshot, run_question
+from src.research.agent import (
+    SYSTEM_PROMPT,
+    EndpointPolicy,
+    check_submission,
+    load_snapshot,
+    materialize_evidence,
+    normalize_submission_action,
+    run_question,
+)
 from src.research.papers import build_snapshot, discover
 
 META = '''<meta property="og:url" content="https://arxiv.org/abs/2503.09516v1">
@@ -82,7 +90,7 @@ def test_fabricated_or_invalid_evidence_is_not_credited(snapshot, mutation):
     _, docs = load_snapshot(snapshot)
     item = evidence(next(iter(docs.values())))
     result = check_submission(submission({**item, **mutation}), docs)
-    assert result["claims_with_valid_quotes"] == 0
+    assert result["claims_with_valid_source_spans"] == 0
     assert result["invalid_quote_count"] == 1
     assert result["reward"] is None
 
@@ -92,7 +100,7 @@ def test_valid_quote_does_not_prove_a_claim(snapshot):
     answer = submission(evidence(next(iter(docs.values()))))
     answer["claims"][0]["text"] = "This method eliminates all hallucinations."
     result = check_submission(answer, docs)
-    assert result["claims_with_valid_quotes"] == 1
+    assert result["claims_with_valid_source_spans"] == 1
     assert result["semantic_support"] == "not_reviewed"
     assert result["claims"][0]["evidence"][0]["supports_claim"] is None
 
@@ -103,6 +111,34 @@ def test_empty_claims_do_not_receive_perfect_score(snapshot):
                                "limitations": ["No supporting source"]}, docs)
     assert result["claim_count"] == 0
     assert result["reward"] is None
+
+
+def test_protocol_requires_printed_tools_and_normalizes_only_valid_bare_submission(snapshot):
+    _, docs = load_snapshot(snapshot)
+    doc = next(iter(docs.values()))
+    bare = json.dumps(submission(evidence(doc)))
+    not_submission = '{"ordinary": "code-like data"}'
+    assert "MUST be Python code containing print(...)" in SYSTEM_PROMPT
+    assert normalize_submission_action(bare) == "SUBMIT: " + bare
+    assert normalize_submission_action(not_submission) == not_submission
+
+
+def test_snapshot_materializes_omitted_quote_and_rejects_a_wrong_model_quote(snapshot):
+    _, docs = load_snapshot(snapshot)
+    doc = next(iter(docs.values()))
+    item = evidence(doc)
+    without_quote = {key: value for key, value in item.items() if key != "quote"}
+    resolved = materialize_evidence(submission(without_quote), docs)
+    source = resolved["claims"][0]["evidence"][0]
+    assert source["quote"] == item["quote"]
+    assert source["quote_origin"] == "snapshot_materialized"
+    checked = check_submission(resolved, docs)
+    assert checked["claims_with_valid_source_spans"] == 1
+    assert checked["claims"][0]["evidence"][0]["exact_quote_valid"] is None
+
+    wrong = submission({**item, "quote": "not from this source"})
+    checked = check_submission(wrong, docs)
+    assert checked["invalid_quote_count"] == 1
 
 
 def test_multiturn_search_read_submit_and_review(snapshot, tmp_path):
@@ -130,7 +166,7 @@ def test_multiturn_search_read_submit_and_review(snapshot, tmp_path):
                           ScriptedPolicy(), output, max_steps=3, use_docker=False)
     assert result["status"] == "submitted"
     assert len(result["trajectory"]) == 3
-    assert result["checks"]["claims_with_valid_quotes"] == 1
+    assert result["checks"]["claims_with_valid_source_spans"] == 1
     assert "NOT been reviewed" in output.with_suffix(".md").read_text()
     with pytest.raises(FileExistsError):
         run_question(snapshot, result["question"], ScriptedPolicy(), output, use_docker=False)

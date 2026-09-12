@@ -23,19 +23,27 @@ Available tools (already imported):
   search_papers(query, top_k=3) -> ranked text windows with exact character offsets
   paper(doc_id) -> title, source URL, pinned version, dates, coverage, section offsets
   passage(doc_id, start=0, length=1600) -> {doc_id,start,end,quote,source_url,coverage}
-Variables persist. Output ONLY Python code; print() reveals results.
+Variables persist. Tool return values are hidden unless you print them. Every non-final turn
+MUST be Python code containing print(...). Never call a tool by itself. For example:
+  results = search_papers("retrieved token masking", top_k=3)
+  print(results)
+  chosen = results[0]
+  print(passage(chosen["doc_id"], chosen["start"], chosen["end"] - chosen["start"]))
+The next observation contains only what print(...) produced. Do not use markdown.
 Read multiple sources when the question requires comparison. Inspect dates and coverage.
 Search matches and existing verify() keyword matches do NOT establish claim support.
 Do not claim exhaustive/latest coverage from a selected snapshot. Abstract-only sources
 cannot substantiate experiment details they omit. Distinguish author-reported results
 from your inference and do not compare benchmark numbers across incompatible settings.
 When evidence is insufficient, state that limitation; do not invent a result.
-When ready, output SUBMIT: followed by a JSON object of this shape:
+The final turn is an exception: output exactly one line beginning with SUBMIT: followed by a JSON
+object. Do not output bare JSON or Python on the final turn. Its shape is:
 {"claims":[{"text":"One factual claim", "evidence":[
-{"doc_id":"paper ID", "start":0, "end":12, "quote":"exact text"}]}],
+{"doc_id":"paper ID", "start":0, "end":12}]}],
 "recommendation":"Your project-specific advice, explicitly labeled as inference",
 "limitations":["What remains unknown or was not covered"]}
-Every factual claim needs evidence. Copy exact quote/offset values returned by tools.
+Every factual claim needs evidence. Copy the doc_id, start, and end values returned by tools.
+Do NOT retype the quotation: the runner resolves the exact text from the frozen source span.
 Use an empty claims list when you cannot substantiate an answer.
 '''
 
@@ -95,6 +103,48 @@ def clean_action(action: str) -> str:
     return action
 
 
+def normalize_submission_action(action: str) -> str:
+    """Accept a valid bare JSON final answer while preserving the intended protocol.
+
+    Qwen3 occasionally omits the literal ``SUBMIT:`` marker despite otherwise
+    producing a complete response. Treating only that narrow shape as a final
+    answer prevents an unnecessary tool-execution step from discarding it.
+    """
+    if action.startswith("SUBMIT:"):
+        return action
+    try:
+        candidate = json.loads(action)
+    except json.JSONDecodeError:
+        return action
+    required = {"claims", "recommendation", "limitations"}
+    if isinstance(candidate, dict) and required.issubset(candidate):
+        return "SUBMIT: " + action
+    return action
+
+
+def materialize_evidence(submission: dict, documents: dict[str, dict]) -> dict:
+    """Resolve citation spans from the frozen snapshot before preserving a run.
+
+    Requiring a model to reproduce a long quotation character-for-character made
+    otherwise valid citations fail. A document ID and bounded span identify the
+    evidence precisely; we attach its exact snapshot text for review instead.
+    """
+    resolved = json.loads(json.dumps(submission))
+    for claim in resolved.get("claims", []):
+        if not isinstance(claim, dict):
+            continue
+        for item in claim.get("evidence", []):
+            if not isinstance(item, dict) or "quote" in item:
+                continue
+            doc = documents.get(item.get("doc_id"))
+            start, end = item.get("start"), item.get("end")
+            if (doc and type(start) is int and type(end) is int
+                    and 0 <= start < end <= len(doc["text"])):
+                item["quote"] = doc["text"][start:end]
+                item["quote_origin"] = "snapshot_materialized"
+    return resolved
+
+
 def check_submission(submission: dict, documents: dict[str, dict]) -> dict:
     """Check provenance mechanically. Exact quotation is NOT semantic entailment."""
     if not isinstance(submission, dict):
@@ -119,25 +169,33 @@ def check_submission(submission: dict, documents: dict[str, dict]) -> dict:
             doc_id = item.get("doc_id")
             doc = documents.get(doc_id) if isinstance(doc_id, str) else None
             start, end, quote = item.get("start"), item.get("end"), item.get("quote")
-            valid = bool(doc and type(start) is int and type(end) is int
-                         and isinstance(quote, str) and quote.strip()
-                         and 0 <= start < end <= len(doc["text"])
-                         and doc["text"][start:end] == quote)
+            span_valid = bool(doc and type(start) is int and type(end) is int
+                              and 0 <= start < end <= len(doc["text"]))
+            quote_is_snapshot = item.get("quote_origin") == "snapshot_materialized"
+            quote_valid = bool(span_valid and isinstance(quote, str) and quote.strip()
+                               and doc["text"][start:end] == quote)
+            valid = bool(span_valid and (quote_is_snapshot or quote_valid))
             evidence_checks.append({
-                "doc_id": doc_id, "exact_quote_valid": valid,
+                "doc_id": doc_id, "source_span_valid": span_valid,
+                "usable_source_span": valid,
+                "exact_quote_valid": quote_valid if not quote_is_snapshot else None,
+                "quote_origin": item.get("quote_origin", "model"),
                 "source_url": doc["metadata"]["source_url"] if doc else None,
                 "coverage": doc["metadata"]["coverage"] if doc else None,
                 "supports_claim": None,
             })
-        checks.append({"text": claim["text"], "evidence": evidence_checks,
-                       "has_valid_quote": any(e["exact_quote_valid"] for e in evidence_checks)})
+        checks.append({
+            "text": claim["text"],
+            "evidence": evidence_checks,
+            "has_valid_source_span": any(e["usable_source_span"] for e in evidence_checks),
+        })
     return {
         "claims": checks, "claim_count": len(claims),
-        "claims_with_valid_quotes": sum(c["has_valid_quote"] for c in checks),
-        "invalid_quote_count": sum(not e["exact_quote_valid"]
+        "claims_with_valid_source_spans": sum(c["has_valid_source_span"] for c in checks),
+        "invalid_quote_count": sum(e["exact_quote_valid"] is False
                                    for c in checks for e in c["evidence"]),
         "semantic_support": "not_reviewed", "reward": None,
-        "note": "Quote integrity only. Human review must assess support, usefulness, "
+        "note": "Source-span integrity only. Human review must assess support, usefulness, "
         "coverage, and factual claims in the recommendation too.",
     }
 
@@ -185,19 +243,21 @@ def run_question(snapshot: Path, question: dict, policy, output: Path, max_steps
     observation = (
         f"Question: {question['question']}\nSnapshot retrieved: {manifest['retrieved_at']}\n"
         f"Coverage: {manifest['coverage_note']}\nPaper count: {len(docs)}\n"
-        "Begin with search_papers() or papers()."
+        "IMPORTANT: tool return values are hidden. Use print(papers()) or "
+        "results = search_papers(...); print(results). Begin by printing a tool result."
     )
     try:
         repl.start_session()
         for step in range(1, max_steps + 1):
             raw = policy.act(observation)
-            action = clean_action(raw)
+            action = normalize_submission_action(clean_action(raw))
             record = {"step": step, "observation": observation, "raw_action": raw,
                       "action": action}
             result["trajectory"].append(record)
             if action.startswith("SUBMIT:"):
                 try:
                     submission = json.loads(action.removeprefix("SUBMIT:").strip())
+                    submission = materialize_evidence(submission, docs)
                     checks = check_submission(submission, docs)
                 except (ValueError, TypeError) as exc:
                     observation = f"Invalid submission: {exc}. Correct its JSON structure."

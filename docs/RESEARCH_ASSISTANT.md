@@ -2,6 +2,8 @@
 
 For the motivation, proposed teacher-to-Qwen distillation workflow, data requirements, and
 open decisions, see [the research pivot notes](RESEARCH_PIVOT_NOTES.md).
+For the concrete GPU setup and first live result, see
+[the first smoke-run record](RESEARCH_SMOKE_RUN.md).
 
 The user-approved objective is: given an AI project and its constraints, find relevant research,
 explain what the papers demonstrate, and make the evidence inspectable. Start with retrieval and
@@ -21,9 +23,10 @@ or RL. The existing MuSiQue training and rewards remain a separate experimental 
   schema are separate from the MuSiQue policy prompts.
 - Each model run saves actions, observations, failure status, question/snapshot identities,
   decoding settings, operator-supplied model revision/hardware, and a Markdown review sheet.
-- Submission checks flag fabricated quotations, missing sources, and invalid character
-  offsets. They do **not** judge whether a quote supports its associated claim. No research
-  training reward is assigned. Factual claims in recommendations also need human review.
+- Submission checks materialize exact text from valid frozen-snapshot spans and flag missing
+  sources, invalid offsets, or incorrect model-supplied quotations. They do **not** judge whether
+  a passage supports its associated claim. No research training reward is assigned. Factual
+  claims in recommendations also need human review.
 
 ## Inspect the downloaded papers now
 
@@ -74,9 +77,9 @@ API reference: [arXiv API user manual](https://info.arxiv.org/help/api/user-manu
 ## Run the agent when a model server is available
 
 Use a server exposing `/v1/chat/completions`, with a pinned model revision and recorded serving
-configuration. The first comparison should use Qwen2.5-7B-Instruct and Qwen3-8B. This repository
-does not install or launch vLLM as part of the command and has not tested a real research-model
-run yet. Keep serving dependencies separate from the pinned legacy training environment.
+configuration. The first training comparison uses the same Qwen3-8B checkpoint before and after
+SFT. This repository does not install or launch vLLM as part of the command. Keep serving
+dependencies separate from the pinned legacy training environment.
 
 ```bash
 python scripts/research.py ask \
@@ -144,17 +147,63 @@ Only then create reviewed training examples and separate held-out papers/questio
 is justified, compare the **same model before and after training** with identical tools and data.
 The eventual claim must be measured improvement in evidence-supported, useful answers.
 
+## Locked benchmark pilot before training
+
+`data/research/benchmark_pilot_v1.json` is a separate eight-question evaluation pilot. Its purpose
+is to verify the baseline, review, and scoring workflow before constructing the larger final test.
+All six papers in its frozen snapshot are reserved from training. Do not put those documents,
+questions, or paraphrases of their grader notes into SFT, preference, or RL examples.
+
+The pilot deliberately includes answerable questions, comparisons requiring two papers, and two
+questions where the correct behavior includes refusing an unsupported guarantee. Validate its
+identity against the snapshot before running anything:
+
+```bash
+python scripts/research_benchmark.py validate \
+  --benchmark data/research/benchmark_pilot_v1.json \
+  --snapshot out/research/starter-2026-09-12
+```
+
+With a model server available, `scripts/run_research_benchmark.sh` runs all eight questions under
+fixed settings, saves an automatic score, and creates `human-review.json`. Automatic metrics cover
+submission, exact source provenance, expected-document recall, tool use, and execution errors.
+They cannot establish that evidence supports a claim. Complete every claim-level support label,
+answerability judgment, recommendation-faithfulness judgment, missed-evidence flag, and usefulness
+score before asking the scorer for human metrics:
+
+```bash
+python scripts/research_benchmark.py score \
+  --benchmark data/research/benchmark_pilot_v1.json \
+  --runs out/research/PILOT_DIR/runs \
+  --reviews out/research/PILOT_DIR/human-review.json \
+  --output out/research/PILOT_DIR/reviewed-score.json
+```
+
+This pilot is frozen early enough to compare base Qwen3-8B with an SFT adapter, but eight questions
+are too few for a headline claim. Before training, expand the final benchmark to 50–75 questions
+over new reserved papers and lock it. The training hypothesis is that reviewed search/read/answer
+trajectories teach transferable evidence use rather than citation formatting. Count SFT as useful
+only if it improves fully supported claims by at least 15 percentage points and cuts the unsupported
+claim rate by at least one third on the held-out set, without reducing answerability accuracy or
+submission rate by more than 5 percentage points. Report uncertainty intervals on the paired
+question-level differences; revise the threshold before seeing trained-model results if the base
+rate makes it statistically unrealistic.
+
+The first training implementation should use Unsloth QLoRA on RunPod and preserve the exact Qwen
+chat template at inference. Do not rent the training GPU until the expanded benchmark is locked,
+the base checkpoint has been scored, and reviewed training examples pass contamination checks.
+
 ## Validation and remaining work
 
 Offline tests cover snapshots, provenance checks, multi-turn replay, failed runs, endpoint
-request controls, and Docker mount arguments. The Docker tests use a mocked transport, not a
-live isolation test. A scripted policy tests the plumbing and establishes no model capability.
+request controls, benchmark validation/scoring, and Docker mount arguments. A scripted policy
+tests the plumbing and establishes no model capability.
 
 ```bash
-python -m pytest tests/test_research.py tests/test_repl.py -q
+python -m pytest tests/test_research.py tests/test_research_benchmark.py tests/test_repl.py -q
 ```
 
-September 12 validation: the complete suite passed **93 tests** with
+September 12 validation: the complete suite passed **99 tests** with
 `HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -m pytest -q`, using the already cached embedding
 model. Without offline mode, 18 legacy fixtures attempted Hugging Face network requests and
 failed during setup; no research test failed. Ruff passed for the added research code.
@@ -162,7 +211,11 @@ The real downloaded corpus also passed a scripted three-step search/read/submit 
 `out/research/scripted-smoke.json` and its `.md` review sheet. That run explicitly labels its
 backend as scripted and is not evidence of model answer quality.
 
-Still needed: a live model-server smoke run; successful live discovery after the API rate limit;
-reviewed question/evidence labels; a paired baseline comparison; and, if indicated by failures,
-better table/PDF extraction or retrieval. No GPU was provisioned and no training job was started
-for this implementation.
+The first live Qwen3-8B run submitted an answer and used a valid snapshot span, but it repeated
+actions, hit a Python syntax failure, covered only one of the requested comparison approaches,
+and has not received semantic human review. That is a protocol/provenance signal, not evidence of
+research quality. The disposable RunPod GPU was stopped after the run.
+
+Still needed: run and review the eight-question base pilot; expand and lock the final held-out
+paper set; create reviewed training trajectories from disjoint papers; then compare base and SFT
+on identical runs. No research fine-tuning job has been started.
