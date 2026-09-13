@@ -4,6 +4,8 @@ For the motivation, proposed teacher-to-Qwen distillation workflow, data require
 open decisions, see [the research pivot notes](RESEARCH_PIVOT_NOTES.md).
 For the concrete GPU setup and first live result, see
 [the first smoke-run record](RESEARCH_SMOKE_RUN.md).
+For the retrieval-agent and larger-explainer boundary, see
+[the second-brain architecture](SECOND_BRAIN_ARCHITECTURE.md).
 
 The user-approved objective is: given an AI project and its constraints, find relevant research,
 explain what the papers demonstrate, and make the evidence inspectable. Start with retrieval and
