@@ -1,5 +1,8 @@
 # AI-paper second brain architecture
 
+For a longer plain-language walkthrough with a complete example, see
+[how the AI research assistant works](HOW_THE_AI_RESEARCH_ASSISTANT_WORKS.md).
+
 The product goal is a private, inspectable research assistant. A small Qwen agent searches a
 curated paper library and produces an evidence packet. A larger model explains that packet in the
 user's preferred level of detail. Neither model is allowed to turn a real citation into a guarantee

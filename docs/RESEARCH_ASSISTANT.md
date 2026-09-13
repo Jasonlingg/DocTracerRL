@@ -6,6 +6,8 @@ For the concrete GPU setup and first live result, see
 [the first smoke-run record](RESEARCH_SMOKE_RUN.md).
 For the retrieval-agent and larger-explainer boundary, see
 [the second-brain architecture](SECOND_BRAIN_ARCHITECTURE.md).
+For a plain-language walkthrough of the complete product and training loop, see
+[how the AI research assistant works](HOW_THE_AI_RESEARCH_ASSISTANT_WORKS.md).
 
 The user-approved objective is: given an AI project and its constraints, find relevant research,
 explain what the papers demonstrate, and make the evidence inspectable. Start with retrieval and
