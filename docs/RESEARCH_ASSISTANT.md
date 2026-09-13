@@ -8,6 +8,8 @@ For the retrieval-agent and larger-explainer boundary, see
 [the second-brain architecture](SECOND_BRAIN_ARCHITECTURE.md).
 For a plain-language walkthrough of the complete product and training loop, see
 [how the AI research assistant works](HOW_THE_AI_RESEARCH_ASSISTANT_WORKS.md).
+For importing a personal collection and saving answers as Obsidian notes, see
+[the folder-based Obsidian workflow](OBSIDIAN_WORKFLOW.md).
 
 The user-approved objective is: given an AI project and its constraints, find relevant research,
 explain what the papers demonstrate, and make the evidence inspectable. Start with retrieval and

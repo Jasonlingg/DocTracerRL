@@ -2,6 +2,9 @@
 
 For a longer plain-language walkthrough with a complete example, see
 [how the AI research assistant works](HOW_THE_AI_RESEARCH_ASSISTANT_WORKS.md).
+The first local folder importer and cited-note exporter are now implemented; see
+[the Obsidian workflow](OBSIDIAN_WORKFLOW.md) for a runnable demo. Markdown notes keep their
+personal-commentary label, and PDF extraction preserves pages with explicit no-OCR coverage.
 
 The product goal is a private, inspectable research assistant. A small Qwen agent searches a
 curated paper library and produces an evidence packet. A larger model explains that packet in the
@@ -42,8 +45,8 @@ For material that cannot leave the machine, use a local explainer as well.
 
 The current implementation is not a 10,000-PDF system. Reaching that scale requires:
 
-1. Local PDF and note ingestion with stable document versions, page references, deduplication,
-   parsing diagnostics, and explicit table/figure coverage.
+1. Extend the local PDF and note importer with deduplication, OCR where needed, and better
+   table/figure extraction. Basic snapshots, source hashes, page references, and diagnostics exist.
 2. A persistent hybrid index combining lexical and embedding retrieval instead of scanning every
    JSON document for each query.
 3. Incremental updates that preserve old benchmark snapshots while refreshing the live library.

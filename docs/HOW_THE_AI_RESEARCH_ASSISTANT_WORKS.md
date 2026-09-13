@@ -1,5 +1,9 @@
 # How the AI research assistant works
 
+September 13 update: the initial folder-based Obsidian integration now imports Markdown and
+text-based PDFs and exports cited explanation notes. Try the [local demo](OBSIDIAN_WORKFLOW.md).
+The larger-library indexing and live model evaluation work described below are still pending.
+
 ## The idea in one sentence
 
 This project is building a personal second brain for AI papers: a small Qwen agent searches your
@@ -248,6 +252,7 @@ The result is not established until the before-and-after benchmark supports it.
 Implemented and tested:
 
 - versioned arXiv ingestion and frozen corpus checks;
+- selected Obsidian folder ingestion for Markdown and text-based PDFs, plus cited note export;
 - deterministic paper and passage search;
 - multi-turn validated JSON actions for Qwen;
 - exact source-span materialization;
@@ -260,7 +265,7 @@ Still to build or run:
 
 - a successful live Qwen test of the new structured-action protocol;
 - the complete base-Qwen pilot and human review;
-- ingestion and indexing for a large PDF library;
+- scalable indexing and richer extraction for a large PDF library;
 - a larger final held-out benchmark;
 - reviewed teacher trajectories from separate training papers;
 - the Unsloth QLoRA training script and first adapter;

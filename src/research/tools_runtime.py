@@ -25,6 +25,7 @@ class ResearchTools:
                 "title": doc["title"],
                 "submitted": doc["metadata"]["submitted"],
                 "coverage": doc["metadata"]["coverage"],
+                "source_kind": doc["metadata"].get("source_kind", "arxiv_paper"),
             }
             for doc in self.documents.values()
         ]
@@ -58,6 +59,10 @@ class ResearchTools:
             "quote": doc["text"][start:end],
             "source_url": doc["metadata"]["source_url"],
             "coverage": doc["metadata"]["coverage"],
+            "source_kind": doc["metadata"].get("source_kind", "arxiv_paper"),
+            "source_path": doc["metadata"].get("source_path"),
+            "pages": [section["page"] for section in doc["sections"]
+                      if "page" in section and section["start"] < end and section["end"] > start],
         }
 
     def search_papers(self, query, top_k=5):
