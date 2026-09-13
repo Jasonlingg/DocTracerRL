@@ -143,6 +143,37 @@ def test_validated_dispatch_calls_only_readonly_research_tools(snapshot):
     assert len(found) == 1 and found[0]["quote"]
 
 
+def test_search_returns_best_window_from_distinct_documents(tmp_path):
+    from src.research.tools_runtime import ResearchTools
+
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    documents = [
+        {
+            "doc_id": "paper_a",
+            "title": "Repeated search paper",
+            "text": "search " * 1000,
+            "sections": [{"section": "Body", "start": 0, "end": len("search " * 1000)}],
+            "metadata": {"submitted": "2025-01-01", "coverage": "test",
+                         "source_url": "https://example.com/a"},
+        },
+        {
+            "doc_id": "paper_b",
+            "title": "Second search paper",
+            "text": "search evidence from another paper",
+            "sections": [{"section": "Body", "start": 0,
+                          "end": len("search evidence from another paper")}],
+            "metadata": {"submitted": "2025-01-02", "coverage": "test",
+                         "source_url": "https://example.com/b"},
+        },
+    ]
+    for document in documents:
+        (corpus / f"{document['doc_id']}.json").write_text(json.dumps(document))
+
+    found = ResearchTools(corpus).search_papers("search", top_k=2)
+    assert [result["doc_id"] for result in found] == ["paper_a", "paper_b"]
+
+
 def test_snapshot_materializes_omitted_quote_and_rejects_a_wrong_model_quote(snapshot):
     _, docs = load_snapshot(snapshot)
     doc = next(iter(docs.values()))

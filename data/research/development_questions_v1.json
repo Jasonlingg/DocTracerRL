@@ -1,0 +1,145 @@
+{
+  "schema_version": "research-questions-v1",
+  "question_set_id": "ai-agent-research-development-v1",
+  "domain": "Training and evaluating tool-using, evidence-grounded AI research agents",
+  "corpus_hash": "9a9c1d750daf5647898eb18681a5f75775ba76047713316dcc5583f6ed201598",
+  "source_selection": "data/research/development_sources_v1.json",
+  "status": "Unreviewed development prompts. These may guide training and must never be reported as held-out evaluation results.",
+  "questions": [
+    {
+      "id": "agent_research_dev_01",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "research workflow",
+      "retrieval_query": "collect references browsing support answers human feedback",
+      "target_doc_ids": ["arxiv_2112_09332v3"],
+      "question": "How does WebGPT combine browsing, reference collection, imitation learning, and human feedback? Which parts of that workflow transfer to a private AI-paper assistant, and which claims require a new experiment?"
+    },
+    {
+      "id": "agent_research_dev_02",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "unsupported claims",
+      "retrieval_query": "unsupported claims attribution revision tool interactive critiquing self correction",
+      "target_doc_ids": ["arxiv_2210_08726v3", "arxiv_2305_11738v4"],
+      "question": "Compare RARR's research-and-revision process with CRITIC's tool-interactive self-correction. What evidence suggests each could reduce unsupported claims, and what would we need to test on AI papers?"
+    },
+    {
+      "id": "agent_research_dev_03",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "tool training",
+      "retrieval_query": "self supervised tool calls instruction tuning real world APIs",
+      "target_doc_ids": ["arxiv_2302_04761v1", "arxiv_2307_16789v2"],
+      "question": "How do Toolformer and ToolLLM obtain training data for tool use? Compare their supervision and explain which approach better resembles our structured paper-search trajectories."
+    },
+    {
+      "id": "agent_research_dev_04",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "evaluation",
+      "retrieval_query": "fine grained atomic factual precision citation correctness completeness evaluation",
+      "target_doc_ids": ["arxiv_2305_14251v2", "arxiv_2305_14627v2"],
+      "question": "Why are factual precision and citation quality separate measurements? Compare FActScore with the citation correctness and completeness evaluation used by ALCE, then propose metrics for our agent."
+    },
+    {
+      "id": "agent_research_dev_05",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "iterative search",
+      "retrieval_query": "iterative retrieval generation search enhanced reasoning long context knowledge",
+      "target_doc_ids": ["arxiv_2305_15294v2", "arxiv_2501_05366v1"],
+      "question": "Compare Iter-RetGen and Search-o1 as approaches to searches that depend on earlier evidence. What is trained or prompted in each system, and what result would justify adding iterative search to our assistant?"
+    },
+    {
+      "id": "agent_research_dev_06",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "attribution datasets",
+      "retrieval_query": "human evaluated attributed explanations citation quality information seeking",
+      "target_doc_ids": ["arxiv_2307_16883v1", "arxiv_2305_14627v2"],
+      "question": "What do HAGRID and ALCE contribute to evaluating attributed answers? Identify which annotations or metrics could inform human review of our paper assistant."
+    },
+    {
+      "id": "agent_research_dev_07",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "agent benchmarks",
+      "retrieval_query": "benchmark general assistants interactive environments tool use multi turn agents",
+      "target_doc_ids": ["arxiv_2308_03688v3", "arxiv_2311_12983v1"],
+      "question": "Compare what AgentBench and GAIA test. Which capabilities overlap with evidence-grounded research, and which important citation-support behavior is outside their reported evaluation?"
+    },
+    {
+      "id": "agent_research_dev_08",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "freshness",
+      "retrieval_query": "fresh changing knowledge false premises search engine evidence order hallucination",
+      "target_doc_ids": ["arxiv_2310_03214v2"],
+      "question": "What does FreshLLMs report about fast-changing knowledge, false premises, evidence quantity, and evidence ordering? Explain what would change when search is limited to a dated private corpus."
+    },
+    {
+      "id": "agent_research_dev_09",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "report synthesis",
+      "retrieval_query": "writing articles outline retrieval multi perspective information seeking citations",
+      "target_doc_ids": ["arxiv_2402_14207v2", "arxiv_2112_09332v3"],
+      "question": "Compare STORM's article-writing workflow with WebGPT's reference-backed question answering. Which design is more relevant to producing an explainable research brief from several papers?"
+    },
+    {
+      "id": "agent_research_dev_10",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "training data quality",
+      "retrieval_query": "negative examples agent fine tuning effective agent tuning data methods",
+      "target_doc_ids": ["arxiv_2402_11651v2", "arxiv_2403_12881v1"],
+      "question": "What do Learning From Failure and Agent-FLAN imply about constructing agent-training data? Separate their reported findings from the hypothesis that those ideas will improve our Qwen research agent."
+    },
+    {
+      "id": "agent_research_dev_11",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "trajectory distillation",
+      "retrieval_query": "multi turn tool use data synthesis distillation graph translation APIs trajectories",
+      "target_doc_ids": ["arxiv_2503_07826v1", "arxiv_2307_16789v2"],
+      "question": "Compare Magnet's multi-turn tool-use data synthesis with ToolLLM's API-oriented training pipeline. Which design choices are relevant to distilling research trajectories into Qwen?"
+    },
+    {
+      "id": "agent_research_dev_12",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "deep research training",
+      "retrieval_query": "deep research reinforcement learning real world search browsing human feedback",
+      "target_doc_ids": ["arxiv_2504_03160v4", "arxiv_2112_09332v3"],
+      "question": "Compare DeepResearcher's reinforcement-learning setup with WebGPT's imitation and preference-based workflow. What controlled experiment would tell us whether SFT alone is enough for our smaller agent?"
+    },
+    {
+      "id": "agent_research_dev_13",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "benchmark limits",
+      "retrieval_query": "challenging benchmark browsing agents hidden hard questions factual citations",
+      "target_doc_ids": ["arxiv_2504_12516v1", "arxiv_2305_14627v2"],
+      "question": "What does BrowseComp measure about browsing agents, and why would strong BrowseComp performance still not prove that an AI-paper answer's citations support every claim?"
+    },
+    {
+      "id": "agent_research_dev_14",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "synthetic training",
+      "retrieval_query": "self challenging agents self generated tasks multi turn tool use synthetic data",
+      "target_doc_ids": ["arxiv_2506_01716v1", "arxiv_2503_07826v1"],
+      "question": "Compare Self-Challenging's self-generated tasks with Magnet's synthetic multi-turn trajectories. What contamination and quality checks would we need before using either idea?"
+    },
+    {
+      "id": "agent_research_dev_15",
+      "split": "development",
+      "review_status": "unreviewed",
+      "focus": "appropriate abstention",
+      "retrieval_query": "single 24GB GPU Qwen latency two seconds guarantee deployment",
+      "target_doc_ids": [],
+      "question": "Do these papers establish that our exact Qwen3-8B agent will run on one 24GB GPU and finish every research question within two seconds? State what the corpus supports and what must be measured directly."
+    }
+  ]
+}

@@ -99,4 +99,9 @@ class ResearchTools:
                             "score": round(score, 4),
                         })
         results.sort(key=lambda result: (-result["score"], result["doc_id"], result["start"]))
-        return results[:top_k]
+        # Search is the discovery step; return each paper's strongest matching
+        # window so repeated passages from one document cannot hide other papers.
+        best_by_document = {}
+        for result in results:
+            best_by_document.setdefault(result["doc_id"], result)
+        return list(best_by_document.values())[:top_k]

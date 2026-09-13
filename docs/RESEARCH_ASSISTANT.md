@@ -153,6 +153,40 @@ Only then create reviewed training examples and separate held-out papers/questio
 is justified, compare the **same model before and after training** with identical tools and data.
 The eventual claim must be measured improvement in evidence-supported, useful answers.
 
+## Separate development corpus
+
+`data/research/development_sources_v1.json` selects 20 version-pinned papers about research
+agents, tool use, attribution, factuality, retrieval, and agent evaluation. They are disjoint from
+the six papers reserved by the pilot benchmark. The frozen local copy is expected at
+`out/research/ai-agents-development-v1-20260912`; like every directory under `out/`, it must be
+copied explicitly when moving the experiment to another machine or pod.
+
+`data/research/development_questions_v1.json` contains 15 unreviewed development prompts. Fourteen
+have expected papers for a retrieval-routing check and one tests abstention when the corpus does
+not establish a deployment guarantee. These prompts and papers may guide SFT data creation, so
+they are not a held-out benchmark and cannot support a before/after training claim.
+
+Run the CPU-only lexical retrieval check with:
+
+```bash
+python scripts/research_retrieval_check.py \
+  --snapshot out/research/ai-agents-development-v1-20260912 \
+  --questions data/research/development_questions_v1.json \
+  --top-k 5 \
+  --output out/research/development-retrieval-top5-v2.json
+```
+
+The resulting target-document recall measures whether the fixed diagnostic queries surface the
+intended papers. It does not measure whether passages are relevant, whether evidence supports a
+claim, or whether Qwen can formulate those queries itself.
+
+The September 13 retrieval check exposed repeated passages from one paper crowding other sources
+out of the top five results. Returning each paper's best matching passage raised target-document
+recall from 0.7692 to 0.9231 and the all-targets-found rate from 0.5714 to 0.8571, while the
+any-target-found rate remained 1.0. The two remaining misses are both two-paper comparisons; this
+supports teaching the agent to issue separate searches for each side rather than treating the
+hand-written diagnostic queries as a solved research benchmark.
+
 ## Locked benchmark pilot before training
 
 `data/research/benchmark_pilot_v1.json` is a separate eight-question evaluation pilot. Its purpose

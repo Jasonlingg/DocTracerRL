@@ -1,0 +1,29 @@
+{
+  "schema_version": "research-source-selection-v1",
+  "collection_id": "ai-agent-research-development-v1",
+  "purpose": "Development and future training corpus for learning multi-step evidence gathering over AI-agent research. Disjoint from benchmark_pilot_v1.json.",
+  "selection_note": "Selected from live Hugging Face paper search on 2026-09-12 for coverage of research agents, tool use, attribution, factuality, retrieval, and agent evaluation. Selection is curated, not exhaustive. Versions were resolved and downloaded from arXiv on 2026-09-13.",
+  "split_policy": "These papers may be used for development and training examples. Never copy questions, grader notes, or papers reserved by data/research/benchmark_pilot_v1.json into training data.",
+  "papers": [
+    {"arxiv_id": "2112.09332v3", "title": "WebGPT: Browser-assisted question-answering with human feedback", "focus": ["research_agent", "citations", "human_feedback"]},
+    {"arxiv_id": "2210.08726v3", "title": "RARR: Researching and Revising What Language Models Say, Using Language Models", "focus": ["attribution", "revision", "unsupported_claims"]},
+    {"arxiv_id": "2302.04761v1", "title": "Toolformer: Language Models Can Teach Themselves to Use Tools", "focus": ["tool_use", "self_supervision"]},
+    {"arxiv_id": "2305.11738v4", "title": "CRITIC: Large Language Models Can Self-Correct with Tool-Interactive Critiquing", "focus": ["tool_use", "self_correction"]},
+    {"arxiv_id": "2305.14251v2", "title": "FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation", "focus": ["factuality", "evaluation"]},
+    {"arxiv_id": "2305.14627v2", "title": "Enabling Large Language Models to Generate Text with Citations", "focus": ["citations", "attribution", "evaluation"]},
+    {"arxiv_id": "2305.15294v2", "title": "Enhancing Retrieval-Augmented Large Language Models with Iterative Retrieval-Generation Synergy", "focus": ["iterative_retrieval", "multi_step_search"]},
+    {"arxiv_id": "2307.16789v2", "title": "ToolLLM: Facilitating Large Language Models to Master 16000+ Real-world APIs", "focus": ["tool_use", "instruction_tuning"]},
+    {"arxiv_id": "2307.16883v1", "title": "HAGRID: A Human-LLM Collaborative Dataset for Generative Information-Seeking with Attribution", "focus": ["attribution", "human_evaluation", "dataset"]},
+    {"arxiv_id": "2308.03688v3", "title": "AgentBench: Evaluating LLMs as Agents", "focus": ["agent_evaluation", "interactive_environments"]},
+    {"arxiv_id": "2310.03214v2", "title": "FreshLLMs: Refreshing Large Language Models with Search Engine Augmentation", "focus": ["freshness", "hallucination", "search"]},
+    {"arxiv_id": "2311.12983v1", "title": "GAIA: a benchmark for General AI Assistants", "focus": ["agent_evaluation", "tool_use", "reasoning"]},
+    {"arxiv_id": "2402.11651v2", "title": "Learning From Failure: Integrating Negative Examples when Fine-tuning Large Language Models as Agents", "focus": ["agent_training", "negative_examples"]},
+    {"arxiv_id": "2402.14207v2", "title": "Assisting in Writing Wikipedia-like Articles From Scratch with Large Language Models", "focus": ["research_agent", "report_synthesis", "citations"]},
+    {"arxiv_id": "2403.12881v1", "title": "Agent-FLAN: Designing Data and Methods of Effective Agent Tuning for Large Language Models", "focus": ["agent_training", "instruction_tuning"]},
+    {"arxiv_id": "2501.05366v1", "title": "Search-o1: Agentic Search-Enhanced Large Reasoning Models", "focus": ["agentic_search", "multi_step_search"]},
+    {"arxiv_id": "2503.07826v1", "title": "Magnet: Multi-turn Tool-use Data Synthesis and Distillation via Graph Translation", "focus": ["tool_use", "distillation", "synthetic_data"]},
+    {"arxiv_id": "2504.03160v4", "title": "DeepResearcher: Scaling Deep Research via Reinforcement Learning in Real-world Environments", "focus": ["deep_research", "reinforcement_learning"]},
+    {"arxiv_id": "2504.12516v1", "title": "BrowseComp: A Simple Yet Challenging Benchmark for Browsing Agents", "focus": ["research_agent", "evaluation", "browsing"]},
+    {"arxiv_id": "2506.01716v1", "title": "Self-Challenging Language Model Agents", "focus": ["agent_training", "synthetic_tasks", "tool_use"]}
+  ]
+}
