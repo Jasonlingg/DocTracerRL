@@ -105,3 +105,30 @@ class ResearchTools:
         for result in results:
             best_by_document.setdefault(result["doc_id"], result)
         return list(best_by_document.values())[:top_k]
+
+    def search_paper(self, doc_id, query, top_k=5):
+        """Rank bounded text windows inside one known paper."""
+        if not isinstance(doc_id, str) or doc_id not in self.documents:
+            raise ValueError("doc_id must identify a paper in this snapshot")
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("query must be a non-empty string")
+        if type(top_k) is not int or not 1 <= top_k <= 10:
+            raise ValueError("top_k must be 1..10")
+
+        doc = self.documents[doc_id]
+        terms = set(re.findall(r"\w+", query.lower()))
+        results = []
+        for section in doc["sections"]:
+            for start in range(section["start"], section["end"], 1200):
+                end = min(start + 1600, section["end"])
+                words = re.findall(r"\w+", doc["text"][start:end].lower())
+                score = sum(words.count(term) / (1 + len(words) / 200) for term in terms)
+                if score:
+                    results.append({
+                        **self.passage(doc_id, start, end - start),
+                        "title": doc["title"],
+                        "section": section["section"],
+                        "score": round(score, 4),
+                    })
+        results.sort(key=lambda result: (-result["score"], result["start"]))
+        return results[:top_k]

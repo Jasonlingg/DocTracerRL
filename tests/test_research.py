@@ -174,6 +174,42 @@ def test_search_returns_best_window_from_distinct_documents(tmp_path):
     assert [result["doc_id"] for result in found] == ["paper_a", "paper_b"]
 
 
+def test_search_paper_returns_multiple_ranked_windows_from_only_the_known_document(tmp_path):
+    from src.research.tools_runtime import ResearchTools
+
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    first_text = "method evidence " * 300 + "unrelated " * 300 + "method result " * 300
+    documents = [
+        {
+            "doc_id": "paper_a", "title": "Known paper", "text": first_text,
+            "sections": [{"section": "Body", "start": 0, "end": len(first_text)}],
+            "metadata": {"submitted": "2025-01-01", "coverage": "test",
+                         "source_url": "https://example.com/a"},
+        },
+        {
+            "doc_id": "paper_b", "title": "Other paper", "text": "method " * 1000,
+            "sections": [{"section": "Body", "start": 0, "end": len("method " * 1000)}],
+            "metadata": {"submitted": "2025-01-02", "coverage": "test",
+                         "source_url": "https://example.com/b"},
+        },
+    ]
+    for document in documents:
+        (corpus / f"{document['doc_id']}.json").write_text(json.dumps(document))
+
+    found = ResearchTools(corpus).search_paper("paper_a", "method", top_k=2)
+    assert len(found) == 2
+    assert {result["doc_id"] for result in found} == {"paper_a"}
+    assert found[0]["score"] >= found[1]["score"]
+
+
+def test_search_paper_rejects_unknown_document(snapshot):
+    from src.research.tools_runtime import ResearchTools
+
+    with pytest.raises(ValueError, match="doc_id"):
+        ResearchTools(snapshot / "corpus").search_paper("missing", "query")
+
+
 def test_snapshot_materializes_omitted_quote_and_rejects_a_wrong_model_quote(snapshot):
     _, docs = load_snapshot(snapshot)
     doc = next(iter(docs.values()))

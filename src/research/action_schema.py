@@ -1,4 +1,4 @@
-"""Generation contract for research-tools-v2; source support remains a separate check."""
+"""Generation contract for research-tools-v3; source support remains a separate check."""
 
 import json
 
@@ -32,6 +32,11 @@ _TOOLS = {
         "query": {"type": "string", "minLength": 1},
         "top_k": {"type": "integer", "minimum": 1, "maximum": 10},
     }, ["query"]),
+    "search_paper": _object({
+        "doc_id": _DOC_ID,
+        "query": {"type": "string", "minLength": 1},
+        "top_k": {"type": "integer", "minimum": 1, "maximum": 10},
+    }, ["doc_id", "query"]),
     "paper": _object({"doc_id": _DOC_ID}),
     "passage": _object({
         "doc_id": _DOC_ID,

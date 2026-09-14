@@ -18,6 +18,9 @@ ABSTENTION = {"action": "submit", "answer": {
 @pytest.mark.parametrize("action", [
     {"action": "papers", "arguments": {}},
     {"action": "search_papers", "arguments": {"query": "support", "top_k": 3}},
+    {"action": "search_paper", "arguments": {
+        "doc_id": "paper", "query": "support", "top_k": 3,
+    }},
     {"action": "paper", "arguments": {"doc_id": "paper"}},
     {"action": "passage", "arguments": {"doc_id": "paper", "start": 0, "length": 1600}},
     ABSTENTION,
