@@ -4,6 +4,8 @@ For the motivation, proposed teacher-to-Qwen distillation workflow, data require
 open decisions, see [the research pivot notes](RESEARCH_PIVOT_NOTES.md).
 For the concrete GPU setup and first live result, see
 [the first smoke-run record](RESEARCH_SMOKE_RUN.md).
+For the complete locked Qwen3-8B pilot and its failure diagnosis, see
+[the baseline pilot record](RESEARCH_BASELINE_PILOT.md).
 For the retrieval-agent and larger-explainer boundary, see
 [the second-brain architecture](SECOND_BRAIN_ARCHITECTURE.md).
 For a plain-language walkthrough of the complete product and training loop, see
