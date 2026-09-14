@@ -9,6 +9,7 @@ cd "$(dirname "$0")/.."
 research_python="${RESEARCH_PYTHON:-python3}"
 research_model="${RESEARCH_MODEL:-Qwen/Qwen3-8B}"
 research_endpoint="${RESEARCH_ENDPOINT:-http://localhost:8000/v1}"
+research_structured_output="${RESEARCH_STRUCTURED_OUTPUT:-none}"
 research_snapshot="${RESEARCH_SNAPSHOT:-out/research/starter-2026-09-12}"
 research_benchmark="${RESEARCH_BENCHMARK:-data/research/benchmark_pilot_v1.json}"
 research_output="${RESEARCH_OUTPUT:-out/research/pilot-$(date -u +%Y%m%dT%H%M%SZ)}"
@@ -33,6 +34,7 @@ for research_question in pilot_01 pilot_02 pilot_03 pilot_04 pilot_05 pilot_06 p
     --revision "$RESEARCH_MODEL_REVISION" \
     --server-hardware "$RESEARCH_SERVER_HARDWARE" \
     --max-steps 10 --max-tokens 1800 --seed 42 \
+    --structured-output "$research_structured_output" \
     --output "$research_output/runs/$research_question.json"; then
     research_status=$("$research_python" -c \
       'import json,sys; print(json.load(open(sys.argv[1]))["status"])' \

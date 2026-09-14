@@ -44,6 +44,8 @@ def main():
     ask.add_argument("--seed", type=int, default=42)
     ask.add_argument("--max-steps", type=int, default=10)
     ask.add_argument("--max-tokens", type=int, default=1800)
+    ask.add_argument("--structured-output", choices=["none", "json_schema"], default="none",
+                     help="Request constrained JSON generation; recorded as a new policy setting")
     ask.add_argument("--output", type=Path, required=True, help="New .json run artifact")
     args = parser.parse_args()
     try:
@@ -84,6 +86,7 @@ def main():
                         "review_status": "unreviewed"}
         policy = EndpointPolicy(
             args.endpoint, args.model, args.revision, args.seed, args.max_tokens,
+            structured_output=args.structured_output,
         )
         result = run_question(
             args.snapshot,

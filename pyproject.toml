@@ -11,6 +11,7 @@ license = "MIT"
 dependencies = [
     "anthropic>=0.39.0",
     "pydantic>=2.0",
+    "jsonschema>=4.23,<5",
     "pyyaml>=6.0",
     "loguru>=0.7",
     "docker>=7.0",

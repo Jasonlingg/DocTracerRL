@@ -11,7 +11,10 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
+from jsonschema import ValidationError
+
 from src.eval.artifacts import configuration_hash, content_hash
+from src.research.action_schema import ACTION_SCHEMA, validate_structured_action
 from src.research.tools_runtime import ResearchTools
 
 PROTOCOL_VERSION = "research-tools-v2"
@@ -50,10 +53,13 @@ class EndpointPolicy:
     """
 
     def __init__(self, endpoint: str, model: str, revision: str, seed: int = 42,
-                 max_tokens: int = 1800, temperature: float = 0.0):
+                 max_tokens: int = 1800, temperature: float = 0.0,
+                 structured_output: str = "none"):
         self.endpoint = endpoint.rstrip("/")
         if max_tokens < 1:
             raise ValueError("max_tokens must be positive")
+        if structured_output not in {"none", "json_schema"}:
+            raise ValueError("structured_output must be none or json_schema")
         self.model = model
         self.config = {"backend": "chat_completions", "model": model,
                        "revision": revision, "seed": seed, "max_tokens": max_tokens,
@@ -61,6 +67,10 @@ class EndpointPolicy:
                        "top_p": 1.0, "top_k": -1, "min_p": 0.0,
                        "repetition_penalty": 1.0,
                        "revision_note": "Operator-supplied; not attested by the server"}
+        # Leave the old policy identity reproducible. The opt-in mode is a new experiment.
+        if structured_output == "json_schema":
+            self.config.update(structured_output=structured_output,
+                               action_schema_hash=configuration_hash(ACTION_SCHEMA))
         self.history = []
 
     def act(self, observation: str) -> str:
@@ -72,6 +82,12 @@ class EndpointPolicy:
             "seed": self.config["seed"], "chat_template_kwargs": {"enable_thinking": False},
             "top_p": 1.0, "top_k": -1, "min_p": 0.0, "repetition_penalty": 1.0,
         }
+        if self.config.get("structured_output") == "json_schema":
+            payload["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "research_action", "strict": True,
+                                "schema": ACTION_SCHEMA},
+            }
         headers = {"Content-Type": "application/json"}
         key = os.environ.get("RESEARCH_API_KEY")
         if key:
@@ -86,6 +102,11 @@ class EndpointPolicy:
         action = choice["message"]["content"]
         if not isinstance(action, str) or not action.strip():
             raise ValueError("Model server returned no text action")
+        if self.config.get("structured_output") == "json_schema":
+            try:
+                validate_structured_action(action)
+            except (ValueError, ValidationError) as exc:
+                raise RuntimeError("Server returned invalid structured JSON") from exc
         self.history.append({"role": "assistant", "content": action})
         return action
 
