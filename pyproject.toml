@@ -36,6 +36,9 @@ dev = [
 musique = [
     "datasets>=2.0",
 ]
+qasper = [
+    "datasets>=4.7.0",
+]
 viewer = [
     "fastapi>=0.110",
     "uvicorn>=0.29",

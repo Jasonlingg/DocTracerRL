@@ -10,6 +10,10 @@ For the first authored development examples and the isolated JSON-generation exp
 [the demonstration batch](RESEARCH_DEMONSTRATIONS.md).
 For the retrieval-agent and larger-explainer boundary, see
 [the second-brain architecture](SECOND_BRAIN_ARCHITECTURE.md).
+For the evidence-based training-data choice and proposed general/domain mixture, see
+[the research dataset decision](RESEARCH_DATASET_DECISION.md).
+For the concrete QASPER conversion result and its boundary, see
+[the QASPER pilot record](QASPER_PILOT.md).
 For a plain-language walkthrough of the complete product and training loop, see
 [how the AI research assistant works](HOW_THE_AI_RESEARCH_ASSISTANT_WORKS.md).
 For importing a personal collection and saving answers as Obsidian notes, see
@@ -19,6 +23,47 @@ The user-approved objective is: given an AI project and its constraints, find re
 explain what the papers demonstrate, and make the evidence inspectable. Start with retrieval and
 tool-using agents. A useful baseline and reviewed failures come before a preference model, SFT,
 or RL. The existing MuSiQue training and rewards remain a separate experimental track.
+
+## Prepare the QASPER domain-data pilot
+
+QASPER is the primary source for teaching within-paper evidence reading and answerability. The
+converter pins the Hugging Face dataset revision, preserves official split/paper/question IDs and
+all answer annotations, and maps human text-evidence paragraphs to exact snapshot offsets. It does
+not turn those annotations into invented tool trajectories. Questions requiring figures/tables or
+whose text evidence cannot be mapped exactly are excluded from the text-only pilot and counted in
+the manifest.
+
+Build the first 40-question pilot from the official train split. Each converted task supplies the
+known paper title and document ID because QASPER's questions were written with that paper already
+in view. The searchable snapshot still contains all 888 train papers, which lets the same agent
+tools run without a second corpus format:
+
+```bash
+python scripts/setup_qasper.py \
+  --split train --num-questions 40 --seed 42 \
+  --output out/research/qasper-train-pilot-v2
+```
+
+This creates `manifest.json`, `questions.json`, and the compatible `corpus/` directory. Validation
+and test are reserved for later paper-disjoint evaluation. The immediate hypothesis is that the
+existing lexical retriever can surface the target paper for a useful fraction of these natural
+scientific questions. The expected signal is 100% exact mapping for every selected text-evidence
+paragraph, correct answer-type preservation, and split isolation. Accept the conversion only if
+those checks pass. Open-ended paper discovery is measured separately; QASPER does not supervise it.
+
+Run the CPU-only routing diagnostic with:
+
+```bash
+python scripts/research_retrieval_check.py \
+  --snapshot out/research/qasper-train-pilot-v2 \
+  --questions out/research/qasper-train-pilot-v2/questions.json \
+  --top-k 5 \
+  --output out/research/qasper-train-pilot-v2-retrieval-top5.json
+```
+
+That command is only a routing diagnostic for title-plus-question queries. It is not the primary
+QASPER score. Evidence selection, answer accuracy, and answerability on known papers are the skills
+QASPER can evaluate.
 
 ## What works now
 
