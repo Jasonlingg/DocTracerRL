@@ -70,9 +70,9 @@ summary = {
     "submitted_count": sum(run["status"] == "submitted" for run in runs),
     "statuses": {run["question"]["id"]: run["status"] for run in runs},
     "valid_source_claims": sum(
-        run.get("checks", {}).get("claims_with_valid_source_spans", 0) for run in runs
+        (run.get("checks") or {}).get("claims_with_valid_source_spans", 0) for run in runs
     ),
-    "claim_count": sum(run.get("checks", {}).get("claim_count", 0) for run in runs),
+    "claim_count": sum((run.get("checks") or {}).get("claim_count", 0) for run in runs),
     "note": "Gold-evidence overlap and answer correctness still require scoring/review.",
 }
 (output / "automatic-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
