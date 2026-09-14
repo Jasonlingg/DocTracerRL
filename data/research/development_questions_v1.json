@@ -136,6 +136,8 @@
       "id": "agent_research_dev_15",
       "split": "development",
       "review_status": "unreviewed",
+      "exclude_from_training": true,
+      "exclusion_reason": "Closely repeats pilot_05's reserved GPU and latency question. Retain only as a historical development diagnostic.",
       "focus": "appropriate abstention",
       "retrieval_query": "single 24GB GPU Qwen latency two seconds guarantee deployment",
       "target_doc_ids": [],

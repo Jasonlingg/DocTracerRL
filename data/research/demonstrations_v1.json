@@ -1,0 +1,575 @@
+{
+  "schema_version": "research-demonstrations-v1",
+  "batch_id": "research-development-demo-v1",
+  "corpus_hash": "9a9c1d750daf5647898eb18681a5f75775ba76047713316dcc5583f6ed201598",
+  "provenance": {
+    "author": "Codex",
+    "method": "assistant_authored_actions_with_real_tool_replay",
+    "model_revision": "not_available_for_interactive_authoring",
+    "review": "assistant self-review; independent human review pending",
+    "purpose": "small development batch; not a held-out test or evidence of model improvement"
+  },
+  "max_steps": 10,
+  "examples": [
+    {
+      "id": "research_demo_001",
+      "split": "development",
+      "focus": "workflow",
+      "question": "What does WebGPT save when collecting a reference, when does it compose an answer, and how do demonstrations and preference comparisons enter its training? Propose one experiment for a private paper collection.",
+      "expected_answerability": "sufficient",
+      "actions": [
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "WebGPT references browsing demonstrations reward model",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "paper",
+          "arguments": {
+            "doc_id": "arxiv_2112_09332v3"
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2112_09332v3",
+            "start": 6195,
+            "length": 1242
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2112_09332v3",
+            "start": 9499,
+            "length": 1904
+          }
+        },
+        {
+          "action": "submit",
+          "answer": {
+            "claims": [
+              {
+                "text": "WebGPT records the page title, domain and quoted extract when collecting a reference. After browsing ends, it composes an answer from the question and references if at least one reference was collected.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2112_09332v3",
+                    "start": 6195,
+                    "end": 7437
+                  }
+                ]
+              },
+              {
+                "text": "WebGPT behavior-clones human commands using supervised learning, trains a reward model on human answer comparisons, and uses that model for PPO or best-of-n answer selection.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2112_09332v3",
+                    "start": 9499,
+                    "end": 11403
+                  }
+                ]
+              }
+            ],
+            "recommendation": "Inference: keep an inspectable reference record and compare demonstration-only training with a later preference-based variant on the same private-corpus tasks.",
+            "limitations": [
+              "These are WebGPT's methods; their effectiveness for our smaller paper agent requires a separate comparison."
+            ]
+          }
+        }
+      ],
+      "review": {
+        "reviewer": "Codex",
+        "reviewer_type": "assistant_self_review",
+        "status": "complete",
+        "independent_review": false,
+        "answer_complete": true,
+        "recommendation_faithful": true,
+        "claim_reviews": [
+          {
+            "claim_index": 0,
+            "support": "supported",
+            "notes": "Environment design explicitly describes the saved fields, stopping conditions and reference requirement."
+          },
+          {
+            "claim_index": 1,
+            "support": "supported",
+            "notes": "Training section separately defines behavior cloning, reward modeling, PPO and rejection sampling."
+          }
+        ],
+        "notes": "All requested reference and training details are answered. The proposed private-corpus experiment is labeled as inference."
+      }
+    },
+    {
+      "id": "research_demo_002",
+      "split": "development",
+      "focus": "search_recovery",
+      "question": "Does Toolformer train dependent tool chains or interactive search refinement? Explain its stated limitation and what kind of example our dataset would need to add.",
+      "expected_answerability": "sufficient",
+      "actions": [
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "Toolformr",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "Toolformer",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "paper",
+          "arguments": {
+            "doc_id": "arxiv_2302_04761v1"
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2302_04761v1",
+            "start": 32899,
+            "length": 1805
+          }
+        },
+        {
+          "action": "submit",
+          "answer": {
+            "claims": [
+              {
+                "text": "Toolformer reports that it cannot chain tools using one tool's output as another's input because calls for each tool are generated independently and its finetuning data lacks chained examples.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2302_04761v1",
+                    "start": 32899,
+                    "end": 34704
+                  }
+                ]
+              },
+              {
+                "text": "The reported approach does not support interactive tool use such as browsing search results or refining a search query, and tool calling can be sensitive to input wording.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2302_04761v1",
+                    "start": 32899,
+                    "end": 34704
+                  }
+                ]
+              }
+            ],
+            "recommendation": "Inference: add examples where an observation determines the next search or tool argument, including failed searches followed by a reformulated query. Evaluate those behaviors separately.",
+            "limitations": [
+              "This paper's limitation does not prove that our proposed examples will improve Qwen."
+            ]
+          }
+        }
+      ],
+      "review": {
+        "reviewer": "Codex",
+        "reviewer_type": "assistant_self_review",
+        "status": "complete",
+        "independent_review": false,
+        "answer_complete": true,
+        "recommendation_faithful": true,
+        "claim_reviews": [
+          {
+            "claim_index": 0,
+            "support": "supported",
+            "notes": "Limitations explicitly connect independent API-call generation to absent chained training examples."
+          },
+          {
+            "claim_index": 1,
+            "support": "supported",
+            "notes": "The same section directly identifies interactive-search and wording limitations."
+          }
+        ],
+        "notes": "The initial misspelling yields no results in the actual snapshot; the next query recovers without repeating it. The answer explicitly covers both dependencies and interaction."
+      }
+    },
+    {
+      "id": "research_demo_003",
+      "split": "development",
+      "focus": "two_paper_comparison",
+      "question": "Our assistant might increase factual precision by giving very short answers. How do FActScore's scope and ALCE's citation metrics help diagnose this, and what should we report alongside precision?",
+      "expected_answerability": "sufficient",
+      "actions": [
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "FActScore atomic facts precision",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "paper",
+          "arguments": {
+            "doc_id": "arxiv_2305_14251v2"
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2305_14251v2",
+            "start": 0,
+            "length": 1300
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2305_14251v2",
+            "start": 32844,
+            "length": 1034
+          }
+        },
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "ALCE citation recall precision",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "paper",
+          "arguments": {
+            "doc_id": "arxiv_2305_14627v2"
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2305_14627v2",
+            "start": 13820,
+            "length": 2944
+          }
+        },
+        {
+          "action": "submit",
+          "answer": {
+            "claims": [
+              {
+                "text": "FActScore measures the percentage of atomic facts supported by a reliable knowledge source.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2305_14251v2",
+                    "start": 0,
+                    "end": 1300
+                  }
+                ]
+              },
+              {
+                "text": "FActScore does not measure factual recall or penalize excessive abstention or fewer facts. Its authors recommend reporting abstention rate and average atomic-fact count alongside it.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2305_14251v2",
+                    "start": 32844,
+                    "end": 33878
+                  }
+                ]
+              },
+              {
+                "text": "ALCE measures whether statements are supported by their cited passages through citation recall, and whether citations are irrelevant through citation precision.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2305_14627v2",
+                    "start": 13820,
+                    "end": 16764
+                  }
+                ]
+              }
+            ],
+            "recommendation": "Inference: report factual precision, citation support, abstention and fact count, plus a separate question-completeness review. A short fully cited answer should still lose completeness credit when it omits requested information.",
+            "limitations": [
+              "Factual recall and citation recall refer to different coverage questions. We still need to validate automated judgments on our paper domain."
+            ]
+          }
+        }
+      ],
+      "review": {
+        "reviewer": "Codex",
+        "reviewer_type": "assistant_self_review",
+        "status": "complete",
+        "independent_review": false,
+        "answer_complete": true,
+        "recommendation_faithful": true,
+        "claim_reviews": [
+          {
+            "claim_index": 0,
+            "support": "supported",
+            "notes": "The abstract defines the unit and numerator/denominator; no empirical performance number is imported."
+          },
+          {
+            "claim_index": 1,
+            "support": "supported",
+            "notes": "The limitations passage explicitly states each scope limitation and companion measurement."
+          },
+          {
+            "claim_index": 2,
+            "support": "supported",
+            "notes": "Citation-quality section defines both metrics. This is not presented as coverage of all facts needed to answer the question."
+          }
+        ],
+        "notes": "Checks both source texts and distinguishes answer completeness from citation recall; does not equate fewer facts with a better answer."
+      }
+    },
+    {
+      "id": "research_demo_004",
+      "split": "development",
+      "focus": "annotation_comparison",
+      "question": "Compare HAGRID's human annotation rules with ALCE's automatic citation evaluation. How do their criteria differ, and how should that influence our review instructions?",
+      "expected_answerability": "sufficient",
+      "actions": [
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "HAGRID",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "paper",
+          "arguments": {
+            "doc_id": "arxiv_2307_16883v1"
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2307_16883v1",
+            "start": 14932,
+            "length": 1818
+          }
+        },
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "ALCE citation recall precision",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "paper",
+          "arguments": {
+            "doc_id": "arxiv_2305_14627v2"
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2305_14627v2",
+            "start": 13820,
+            "length": 2944
+          }
+        },
+        {
+          "action": "submit",
+          "answer": {
+            "claims": [
+              {
+                "text": "HAGRID evaluates informativeness and attributability separately. At answer level it requires at least one informative sentence for informativeness, but all sentences must be attributable for the answer to be attributable.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2307_16883v1",
+                    "start": 14932,
+                    "end": 16750
+                  }
+                ]
+              },
+              {
+                "text": "For a sentence with multiple citations, HAGRID instructs annotators that all cited quotes must contain enough evidence to validate the sentence.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2307_16883v1",
+                    "start": 14932,
+                    "end": 16750
+                  }
+                ]
+              },
+              {
+                "text": "ALCE uses an NLI model to check whether concatenated cited passages support each statement for citation recall; citation precision separately detects irrelevant citations.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2305_14627v2",
+                    "start": 13820,
+                    "end": 16764
+                  }
+                ]
+              }
+            ],
+            "recommendation": "Inference: specify whether a claim needs joint support or support from each citation, then score usefulness separately. Review disagreements on multi-source claims before using an automatic score for training decisions.",
+            "limitations": [
+              "These annotation definitions are not interchangeable. An automated entailment judgment still requires domain validation."
+            ]
+          }
+        }
+      ],
+      "review": {
+        "reviewer": "Codex",
+        "reviewer_type": "assistant_self_review",
+        "status": "complete",
+        "independent_review": false,
+        "answer_complete": true,
+        "recommendation_faithful": true,
+        "claim_reviews": [
+          {
+            "claim_index": 0,
+            "support": "supported",
+            "notes": "Both aggregation rules are explicit in the human-annotation passage."
+          },
+          {
+            "claim_index": 1,
+            "support": "supported",
+            "notes": "The attribution paragraph states the multiple-citation rule; this does not silently substitute ALCE's joint-support rule."
+          },
+          {
+            "claim_index": 2,
+            "support": "supported",
+            "notes": "The NLI and concatenation definitions appear in the citation-quality section."
+          }
+        ],
+        "notes": "The answer compares the different support aggregation rules rather than claiming all attribution labels have identical meaning."
+      }
+    },
+    {
+      "id": "research_demo_005",
+      "split": "development",
+      "focus": "reported_tradeoff",
+      "question": "FreshLLMs varies both retrieved evidence count and demonstration style. For GPT-4, what happened when it added more demonstrations or made demonstration answers verbose? Should we simply maximize prompt length?",
+      "expected_answerability": "sufficient",
+      "actions": [
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "FreshPrompt verbose demonstrations hallucination",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "paper",
+          "arguments": {
+            "doc_id": "arxiv_2310_03214v2"
+          }
+        },
+        {
+          "action": "passage",
+          "arguments": {
+            "doc_id": "arxiv_2310_03214v2",
+            "start": 31440,
+            "length": 1416
+          }
+        },
+        {
+          "action": "submit",
+          "answer": {
+            "claims": [
+              {
+                "text": "In FreshLLMs' GPT-4 experiments, increasing demonstrations from five to fifteen slightly reduced accuracy, including a one-percentage-point overall decrease under Strict evaluation.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2310_03214v2",
+                    "start": 31440,
+                    "end": 32856
+                  }
+                ]
+              },
+              {
+                "text": "More verbose demonstration answers could help complex questions but also allowed hallucination; the authors report a 2.6-percentage-point decrease in overall Strict accuracy.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2310_03214v2",
+                    "start": 31440,
+                    "end": 32856
+                  }
+                ]
+              },
+              {
+                "text": "Increasing retrieved evidence count improved accuracy in the reported experiment, so evidence count and demonstration count had different effects.",
+                "evidence": [
+                  {
+                    "doc_id": "arxiv_2310_03214v2",
+                    "start": 31440,
+                    "end": 32856
+                  }
+                ]
+              }
+            ],
+            "recommendation": "Inference: vary evidence count and demonstration style separately on development questions rather than maximizing prompt length. Choose settings using usefulness and unsupported-claim rates.",
+            "limitations": [
+              "These findings concern the paper's GPT-4 and FreshQA settings and are not an optimal-context-length result for Qwen."
+            ]
+          }
+        }
+      ],
+      "review": {
+        "reviewer": "Codex",
+        "reviewer_type": "assistant_self_review",
+        "status": "complete",
+        "independent_review": false,
+        "answer_complete": true,
+        "recommendation_faithful": true,
+        "claim_reviews": [
+          {
+            "claim_index": 0,
+            "support": "supported",
+            "notes": "The paragraph reports the five-to-fifteen demonstration ablation and its Strict change."
+          },
+          {
+            "claim_index": 1,
+            "support": "supported",
+            "notes": "The writing-style ablation states both the qualitative tradeoff and the measured decrease."
+          },
+          {
+            "claim_index": 2,
+            "support": "supported",
+            "notes": "The preceding paragraph describes improved accuracy as retrieved evidence increases and contrasts demonstrations."
+          }
+        ],
+        "notes": "The answer includes measured tradeoffs and confines them to the reported model and evaluation setting."
+      }
+    },
+    {
+      "id": "research_demo_006",
+      "split": "development",
+      "focus": "missing_internal_evidence",
+      "question": "What was the measured change in weekly user retention in our internal vaultpilotresultsr3 study after adding the paper assistant? Use this collection and identify the missing evidence if the study is absent.",
+      "expected_answerability": "insufficient",
+      "actions": [
+        {
+          "action": "search_papers",
+          "arguments": {
+            "query": "vaultpilotresultsr3",
+            "top_k": 3
+          }
+        },
+        {
+          "action": "papers",
+          "arguments": {}
+        },
+        {
+          "action": "submit",
+          "answer": {
+            "claims": [],
+            "recommendation": "I cannot establish the retention change from this collection. Provide the internal study report with cohort definitions, sample sizes, dates and retention measurements so the change can be calculated.",
+            "limitations": [
+              "The named study returned no search matches and is absent from the supplied paper inventory. That establishes a limitation of this collection, not that no such study exists elsewhere."
+            ]
+          }
+        }
+      ],
+      "review": {
+        "reviewer": "Codex",
+        "reviewer_type": "assistant_self_review",
+        "status": "complete",
+        "independent_review": false,
+        "answer_complete": true,
+        "recommendation_faithful": true,
+        "claim_reviews": [],
+        "notes": "The real search returns no matches and the inventory contains only the selected papers. Empty claims and an explicit evidence request avoid inventing a retention result."
+      }
+    }
+  ]
+}
