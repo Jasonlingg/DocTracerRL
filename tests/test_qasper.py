@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from src.research.agent import load_snapshot
+from src.research.agent import load_snapshot, run_question
 from src.research.qasper import build_qasper_snapshot
 
 
@@ -117,6 +117,31 @@ def test_selection_is_reproducible_and_snapshots_are_immutable(tmp_path):
     )
     with pytest.raises(FileExistsError):
         build_qasper_snapshot([paper()], first)
+
+
+def test_snapshot_runs_through_production_agent_boundary(tmp_path):
+    class AbstainingPolicy:
+        config = {"model": "fixture", "revision": "fixture"}
+
+        def act(self, _observation):
+            return json.dumps(
+                {
+                    "action": "submit",
+                    "answer": {
+                        "claims": [],
+                        "recommendation": "The supplied paper does not answer this question.",
+                        "limitations": ["No supporting evidence was found."],
+                    },
+                }
+            )
+
+    snapshot = tmp_path / "snapshot"
+    _, questions = build_qasper_snapshot([paper()], snapshot, num_questions=None)
+    question = next(q for q in questions["questions"] if q["source_question_id"] == "q2")
+    result = run_question(snapshot, question, AbstainingPolicy(), tmp_path / "run.json")
+    assert result["status"] == "submitted"
+    assert result["snapshot_manifest"]["retrieved_at"]
+    assert result["checks"]["claim_count"] == 0
 
 
 def test_unmatched_gold_evidence_is_excluded_instead_of_silently_rewritten(tmp_path):

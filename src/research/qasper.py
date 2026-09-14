@@ -345,10 +345,12 @@ def build_qasper_snapshot(
         excluded_unmatched = sum(
             "unmatched_text_evidence" in q["conversion_issues"] for q in converted_questions
         )
+        created_at = datetime.now(timezone.utc).isoformat()
         manifest = {
             "schema_version": "research-snapshot-v1",
             "parser_version": CONVERTER_VERSION,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": created_at,
+            "retrieved_at": created_at,
             "source_dataset": QASPER_DATASET,
             "source_config": QASPER_CONFIG,
             "source_revision": revision,

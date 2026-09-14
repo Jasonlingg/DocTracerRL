@@ -72,3 +72,13 @@ whether it uses the supplied document ID, reaches the gold paragraphs, answers c
 abstains on unanswerable questions. Do this before SFT. In parallel, replace the scan-based lexical
 retriever with a persisted lexical or hybrid index and evaluate paper discovery on a dataset built
 for that task, such as the reserved LitSearch benchmark.
+
+The fixed five-question smoke plan is `data/research/qasper_smoke_v1.json`. It covers two
+extractive questions, one abstractive question, one boolean question, and one unanswerable
+question. Run it against an existing Qwen server with:
+
+```bash
+export RESEARCH_MODEL_REVISION=b968826d9c46dd6066d109eabc6255188de91218
+export RESEARCH_SERVER_HARDWARE='1x A40; BF16; vLLM 0.10.2; context 16384; eager'
+bash scripts/run_qasper_smoke.sh
+```
