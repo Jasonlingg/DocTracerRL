@@ -30,6 +30,9 @@ Output exactly one JSON object per turn, with no markdown or Python. Available a
   {"action":"paper","arguments":{"doc_id":"paper ID"}}
   {"action":"passage","arguments":{"doc_id":"paper ID","start":0,"length":1600}}
 The application validates and executes the action, then returns its result as your next input.
+When the question supplies a known doc_id, call search_paper with that doc_id and the focused
+question before reading passages. Use offsets returned by search_paper; do not guess offsets or
+scan a long paper linearly. Never repeat an identical action and submit once evidence is adequate.
 Read multiple sources when the question requires comparison. Inspect dates and coverage.
 Search matches do NOT establish claim support.
 Do not claim exhaustive/latest coverage from a selected snapshot. Abstract-only sources

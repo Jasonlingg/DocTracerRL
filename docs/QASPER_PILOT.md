@@ -132,6 +132,18 @@ export RESEARCH_PAPER_RERANKER_REVISION=233902d25c440f23af6f7d6e94d2946bac0bee0a
 bash scripts/run_qasper_smoke.sh
 ```
 
+That first reranker-enabled run met the original numeric thresholds but did not test the intended
+mechanism: Qwen called `search_paper` zero times, continued guessing `passage` offsets, and repeated
+actions on three questions. It swapped the prior dataset-size failure for a max-step failure on the
+seven-method question. Semantic review found one fully correct answer, one incomplete answer, one
+incorrect boolean answer, one missing answer, and the same unsupported answer to the unanswerable
+question. Therefore the reranker-enabled run regressed semantically and does not authorize training
+under its decision rule.
+
+The next isolated prompt test explicitly routes known-document questions through `search_paper`.
+It is recorded separately in `data/research/qasper_smoke_reranker_routing_v1.json`; it keeps the
+model, questions, snapshot, decoding settings, and reranker fixed.
+
 ## Base-Qwen smoke result
 
 The fixed smoke ran on September 14, 2026 with base `Qwen/Qwen3-8B` revision
