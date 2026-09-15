@@ -59,7 +59,8 @@ def score_qasper_smoke(plan_path: Path, questions_path: Path, runs_dir: Path) ->
         tool_actions = [
             record["action"]
             for record in run.get("trajectory", [])
-            if record.get("action", {}).get("action") != "submit"
+            if isinstance(record.get("action"), dict)
+            and record["action"].get("action") != "submit"
         ]
         action_keys = [json.dumps(action, sort_keys=True) for action in tool_actions]
         duplicate_actions = len(action_keys) - len(set(action_keys))

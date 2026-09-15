@@ -48,6 +48,7 @@ def test_score_tracks_gold_reach_and_abstention_without_claiming_correctness(tmp
         "trajectory": [
             {"action": {"action": "paper", "arguments": {"doc_id": "paper"}}},
             {"action": {"action": "paper", "arguments": {"doc_id": "paper"}}},
+            {"raw_action": "not JSON", "output": "Action rejected"},
         ],
     }
     abstention = {
