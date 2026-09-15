@@ -37,7 +37,7 @@ def corpus() -> Corpus:
         ["python", "scripts/setup_corpus.py"], check=True, capture_output=True
     )
     c = Corpus(corpus_path="data/corpus")
-    c.load()
+    c.load(build_index=False)
     return c
 
 

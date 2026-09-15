@@ -137,6 +137,25 @@ def read(doc_id: str) -> str:
         return f"ERROR: Document '{doc_id}' not found"
     return doc["text"]
 
+def passage(doc_id: str, start: int = 0, length: int = 1600) -> dict:
+    """Return an exact, bounded passage with stable character offsets."""
+    doc = _load_doc(doc_id)
+    if doc is None:
+        return {"error": f"Document '{doc_id}' not found"}
+    if type(start) is not int or type(length) is not int:
+        return {"error": "start and length must be integers"}
+    if not 0 <= start < len(doc["text"]):
+        return {"error": "start must be inside the document"}
+    if not 1 <= length <= 3000:
+        return {"error": "length must be between 1 and 3000"}
+    end = min(start + length, len(doc["text"]))
+    return {
+        "doc_id": doc_id,
+        "start": start,
+        "end": end,
+        "text": doc["text"][start:end],
+    }
+
 def extract(doc_id: str, pattern: str) -> list[str]:
     """Extract text matching a regex pattern from a document."""
     doc = _load_doc(doc_id)
@@ -204,7 +223,7 @@ def list_docs() -> list[dict]:
     ]
 
 print(
-    "Tools loaded: search(), read(), extract(), aggregate(), "
+    "Tools loaded: search(), read(), passage(), extract(), aggregate(), "
     "search_within(), verify(), list_docs()"
 )
 print(f"Corpus: {len(list_docs())} documents available")

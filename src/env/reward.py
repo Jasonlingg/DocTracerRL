@@ -15,6 +15,49 @@ REWARD_VERSION = "outcome-v1"
 REWARD_WEIGHTS = {"answer": 0.8, "citation_precision": 0.1, "citation_recall": 0.1}
 
 
+def parse_submission_details(
+    action: str,
+) -> tuple[str, list[str], list[dict]] | None:
+    """Parse a submission, including optional exact source spans.
+
+    The evidence suffix is deliberately optional so old MuSiQue trajectories and
+    adapters keep their original submission protocol. Research evaluation can
+    require it without changing the training reward.
+    """
+    if not action.strip().upper().startswith("SUBMIT:"):
+        return None
+
+    body = re.sub(r"^\s*SUBMIT:\s*", "", action, count=1, flags=re.IGNORECASE)
+    citations_match = re.search(r"\bCITATIONS:\s*", body, re.IGNORECASE)
+    if citations_match is None:
+        return body.strip(), [], []
+
+    answer = body[:citations_match.start()].strip()
+    tail = body[citations_match.end():].lstrip()
+    try:
+        citations_value, consumed = json.JSONDecoder().raw_decode(tail)
+        citations = (
+            citations_value
+            if isinstance(citations_value, list)
+            and all(isinstance(item, str) for item in citations_value)
+            else []
+        )
+    except json.JSONDecodeError:
+        return answer, [], []
+
+    evidence: list[dict] = []
+    remainder = tail[consumed:].strip()
+    evidence_match = re.match(r"^EVIDENCE:\s*", remainder, re.IGNORECASE)
+    if evidence_match is not None:
+        try:
+            value, _ = json.JSONDecoder().raw_decode(remainder[evidence_match.end():].lstrip())
+            if isinstance(value, list) and all(isinstance(item, dict) for item in value):
+                evidence = value
+        except json.JSONDecodeError:
+            pass
+    return answer, citations, evidence
+
+
 def parse_submission(action: str) -> tuple[str, list[str]] | None:
     """Parse a SUBMIT action into (answer, citations).
 
@@ -22,29 +65,11 @@ def parse_submission(action: str) -> tuple[str, list[str]] | None:
     Gym-style env (`document_env.py`) and the verifiers wrapper
     (`verifiers_env.py`).
     """
-    if not action.strip().upper().startswith("SUBMIT:"):
+    parsed = parse_submission_details(action)
+    if parsed is None:
         return None
-
-    # Extract answer (between SUBMIT: and CITATIONS:)
-    match = re.search(
-        r"SUBMIT:\s*(.*?)\s*CITATIONS:\s*(\[.*?\])",
-        action,
-        re.DOTALL | re.IGNORECASE,
-    )
-    if match:
-        answer = match.group(1).strip()
-        try:
-            citations = json.loads(match.group(2))
-        except json.JSONDecodeError:
-            citations = []
-        return answer, citations
-
-    # Fallback: just SUBMIT with no citations
-    match = re.search(r"SUBMIT:\s*(.*)", action, re.DOTALL | re.IGNORECASE)
-    if match:
-        return match.group(1).strip(), []
-
-    return None
+    answer, citations, _ = parsed
+    return answer, citations
 
 
 class RewardBreakdown(BaseModel):

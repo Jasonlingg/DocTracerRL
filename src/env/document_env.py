@@ -16,6 +16,7 @@ from src.env.reward import (
     RewardBreakdown,
     compute_reward,
     parse_submission,
+    parse_submission_details,
 )
 
 # Re-exported so `from src.env.document_env import parse_submission` keeps working.
@@ -49,6 +50,7 @@ SYSTEM_PREAMBLE = """You have a Python REPL with these functions loaded:
   search(query, top_k=5)              → [{"doc_id", "title", "chunk", "score"}]
   search(query, method="chunk")       → chunk-level search (finds buried facts)
   read(doc_id)                        → full document text
+  passage(doc_id, start, length)      → exact text with stable character offsets
   extract(doc_id, pattern)            → regex matches
   search_within(doc_id, query)        → search inside a specific document
   verify(doc_id, claim)               → check if a claim is supported by a doc
@@ -73,12 +75,14 @@ class DocumentExplorationEnv:
         max_steps: int = 10,
         use_docker: bool | None = None,
         corpus_path: str = "data/corpus",
+        require_evidence: bool = False,
     ) -> None:
         self.corpus = corpus
         self.questions = questions
         self.max_steps = max_steps
         self._use_docker = use_docker
         self._corpus_path = corpus_path
+        self.require_evidence = require_evidence
         self.repl = PersistentREPL(
             use_docker=use_docker, corpus_path=corpus_path,
         )
@@ -116,7 +120,17 @@ class DocumentExplorationEnv:
         self.repl.start_session()
 
         # Build initial observation
-        observation = f"{SYSTEM_PREAMBLE}\n\nQuestion: {q['question']}\n"
+        preamble = SYSTEM_PREAMBLE
+        if self.require_evidence:
+            preamble += (
+                "\nFor this research evaluation, inspect exact passages and append source spans:\n"
+                'SUBMIT: <answer> CITATIONS: ["id"] EVIDENCE: '
+                '[{"doc_id":"id","start":0,"end":100}]\n'
+                "Citations identify papers; EVIDENCE identifies the exact passages supporting "
+                "your important claims. The evaluator checks spans separately from answer "
+                "quality.\n"
+            )
+        observation = f"{preamble}\n\nQuestion: {q['question']}\n"
         logger.info(f"Episode started: {q['id']} — {q['question'][:80]}")
         return observation
 
@@ -130,10 +144,10 @@ class DocumentExplorationEnv:
         self._step_count += 1
 
         # Check if this is a submission
-        submission = parse_submission(action)
+        submission = parse_submission_details(action)
 
         if submission is not None:
-            answer, citations = submission
+            answer, citations, evidence = submission
             reward_breakdown = compute_reward(
                 predicted_answer=answer,
                 predicted_citations=citations,
@@ -167,6 +181,7 @@ class DocumentExplorationEnv:
                 "reward_breakdown": reward_breakdown,
                 "predicted_answer": answer,
                 "predicted_citations": citations,
+                "predicted_evidence": evidence,
             }
             return "", reward_breakdown.total, True, info
 
@@ -186,9 +201,15 @@ class DocumentExplorationEnv:
         # Add step counter so agent knows urgency
         remaining = self.max_steps - self._step_count
         if remaining <= 1:
-            observation += f"\n\n*** FINAL STEP — you MUST respond with: SUBMIT: <answer> CITATIONS: [...] ***"
+            observation += (
+                "\n\n*** FINAL STEP — you MUST respond with: "
+                "SUBMIT: <answer> CITATIONS: [...] ***"
+            )
         elif remaining <= 5:
-            observation += f"\n\n[Step {self._step_count}/{self.max_steps} — {remaining} steps left. Run sufficiency check: can you answer now? If yes → SUBMIT immediately.]"
+            observation += (
+                f"\n\n[Step {self._step_count}/{self.max_steps} — {remaining} steps left. "
+                "Run sufficiency check: can you answer now? If yes → SUBMIT immediately.]"
+            )
         else:
             observation += f"\n\n[Step {self._step_count}/{self.max_steps}/{self.max_steps}]"
 

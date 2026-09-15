@@ -34,9 +34,7 @@ def clean_action(text: str) -> str:
     """Extract a SUBMIT line or bare code block from raw model output."""
     stripped = text.strip()
 
-    submit_match = re.search(
-        r"(SUBMIT:\s*.*?CITATIONS:\s*\[.*?\])", stripped, re.DOTALL | re.IGNORECASE
-    ) or re.search(r"(SUBMIT:\s*.+)", stripped, re.IGNORECASE)
+    submit_match = re.search(r"(SUBMIT:\s*.+)", stripped, re.DOTALL | re.IGNORECASE)
     if submit_match:
         return submit_match.group(1).strip()
 

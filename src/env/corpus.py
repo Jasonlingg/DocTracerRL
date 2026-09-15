@@ -60,14 +60,20 @@ class Corpus:
             self._embedder = SentenceTransformer(self._embedding_model)
         return self._embedder
 
-    def load(self) -> None:
-        """Load documents from corpus_path, chunk, embed, and build FAISS index."""
+    def load(self, build_index: bool = True) -> None:
+        """Load documents, optionally building the FAISS index.
+
+        Code-execution policies search through the functions injected into their
+        REPL, so their evaluation does not need to build this separate vector
+        index. Other policies retain the indexed default.
+        """
         self._load_documents()
         self._chunk_documents()
-        self._build_index()
+        if build_index:
+            self._build_index()
         logger.info(
             f"Corpus loaded: {len(self._documents)} docs, "
-            f"{len(self._chunks)} chunks"
+            f"{len(self._chunks)} chunks, index={'yes' if build_index else 'no'}"
         )
 
     def _load_documents(self) -> None:

@@ -113,6 +113,14 @@ def test_read_tool(repl: LocalREPL) -> None:
     assert "True" in output
 
 
+def test_passage_returns_exact_text_and_offsets(repl: LocalREPL) -> None:
+    output = repl.execute(
+        'result = passage("apex_corp_2024_financial", 0, 20); '
+        'print(result["start"], result["end"], len(result["text"]))'
+    )
+    assert output.strip() == "0 20 20"
+
+
 def test_bare_search_call_auto_prints_its_result(repl: LocalREPL) -> None:
     """A bare search(...) with no print() must still produce visible output —
     otherwise the model gets zero feedback and keeps retrying blind."""

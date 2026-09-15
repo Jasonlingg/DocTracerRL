@@ -1,10 +1,31 @@
 """Tests for corpus loading and search."""
 
+import hashlib
+import re
 import subprocess
 
+import numpy as np
 import pytest
 
 from src.env.corpus import Corpus
+
+
+class DeterministicEmbedder:
+    """Tiny hashed bag-of-words embedder for offline unit tests."""
+
+    def encode(self, texts, normalize_embeddings=True):
+        vectors = []
+        for text in texts:
+            vector = np.zeros(512, dtype=np.float32)
+            for token in re.findall(r"\w+", text.lower()):
+                digest = hashlib.sha256(token.encode()).digest()
+                vector[int.from_bytes(digest[:2], "big") % len(vector)] += 1
+            if normalize_embeddings:
+                norm = np.linalg.norm(vector)
+                if norm:
+                    vector /= norm
+            vectors.append(vector)
+        return np.stack(vectors)
 
 
 @pytest.fixture(scope="module")
@@ -12,6 +33,7 @@ def corpus() -> Corpus:
     """Load the synthetic corpus (generate if needed)."""
     subprocess.run(["python", "scripts/setup_corpus.py"], check=True, capture_output=True)
     c = Corpus(corpus_path="data/corpus")
+    c._embedder = DeterministicEmbedder()
     c.load()
     return c
 
@@ -50,3 +72,15 @@ def test_list_documents_has_info(corpus: Corpus) -> None:
         assert doc.doc_id
         assert doc.title
         assert doc.chars > 0
+
+
+def test_load_can_skip_vector_index(tmp_path) -> None:
+    path = tmp_path / "corpus"
+    path.mkdir()
+    (path / "note.json").write_text(
+        '{"doc_id":"note","title":"Note","text":"saved research"}'
+    )
+    result = Corpus(corpus_path=str(path))
+    result.load(build_index=False)
+    assert result.read("note") == "saved research"
+    assert result.search("research") == []

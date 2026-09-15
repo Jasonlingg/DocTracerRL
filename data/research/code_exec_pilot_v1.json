@@ -1,0 +1,171 @@
+{
+  "schema_version": "research-benchmark-v1",
+  "benchmark_id": "ai-paper-code-exec-pilot-v1",
+  "status": "Frozen ten-question pilot. Human review is the primary score; answer token overlap is diagnostic only.",
+  "domain": "Retrieval and tool-using AI agents",
+  "corpus_hash": "ca28990a801741357e84438b36685c8f521817d941b203bbbd8735aba884d2aa",
+  "reserved_doc_ids": [
+    "arxiv_2005_11401v4",
+    "arxiv_2210_03629v3",
+    "arxiv_2310_11511v1",
+    "arxiv_2401_15884v3",
+    "arxiv_2403_14403v2",
+    "arxiv_2503_09516v5"
+  ],
+  "training_exclusion": "Do not use these papers, questions, answers, or grader notes in training data.",
+  "questions": [
+    {
+      "id": "paper_01",
+      "split": "pilot_evaluation",
+      "focus": "training mechanics",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2503_09516v5"],
+      "expected_citations": ["arxiv_2503_09516v5"],
+      "question": "Why does Search-R1 exclude retrieved passage tokens from its policy-gradient loss, and what experiment in the paper supports that choice? Keep the paper's finding separate from advice for our agent.",
+      "answer": "Search-R1 masks retrieved tokens because they come from the environment rather than the policy; optimizing them can create unintended learning dynamics. Its Qwen2.5-7B-base masking ablation reports more stable training and consistently better performance with masking than without it. Testing the same choice in this project is an inference, not a result established for this agent.",
+      "grader_notes": [
+        "Distinguish model-generated action tokens from retrieved source tokens.",
+        "The masking ablation concerns Search-R1 training, not research-synthesis quality."
+      ]
+    },
+    {
+      "id": "paper_02",
+      "split": "pilot_evaluation",
+      "focus": "retrieval routing",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2403_14403v2"],
+      "expected_citations": ["arxiv_2403_14403v2"],
+      "question": "Describe Adaptive-RAG's three query-complexity routes and one limitation of how its routing labels are created. What would we need to validate before using the idea in our paper assistant?",
+      "answer": "Adaptive-RAG routes simple questions to no retrieval, moderate questions to single-step retrieval, and complex questions to iterative retrieval. Its labels are automatically created from model outcomes and dataset biases and may be wrong. We would need to label our own questions and compare routing accuracy, answer support, latency, and cost against a fixed no-router baseline.",
+      "grader_notes": [
+        "The routes are no retrieval, single-step retrieval, and iterative retrieval.",
+        "Automatically constructed complexity labels may contain errors."
+      ]
+    },
+    {
+      "id": "paper_03",
+      "split": "pilot_evaluation",
+      "focus": "retrieval correction",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2401_15884v3"],
+      "expected_citations": ["arxiv_2401_15884v3"],
+      "question": "What actions does Corrective RAG trigger for correct, incorrect, and ambiguous retrieval results? Explain which part would need adaptation if our project must stay entirely within a private local corpus.",
+      "answer": "Corrective RAG refines relevant documents when retrieval is judged correct, replaces incorrect retrieval with web search, and combines refinement with web search when results are ambiguous. A private deployment would need to replace public web search with an approved local fallback or abstention path.",
+      "grader_notes": [
+        "Correct refines retrieved documents; incorrect replaces them with web search; ambiguous combines both.",
+        "A local fallback is a project adaptation rather than a reported paper result."
+      ]
+    },
+    {
+      "id": "paper_04",
+      "split": "pilot_evaluation",
+      "focus": "evidence limits",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2310_11511v1"],
+      "expected_citations": ["arxiv_2310_11511v1"],
+      "question": "Does Self-RAG establish that its generated claims are always supported by its citations? Answer from the paper and explain why citation validity and citation support must be scored separately in our benchmark.",
+      "answer": "No. Self-RAG reports that generations can still be incompletely supported. A valid citation only proves that the cited source and span exist; a separate semantic judgment is needed to determine whether that evidence entails the model's claim.",
+      "grader_notes": [
+        "The paper says outputs can still be not fully supported by citations.",
+        "A real source span proves provenance but not entailment."
+      ]
+    },
+    {
+      "id": "paper_05",
+      "split": "pilot_evaluation",
+      "focus": "unsupported deployment constraint",
+      "expected_answerability": "insufficient",
+      "minimum_distinct_sources": 1,
+      "required_doc_ids": ["arxiv_2310_11511v1"],
+      "expected_citations": ["arxiv_2310_11511v1"],
+      "question": "Do the supplied papers establish that our exact Qwen research agent will fit on one 24GB GPU and answer every question in under two seconds? Cite what is known and abstain from any unsupported guarantee.",
+      "answer": "No. The supplied papers describe hardware or performance for their own systems, but they do not test this exact Qwen agent, its code-execution harness, a 24GB GPU memory limit, or an under-two-second guarantee. Those constraints require direct profiling of our implementation.",
+      "grader_notes": [
+        "Self-RAG reports its own setup, not this Qwen agent.",
+        "The collection cannot support an under-two-second guarantee."
+      ]
+    },
+    {
+      "id": "paper_06",
+      "split": "pilot_evaluation",
+      "focus": "comparability",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 2,
+      "required_doc_ids": ["arxiv_2310_11511v1", "arxiv_2503_09516v5"],
+      "expected_citations": ["arxiv_2310_11511v1", "arxiv_2503_09516v5"],
+      "question": "Can we choose Search-R1 over Self-RAG for this project by directly comparing a headline score from each paper? Identify the relevant differences in training objective or evaluation setup and give a defensible comparison plan.",
+      "answer": "No. Search-R1 optimizes multi-turn search-and-reasoning trajectories with outcome reward, while Self-RAG trains retrieval and critique behavior with reflection tokens; their reported tasks, models, corpora, and metrics differ. Compare implementations on the same frozen corpus, questions, tool and token budget, decoding settings, seed, and support rubric.",
+      "grader_notes": [
+        "Do not treat scores from different tasks and settings as a controlled comparison.",
+        "The proposed comparison must hold the corpus, questions, tools, decoding, and rubric fixed."
+      ]
+    },
+    {
+      "id": "paper_07",
+      "split": "pilot_evaluation",
+      "focus": "prompting versus training",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 2,
+      "required_doc_ids": ["arxiv_2210_03629v3", "arxiv_2503_09516v5"],
+      "expected_citations": ["arxiv_2210_03629v3", "arxiv_2503_09516v5"],
+      "question": "Compare how ReAct elicits tool use through prompting with how Search-R1 trains search behavior. Which result from each paper is relevant, and what does neither paper establish about AI-paper citation support?",
+      "answer": "ReAct prompts interleaved reasoning and actions with one or two examples and reports gains on interactive tasks including ALFWorld and WebShop. Search-R1 uses reinforcement learning with search interactions, retrieved-token masking, and outcome rewards and reports gains over RAG baselines. Neither paper evaluates this project's claim-to-passage support rubric on AI papers.",
+      "grader_notes": [
+        "ReAct uses few-shot prompting in its reported setup.",
+        "Search-R1 trains search behavior with reinforcement learning and outcome reward.",
+        "Neither directly evaluates this project's citation-support target."
+      ]
+    },
+    {
+      "id": "paper_08",
+      "split": "pilot_evaluation",
+      "focus": "freshness abstention",
+      "expected_answerability": "insufficient",
+      "minimum_distinct_sources": 0,
+      "required_doc_ids": [],
+      "expected_citations": [],
+      "question": "What work published after March 2025 proves the best current method for evidence-grounded AI-paper research? Use only this snapshot and clearly state what cannot be established.",
+      "answer": "This snapshot cannot establish the best current method. It is a selected historical collection rather than an exhaustive post-March-2025 search. A bounded, dated literature search and common evaluation would be needed before making a current-best claim.",
+      "grader_notes": [
+        "The snapshot cannot establish exhaustive post-March-2025 coverage or a best method.",
+        "A good response abstains and proposes a bounded dated search."
+      ]
+    },
+    {
+      "id": "paper_09",
+      "split": "pilot_evaluation",
+      "focus": "knowledge updating",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 2,
+      "required_doc_ids": ["arxiv_2005_11401v4", "arxiv_2310_11511v1"],
+      "expected_citations": ["arxiv_2005_11401v4", "arxiv_2310_11511v1"],
+      "question": "Compare how the original RAG system and Self-RAG use retrieved knowledge. Which parts let knowledge change without retraining every model weight, and what would still need testing for a private paper vault?",
+      "answer": "Original RAG combines a parametric generator with an explicit non-parametric document index, so indexed knowledge can be replaced without retraining all generator weights. Self-RAG retrieves on demand and uses learned reflection tokens to judge retrieval, relevance, support, and utility. For a private vault, retrieval quality, access controls, support accuracy, latency, and behavior after corpus updates still require direct testing.",
+      "grader_notes": [
+        "RAG separates parametric memory from an updateable non-parametric index.",
+        "Self-RAG learns when to retrieve and how to critique retrieved evidence.",
+        "Private-vault performance is outside both reported evaluations."
+      ]
+    },
+    {
+      "id": "paper_10",
+      "split": "pilot_evaluation",
+      "focus": "routing versus correction",
+      "expected_answerability": "sufficient",
+      "minimum_distinct_sources": 2,
+      "required_doc_ids": ["arxiv_2401_15884v3", "arxiv_2403_14403v2"],
+      "expected_citations": ["arxiv_2401_15884v3", "arxiv_2403_14403v2"],
+      "question": "How do Adaptive-RAG and Corrective RAG intervene at different points in retrieval? Give one simple experiment that would tell us which failure our paper assistant actually has.",
+      "answer": "Adaptive-RAG acts before or during retrieval by routing questions to no retrieval, one retrieval step, or iterative retrieval based on complexity. Corrective RAG evaluates retrieved documents and then refines, replaces, or combines evidence. Label a fixed set of failures as wrong route or bad retrieved evidence, run both interventions on the same questions, and compare supported answers, retrieval steps, latency, and cost.",
+      "grader_notes": [
+        "Adaptive-RAG selects retrieval depth from predicted query complexity.",
+        "Corrective RAG evaluates and repairs retrieval results.",
+        "The experiment should isolate routing failures from evidence-quality failures."
+      ]
+    }
+  ]
+}

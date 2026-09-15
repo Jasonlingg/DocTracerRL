@@ -27,6 +27,7 @@ class EvalResult(BaseModel):
     trajectory: list[StepRecord] = Field(default_factory=list)
     predicted_answer: str = ""
     predicted_citations: list[str] = Field(default_factory=list)
+    predicted_evidence: list[dict] = Field(default_factory=list)
     duration_seconds: float = 0.0
     outcome_reward: float = 0.0
     shaping_reward: float = 0.0
@@ -55,6 +56,7 @@ def run_single(
     outcome_reward = 0.0
     predicted_answer = ""
     predicted_citations: list[str] = []
+    predicted_evidence: list[dict] = []
     answer_score = 0.0
     cit_p = 0.0
     cit_r = 0.0
@@ -76,6 +78,7 @@ def run_single(
             outcome_reward = rb.total - rb.efficiency_bonus
             predicted_answer = info.get("predicted_answer", "")
             predicted_citations = info.get("predicted_citations", [])
+            predicted_evidence = info.get("predicted_evidence", [])
 
     duration = time.time() - start
     trajectory = env.get_trajectory()
@@ -93,6 +96,7 @@ def run_single(
         trajectory=trajectory,
         predicted_answer=predicted_answer,
         predicted_citations=predicted_citations,
+        predicted_evidence=predicted_evidence,
         duration_seconds=duration,
         outcome_reward=outcome_reward,
         shaping_reward=episode_return - outcome_reward,
@@ -109,6 +113,7 @@ def _run_one_question(
     max_steps: int,
     use_docker: bool | None,
     corpus_path: str,
+    require_evidence: bool = False,
 ) -> EvalResult:
     """Run one question with a fresh env + policy instance (safe for parallel use)."""
     q = questions[q_idx]
@@ -118,6 +123,7 @@ def _run_one_question(
         max_steps=max_steps,
         use_docker=use_docker,
         corpus_path=corpus_path,
+        require_evidence=require_evidence,
     )
     try:
         policy = policy_factory()
@@ -157,6 +163,7 @@ def run_eval(
     corpus_path: str = "data/corpus",
     question_ids: list[str] | None = None,
     workers: int = 1,
+    require_evidence: bool = False,
 ) -> list[EvalResult]:
     """Run all policies on all (or selected) questions.
 
@@ -187,7 +194,7 @@ def run_eval(
                     logger.info(f"  Question {q['id']}: {q['question'][:60]}...")
                     result = _run_one_question(
                         corpus, questions, q_idx, policy_name, factory,
-                        max_steps, use_docker, corpus_path,
+                        max_steps, use_docker, corpus_path, require_evidence,
                     )
                     results.append(result)
                     logger.info(
@@ -201,7 +208,7 @@ def run_eval(
                         fut = pool.submit(
                             _run_one_question,
                             corpus, questions, q_idx, policy_name, factory,
-                            max_steps, use_docker, corpus_path,
+                            max_steps, use_docker, corpus_path, require_evidence,
                         )
                         futures[fut] = q_idx
 

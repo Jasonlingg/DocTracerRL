@@ -3,15 +3,31 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 import os
-from pathlib import Path
 import platform
 import random
 import subprocess
+from datetime import datetime
+from pathlib import Path
 from uuid import uuid4
 
+import typer
 from dotenv import load_dotenv
+from rich.console import Console
+
+from src.env.corpus import Corpus
+from src.env.reward import REWARD_VERSION, REWARD_WEIGHTS
+from src.eval.artifacts import configuration_hash, content_hash
+from src.eval.harness import run_eval
+from src.eval.report import print_results
+from src.policies.claude_policy import ClaudePolicy
+from src.policies.grpo_policy import GRPOPolicy
+from src.policies.naive_rag import NaiveRAGPolicy
+from src.policies.qwen_base_policy import QwenBasePolicy
+from src.policies.qwen_sft_policy import QwenSFTPolicy
+from src.policies.single_shot import SingleShotPolicy
+from src.policies.sparse_rag import SparseRAGPolicy
+from src.policies.stuffing import ContextStuffingPolicy
 
 # An exported-but-EMPTY key shadows .env: load_dotenv() defaults to
 # override=False and treats "" as already-set, so the blank value wins and
@@ -21,31 +37,18 @@ for _k in ("ANTHROPIC_API_KEY", "DEMO_API_KEY"):
         del os.environ[_k]
 load_dotenv()
 
-import typer
-from loguru import logger
-from rich.console import Console
-
-from src.env.corpus import Corpus
-from src.eval.harness import run_eval
-from src.eval.artifacts import content_hash, configuration_hash
-from src.env.reward import REWARD_VERSION, REWARD_WEIGHTS
-from src.eval.report import print_results
-from src.policies.claude_policy import ClaudePolicy
-from src.policies.naive_rag import NaiveRAGPolicy
-from src.policies.qwen_base_policy import QwenBasePolicy
-from src.policies.qwen_sft_policy import QwenSFTPolicy
-from src.policies.grpo_policy import GRPOPolicy
-from src.policies.single_shot import SingleShotPolicy
-from src.policies.sparse_rag import SparseRAGPolicy
-from src.policies.stuffing import ContextStuffingPolicy
-
 app = typer.Typer(help="RLM Explorer Evaluation CLI")
 console = Console()
 
 
 def load_questions(path: str = "data/questions/eval_set.json") -> list[dict]:
     with open(path) as f:
-        return json.load(f)
+        data = json.load(f)
+    if isinstance(data, dict) and isinstance(data.get("questions"), list):
+        return data["questions"]
+    if not isinstance(data, list):
+        raise ValueError("Question file must be a list or contain a questions list")
+    return data
 
 
 def build_policies(
@@ -118,6 +121,12 @@ def main(
     output: Path | None = typer.Option(None, "--output", help="Exact transcript output path"),
     run_label: str | None = typer.Option(None, "--run-label", help="Checkpoint comparison label"),
     seed: int = typer.Option(42, "--seed"),
+    require_evidence: bool = typer.Option(
+        False, "--require-evidence", help="Ask for exact source spans in submissions"
+    ),
+    no_vector_index: bool = typer.Option(
+        False, "--no-vector-index", help="Skip unused FAISS index for code-execution policies"
+    ),
 ) -> None:
     """Run evaluation: policies through the document exploration environment."""
     console.print("[bold]RLM Explorer — Evaluation[/bold]\n")
@@ -145,7 +154,10 @@ def main(
     # Load corpus
     console.print("Loading corpus...")
     corpus = Corpus(corpus_path=corpus_path)
-    corpus.load()
+    if no_vector_index:
+        corpus.load(build_index=False)
+    else:
+        corpus.load()
 
     # Load questions
     if hard and not musique:
@@ -181,6 +193,7 @@ def main(
         corpus_path=corpus_path,
         question_ids=question_ids,
         workers=workers,
+        require_evidence=require_evidence,
     )
 
     # Always print and save, even on partial results
@@ -192,7 +205,8 @@ def main(
         "questions_sha256": content_hash(Path(questions_path)),
         "corpus_sha256": content_hash(Path(corpus_path)),
         "max_steps": max_steps, "seed": seed, "reward_version": REWARD_VERSION,
-        "workers": workers,
+        "workers": workers, "require_evidence": require_evidence,
+        "vector_index": not no_vector_index,
         "decoding": sorted({
             json.dumps({"max_tokens": getattr(p, "_max_tokens", None),
                         "temperature": getattr(p, "_temperature", None)}, sort_keys=True)
@@ -214,7 +228,11 @@ def main(
         ).stdout.splitlines(),
         "python": platform.python_version(), "platform": platform.platform(),
         "torch": torch.__version__ if torch is not None else None,
-        "gpu": torch.cuda.get_device_name() if torch is not None and torch.cuda.is_available() else None,
+        "gpu": (
+            torch.cuda.get_device_name()
+            if torch is not None and torch.cuda.is_available()
+            else None
+        ),
         "workers": workers,
         "policy_settings": {
             name: {"max_tokens": getattr(p, "_max_tokens", None),
@@ -267,6 +285,7 @@ def save_transcripts(
             "duration_seconds": r.duration_seconds,
             "predicted_answer": r.predicted_answer,
             "predicted_citations": r.predicted_citations,
+            "predicted_evidence": r.predicted_evidence,
             "trajectory": [
                 {
                     "step": s.step,

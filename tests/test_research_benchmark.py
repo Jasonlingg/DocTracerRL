@@ -86,6 +86,17 @@ def test_checked_in_pilot_is_valid_and_keeps_all_source_papers_out_of_training()
     }
 
 
+def test_checked_in_code_execution_pilot_has_ten_frozen_questions():
+    data = json.loads(Path("data/research/code_exec_pilot_v1.json").read_text())
+    validate_benchmark(data)
+    assert len(data["questions"]) == 10
+    assert all(question.get("answer") for question in data["questions"])
+    assert all(
+        question.get("expected_citations") == question.get("required_doc_ids")
+        for question in data["questions"]
+    )
+
+
 def test_score_separates_provenance_from_human_support(tmp_path):
     data = benchmark()
     runs = tmp_path / "runs"

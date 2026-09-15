@@ -12,7 +12,7 @@ from src.env.document_env import DocumentExplorationEnv, parse_submission
 def corpus() -> Corpus:
     subprocess.run(["python", "scripts/setup_corpus.py"], check=True, capture_output=True)
     c = Corpus(corpus_path="data/corpus")
-    c.load()
+    c.load(build_index=False)
     return c
 
 
@@ -52,11 +52,15 @@ def test_step_with_code(env: DocumentExplorationEnv) -> None:
 def test_step_with_submit(env: DocumentExplorationEnv) -> None:
     env.reset(question_idx=0)
     obs, reward, done, info = env.step(
-        'SUBMIT: Net income was $28.2M CITATIONS: ["apex_corp_2024_financial"]'
+        'SUBMIT: Net income was $28.2M CITATIONS: ["apex_corp_2024_financial"] '
+        'EVIDENCE: [{"doc_id":"apex_corp_2024_financial","start":0,"end":20}]'
     )
     assert done is True
     assert reward > 0.0
     assert "reward_breakdown" in info
+    assert info["predicted_evidence"] == [{
+        "doc_id": "apex_corp_2024_financial", "start": 0, "end": 20,
+    }]
 
 
 def test_max_steps_triggers_done(env: DocumentExplorationEnv) -> None:

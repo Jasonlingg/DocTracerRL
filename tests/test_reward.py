@@ -1,6 +1,26 @@
 """Tests for reward scoring functions."""
 
-from src.env.reward import compute_reward, score_answer, score_citations
+from src.env.reward import (
+    compute_reward,
+    parse_submission_details,
+    score_answer,
+    score_citations,
+)
+
+
+def test_parse_submission_details_preserves_old_format_and_accepts_evidence():
+    old = parse_submission_details('SUBMIT: answer CITATIONS: ["doc1"]')
+    assert old == ("answer", ["doc1"], [])
+
+    detailed = parse_submission_details(
+        'SUBMIT: supported answer CITATIONS: ["doc1"] '
+        'EVIDENCE: [{"doc_id":"doc1","start":4,"end":12}]'
+    )
+    assert detailed == (
+        "supported answer",
+        ["doc1"],
+        [{"doc_id": "doc1", "start": 4, "end": 12}],
+    )
 
 
 class TestScoreAnswer:

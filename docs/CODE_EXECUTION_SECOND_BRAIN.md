@@ -67,3 +67,29 @@ repeated actions on the same questions under identical decoding settings.
 clear recurring failure that better demonstrations can teach. If base and SFT both retrieve well,
 build the orchestrator boundary next. If both fail because the corpus is too small or poorly
 structured, improve the vault and retrieval before training.
+
+### Minimal frozen pilot
+
+The runnable pilot is intentionally small: six reserved papers and ten questions in
+`data/research/code_exec_pilot_v1.json`. It adds exact character spans to the existing submission
+format without changing the MuSiQue reward. On a GPU machine with the SFT adapter available:
+
+```bash
+CHECKPOINT_PATH=jasonlingg/doctracerrl-sft-qwen2.5-7b \
+  ./scripts/run_ai_paper_code_eval.sh
+```
+
+The command runs base and SFT with the same questions, corpus, tools, step limit, and seed. It then
+creates a blind review bundle. Read `blind-review/review.md`, enter `pass`, `partial`, or `fail` for
+each answer in `blind-review/review.json`, and reveal the system identities only afterward:
+
+```bash
+python scripts/review_code_exec_pilot.py score \
+  --review out/research/<run>/blind-review/review.json \
+  --key out/research/<run>/blind-review/blind-key.json \
+  --output out/research/<run>/human-score.json
+```
+
+The primary metric is the human supported-answer pass rate. Exact span validity, required-paper
+recall, execution errors, repeated actions, steps, and latency are diagnostics. Token-overlap
+reward remains visible for compatibility but is not evidence of good research.
