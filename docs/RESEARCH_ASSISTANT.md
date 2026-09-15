@@ -1,5 +1,10 @@
 # AI-paper research assistant
 
+> **Status as of September 15, 2026:** this JSON-action/QASPER path is paused. The active project
+> uses the executable Python environment in `src/env/` against an Obsidian snapshot. Keep this
+> document as the record of the earlier experiment. Continue QASPER work only when it is explicitly
+> retargeted to code-execution trajectories. See [the active plan](CODE_EXECUTION_SECOND_BRAIN.md).
+
 For the motivation, proposed teacher-to-Qwen distillation workflow, data requirements, and
 open decisions, see [the research pivot notes](RESEARCH_PIVOT_NOTES.md).
 For the concrete GPU setup and first live result, see

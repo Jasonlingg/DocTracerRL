@@ -3,11 +3,11 @@
 Read [the Astra improvement brief](docs/GPT_ASTRA_IMPROVEMENT_BRIEF.md) before changing
 the training or reward code. It records the current evidence, research, and order of work.
 
-The user approved a focused AI-paper research assistant on September 12, 2026. The immediate
-objective is a working retrieval baseline and reviewed examples of its failures, before choosing
-a training method. Read [the research assistant runbook](docs/RESEARCH_ASSISTANT.md).
-Keep the existing MuSiQue checkpoint comparison as an outstanding legacy experiment; do not
-claim those checkpoints improve performance without the common-split evaluation.
+The user chose the executable-code track on September 15, 2026: Qwen writes Python against
+`search()`, `read()`, and `extract()` to explore a personal Obsidian snapshot. Read
+[the code-execution second-brain plan](docs/CODE_EXECUTION_SECOND_BRAIN.md). The JSON-action
+research agent and QASPER routing/reranker track are paused unless their data is retargeted to
+code-execution trajectories.
 
 - Preserve the user's uncommitted changes in `scripts/train_grpo_custom.py`,
   `tests/test_grpo_loss.py`, and `docs/QWEN_TRAINING_RESEARCH_AND_IMPROVEMENTS.md`.
@@ -20,7 +20,8 @@ claim those checkpoints improve performance without the common-split evaluation.
 - Make each experiment reproducible: record checkpoint identifier, question split and IDs,
   corpus revision, policy decoding settings, reward version, hardware, and seed.
 - Prefer small, isolated changes followed by the narrowest meaningful verification. Do not run
-  a costly GRPO job until the 5-question checkpoint smoke evaluation and its diagnostics pass.
+  another costly training job until a baseline over the personal-vault task has named questions,
+  reviewed outputs, and a decision rule.
 
 The user wants an evidence-based improvement, not a speculative rewrite. State the hypothesis,
 the expected signal, and the decision rule before each material experiment.

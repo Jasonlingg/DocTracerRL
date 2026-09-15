@@ -1,5 +1,16 @@
 # Runbook: evaluate the June checkpoints
 
+## September 15 update: run complete, see RESULTS.md Phase 5
+
+This runbook was finally executed. First attempt (n=5) was confounded by a REPL bug — bare
+`search(...)` calls with no `print()` produced zero output, so even the untrained base model
+scored 0.000. Fixed in `src/env/repl.py` (`_auto_print_trailing_expression`). The real,
+unconfounded 50-question result: **SFT beats base** (+0.018 outcome, +0.013 answer F1), **GRPO
+does not measurably beat SFT** (-0.003, noise-level). Closer to the "flat" branch below than the
+"training was working" branch. The apparent GRPO checkpoint comparison is resolved: both Hub IDs
+contain the exact same adapter weight object. Full numbers and methodology are in `RESULTS.md`
+Phase 5.
+
 ## September 10 correctness update
 
 The dependency conflict, REPL recovery/output handling, rollout/scoring context

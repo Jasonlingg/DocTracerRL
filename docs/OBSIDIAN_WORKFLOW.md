@@ -1,8 +1,29 @@
 # Use an Obsidian vault as the research library
 
 This integration works through ordinary folders and Markdown. No Obsidian plugin is required.
-Import and export run on your CPU. Asking Qwen and the larger explainer still requires configured
-model endpoints. No model has been fine-tuned for this integration yet.
+Import and local harness checks run on your CPU. The active agent uses the executable Python tools
+in `src/env/`; running Qwen still requires a model endpoint or GPU. The older JSON-action research
+and explainer commands below remain available but are not the current training target.
+
+## Use the code-execution environment
+
+Import a frozen snapshot, then pass its `corpus/` directory to the standard evaluation runner:
+
+```bash
+python3 scripts/research_vault.py import \
+  --vault '/path/to/My Vault' --collection Research \
+  --output out/research/my-vault-snapshot-1
+
+python3 scripts/run_eval.py \
+  --corpus out/research/my-vault-snapshot-1/corpus \
+  --questions data/my-vault/questions.json \
+  --policy qwen_sft_policy --output out/my-vault-sft.json
+```
+
+Each question uses the existing multi-step loop: Qwen emits Python, the sandbox executes it, and
+the observation returns to Qwen. A typical trajectory calls `search(...)`, saves a document ID,
+uses `read(...)` or `extract(...)`, and finally emits `SUBMIT:`. A private snapshot belongs under
+`out/`, which is ignored by Git. Do not commit the imported note text.
 
 ## Try the local example
 

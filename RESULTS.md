@@ -240,20 +240,103 @@ Model learned format (gets 0.100 format bonus) but submits immediately without s
 #### Qwen2.5-1.5B GRPO — FAILED
 - Killed at step 0. Syntax errors on 7/8 rollouts per group. No useful gradient.
 
-#### Qwen2.5-7B GRPO — IN PROGRESS
+#### Qwen2.5-7B GRPO — one surviving post-training adapter, never evaluated until Phase 5
 - **Started:** 2026-05-27
 - **Checkpoint path:** `checkpoints/grpo_qwen_7b/`
-- **Target:** 300 steps
-- Results: TBD
+- **Published checkpoints:** `jasonlingg/doctracerrl-grpo-qwen2.5-7b-50steps`, `jasonlingg/doctracerrl-grpo-qwen2.5-7b`
+- Results: see Phase 5 — the belief that this run "flatlined" was never checked against a measured baseline until 2026-09-15.
+
+---
+
+## Phase 5: Checkpoint Evaluation (finally run, 2026-09-15)
+
+The three checkpoints above sat unevaluated for three months. `docs/EVAL_RUNBOOK.md` had the
+runbook the whole time; nobody ran it. This phase runs it and documents a bug the first attempt
+uncovered along the way.
+
+### 5.1 First attempt (n=5 smoke) — confounded by a REPL bug, not a training result
+
+All four policies — including the **untrained base model** — scored exactly **0.000** on the first
+5-question smoke run. Inspecting raw trajectories showed why: `PersistentREPL` executes each step
+as `python3 script.py`, not an interactive REPL. A bare `search(...)` call with no `print()`
+wrapper produces zero visible output. The model called `search()`, saw nothing, and blindly
+retried query variations for up to 10 steps — in the base model too, so this was not a training
+difference. It was a structural bug making the comparison meaningless. This is a sibling of the
+March 2026 "REPL Output Flooding" and "prose contamination" bugs already logged in `STATUS.md`,
+just never caught for this exact case (bare expression statements with no `print()`).
+
+### 5.2 Fix: auto-print the trailing expression
+
+Added `_auto_print_trailing_expression()` to `src/env/repl.py`. It parses each step's code with
+`ast`, and if the last statement is a bare expression — not an assignment, not already
+`print(...)` — rewrites it into a `print()` call before execution, matching what an interactive
+session already does for a trailing expression. The system prompt already says "Use print() to
+see output"; the model just doesn't reliably follow it, so the harness now makes that failure
+mode structurally impossible instead of relying on the model remembering.
+
+The first implementation had its own bug, caught by `test_timeout` regressing: naive line-based
+slicing corrupted code where multiple statements share one physical line via `;`
+(`import time; time.sleep(10)` lost the `import` entirely, since both statements' source
+overlapped on line 1). Fixed by rebuilding the whole step via `ast.unparse()` on the modified
+tree instead of slicing source lines. Regression tests cover both the REPL fix and single-document
+vault search; the full suite passes (149 passed, 1 skipped).
+
+### 5.3 Re-run at n=5 — real signal, one-question small-sample noise
+
+With the fix, rewards moved to a real range (0.083–0.110) instead of flat 0.000. The apparent
+"base beats trained" result on this tiny sample traced to a single question (`dev_0001`) where
+all four policies retrieved the identical correct document but extracted the answer differently:
+base cleanly pulled "Dane County"; SFT copied the whole document title verbatim ("York, Dane
+County, Wisconsin" — verbose, not wrong, but F1-costly); both GRPO checkpoints mis-parsed the
+compound place name and answered "York County" — genuinely wrong, dropping "Dane" entirely. One
+question dominated a 5-question average. Not conclusive at n=5; ran the real 50-question split.
+
+### 5.4 Full 50-question result — the actual headline
+
+One SSH disconnect killed the 4th policy mid-run (`last -x` confirmed "gone - no logout"); base,
+SFT, and GRPO-50 completed clean, and GRPO-full was rerun alone inside `tmux` for disconnect
+resilience, then merged via `scripts/summarize_eval.py`.
+
+| Policy | Outcome | Answer F1 | Cit Precision | Cit Recall | Avg Steps | Submit |
+|---|---:|---:|---:|---:|---:|---:|
+| base (untrained) | 0.158 | 0.127 | 0.350 | 0.215 | 8.0 | 98% |
+| **SFT** | **0.176** | **0.140** | 0.400 | 0.238 | 7.7 | 98% |
+| GRPO repository labeled 50 steps | 0.172 | 0.146 | 0.350 | 0.207 | 8.2 | 96% |
+| Same GRPO adapter via the other Hub ID | 0.172 | 0.146 | 0.350 | 0.207 | 8.2 | 98% |
+
+**SFT beats base**: +0.018 outcome, +0.013 answer F1 — small but real, on the real split, with the
+confound removed. GRPO does not measurably beat SFT (-0.003, noise-level on n=50).
+
+**Resolved checkpoint anomaly:** the two published GRPO repositories contain byte-identical files.
+Their `adapter_model.safetensors` objects have the same SHA-256 hash
+(`1f44ac5cb716f2947fb23af7426865a4d8af31074b8df13934b1a7b4813c748d`). They are aliases of one
+adapter, so the table contains two evaluations of the same policy, not evidence about progression
+from step 50 to a later checkpoint. Submission rate is the sole aggregate discrepancy between the
+runs (96% versus 98%); the outcome components and average steps match.
+
+The shared GRPO adapter is not an accidental copy of SFT: all 392 tensors differ from the SFT
+adapter, with relative L2 delta 0.001369 (about 0.137%). Neither Hub repository includes trainer
+state or a recorded global step. The surviving run record says training stopped at step 50, making
+"one post-GRPO checkpoint, likely step 50" the strongest supported description. The exact number
+of optimizer updates cannot be recovered from the published artifacts.
+
+### 5.5 Reading the result
+
+Per `docs/EVAL_RUNBOOK.md`'s own decision rule: this is closer to the "flat" branch than the
+"SFT > base and GRPO > SFT" branch — SFT shows a small real gain, GRPO shows none beyond SFT. This
+is a **measured** result, not an impression, for the first time in three months. It also does not
+resolve which underlying protocol (code-execution vs. structured JSON tool-calling) is the right
+one going forward — that decision was made independently in this session for portfolio/career
+reasons, not because this eval favored one over the other.
 
 ---
 
 ## 6. Next Steps
 
 ### Immediate
-- [ ] Monitor 7B GRPO — watch `recent_avg` for upward trend past 0.113 by step 50
-- [ ] Eval 7B GRPO checkpoint on 50 dev questions at step 50, 100, 300
-- [ ] Eval 7B SFT checkpoint on 50 dev questions (need base comparison)
+- [x] Eval 7B GRPO checkpoint on 50 dev questions — done 2026-09-15, see Phase 5
+- [x] Eval 7B SFT checkpoint on 50 dev questions (need base comparison) — done 2026-09-15, see Phase 5
+- [x] Confirm whether GRPO-50 and GRPO-full are distinct — no; both Hub IDs contain the same adapter
 
 ### Final Eval (Phase 6)
 - [ ] Run all policies on test split (200 questions)

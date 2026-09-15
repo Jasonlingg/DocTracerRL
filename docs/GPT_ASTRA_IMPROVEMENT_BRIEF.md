@@ -1,10 +1,18 @@
 # GPT-6 Astra improvement brief
 
-> September 12 direction update: the user approved a focused AI-paper research assistant.
+> September 15 direction update: the active product is a code-execution knowledge-query agent
+> over a personal Obsidian vault. Qwen writes Python using `search()`, `read()`, and `extract()`.
+> The JSON-action/QASPER routing and reranker work is paused unless it produces code-execution
+> trajectories. The common-split MuSiQue evaluation is complete: SFT improved outcome from 0.158
+> to 0.176; the two GRPO Hub repositories contain the exact same adapter and therefore are one
+> result, not a checkpoint progression. See [the active plan](CODE_EXECUTION_SECOND_BRAIN.md).
+
+> Superseded September 12 direction: the user approved a focused AI-paper research assistant.
 > [The research runbook](RESEARCH_ASSISTANT.md) records the current milestone: establish a
 > useful retrieval baseline, review failures, then choose an intervention. The MuSiQue
 > evidence and training cautions below remain relevant to the legacy experiment; its
-> checkpoint comparison is still unexecuted and is not evidence of research-agent quality.
+> checkpoint comparison was still unexecuted at that point and was not evidence of
+> research-agent quality.
 
 > September 10 update: the subsequent audit reproduced correctness failures and
 > the user authorized repairing them before checkpoint evaluation. Read the
@@ -17,12 +25,14 @@
 ## Mission
 
 RLM Explorer trains an open-weight model to answer multi-hop questions by writing Python in a
-persistent REPL. The research question is whether reinforcement learning teaches a Qwen 7B model
-to explore documents better than its base model and an SFT warm-start. The project is not ready to
-claim that result: the public SFT and GRPO checkpoints have not been evaluated on a common split.
+persistent REPL. The research question is whether training teaches a Qwen 7B model to explore
+documents better than its base model. The common-split evaluation now shows that SFT improves the
+outcome score from 0.158 to 0.176. The two public GRPO repositories contain byte-identical adapters
+and cannot measure training progression; that shared adapter scores 0.172.
 
-The next action is measurement, then diagnosis, then a single controlled intervention. Do not
-start a new long training run or change multiple variables at once.
+The next action is a baseline on named questions over a real Obsidian snapshot, followed by review
+of retrieval and synthesis failures. Do not start a new long training run or change multiple
+variables at once.
 
 ## Repository map
 
@@ -32,7 +42,7 @@ start a new long training run or change multiple variables at once.
 | Policies | `src/policies/qwen_*.py`, `qwen_common.py` | Same Qwen base with no adapter, SFT adapter, or GRPO adapter. |
 | Training | `scripts/train_sft.py`, `collect_sft_data.py`, `train_grpo_custom.py` | LoRA SFT and a custom multi-turn GRPO implementation. |
 | Evaluation | `scripts/run_eval.py`, `eval_checkpoints.sh`, `summarize_eval.py`, `analyze_run.py` | Runs policies and persists transcripts for summary and hop analysis. |
-| Evidence | `RESULTS.md`, `docs/EVAL_RUNBOOK.md`, `docs/QWEN_TRAINING_RESEARCH_AND_IMPROVEMENTS.md` | Historical results, the unexecuted checkpoint runbook, and current optimizer analysis. |
+| Evidence | `RESULTS.md`, `docs/EVAL_RUNBOOK.md`, `docs/QWEN_TRAINING_RESEARCH_AND_IMPROVEMENTS.md` | Results, executed checkpoint runbook, and optimizer analysis. |
 
 `docs/EVAL_RUNBOOK.md` is the operational source for checkpoint evaluation. The three public
 adapters are `jasonlingg/doctracerrl-sft-qwen2.5-7b`,
@@ -57,7 +67,7 @@ adapters are `jasonlingg/doctracerrl-sft-qwen2.5-7b`,
   raises `RuntimeError: Cannot send a request, as the client has been closed.` This is a
   reproducibility/test-isolation gap, not evidence that the environment tests found a logic bug.
 
-## Material inconsistencies to resolve before interpreting results
+## Pre-evaluation audit (historical)
 
 1. **Training and evaluation do not report the same return.** During GRPO rollouts,
    `_collect_rollout()` accumulates retrieval-hit shaping rewards and the final submission reward.
@@ -70,9 +80,8 @@ adapters are `jasonlingg/doctracerrl-sft-qwen2.5-7b`,
    bonus. `README.md`, `RESULTS.md`, `STATUS.md`, `PLAN.md`, and analysis helpers still describe
    earlier formulas, including a removed efficiency bonus and a format bonus. Version the reward
    and rewrite reports from structured metrics instead of subtracting assumptions after the fact.
-3. **The highest-priority experiment is absent.** `RESULTS.md` says the 7B SFT evaluation is
-   pending and GRPO results are TBD. `docs/EVAL_RUNBOOK.md` says the three public checkpoints were
-   pushed but never evaluated. Do not infer a failure from the live training counter.
+3. **Resolved September 15:** the common-split evaluation is recorded in `RESULTS.md` Phase 5.
+   The SFT adapter beat base, while both GRPO Hub IDs proved to contain the same adapter.
 4. **Unit tests require an online model download.** Unit tests for corpus, environment, verifier,
    and sparse RAG cannot run in a clean offline checkout. Add a test-only deterministic embedder
    or fixture that avoids model download; retain one opt-in integration test for the actual
@@ -81,26 +90,24 @@ adapters are `jasonlingg/doctracerrl-sft-qwen2.5-7b`,
    parameters, model revision, corpus hash, reward version, or the selected question IDs next to
    its summary. Add a machine-readable manifest before any result is presented as a comparison.
 
-## Execution order
+## Completed checkpoint evaluation
 
-### 1. Establish a checkpoint baseline
+### 1. Checkpoint baseline
 
-On a GPU machine with the pinned `requirements-pod.txt`, rebuild the deterministic MuSiQue corpus
-and run:
+The evaluation was run on the deterministic MuSiQue corpus with:
 
 ```bash
 ./scripts/eval_checkpoints.sh 5
 ./scripts/eval_checkpoints.sh 50
 ```
 
-The smoke run must load all four policies: base, SFT, 50-step GRPO, and later GRPO. Before the
-50-question run, confirm the same question IDs, corpus, decoding parameters, and max-step limit
-are used for each policy. Store each policy's transcript under a distinct, explicit name so the
-two `grpo_policy` runs cannot be accidentally combined.
+The final 50-question comparison scored base at 0.158, SFT at 0.176, and the shared GRPO adapter
+at 0.172. The two GRPO repository names were duplicate artifacts, so there is no later-checkpoint
+delta to interpret.
 
 Report answer F1, citation precision/recall, submission rate, step count, outcome reward, and
 training-return-with-shaping separately. Stratify every metric by 2-, 3-, and 4-hop questions.
-The primary deltas are `SFT - base`, `GRPO-50 - SFT`, and `GRPO - SFT`, with bootstrap confidence
+The usable primary deltas are `SFT - base` and `shared GRPO - SFT`, with bootstrap confidence
 intervals over common question IDs.
 
 Decision rule:
@@ -162,13 +169,13 @@ Only after that baseline should you run these ablations, one per experiment:
 
 Use the following as Astra's task instruction after it has read this repository and this brief:
 
-> You are the research engineer for RLM Explorer. First establish a reproducible common-split
-> evaluation of base, SFT, GRPO-50, and GRPO checkpoints; do not change the training recipe before
-> that evidence exists. Preserve uncommitted optimizer changes. Separate terminal outcome metrics
-> from reward shaping, record experiment manifests, and make each conclusion traceable to a saved
-> transcript. When an intervention is justified, state its hypothesis, control, metric, cost, and
-> stop condition. Keep the environment multi-turn and executable-code based. Prefer a small,
-> reviewable implementation with targeted tests over a speculative rewrite.
+> You are the research engineer for RLM Explorer. Build the executable-code knowledge-query agent
+> over a frozen Obsidian snapshot. Use the completed MuSiQue comparison as evidence that SFT helped,
+> and treat the two GRPO Hub IDs as one checkpoint. Preserve uncommitted optimizer changes. Record
+> experiment manifests and make each conclusion traceable to a saved transcript. When an
+> intervention is justified, state its hypothesis, control, metric, cost, and stop condition. Keep
+> the environment multi-turn and executable-code based. Prefer a small, reviewable implementation
+> with targeted tests over a speculative rewrite.
 
 ## GPT-6 Astra configuration
 
