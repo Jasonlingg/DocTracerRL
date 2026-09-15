@@ -179,7 +179,7 @@ def test_search_paper_returns_multiple_ranked_windows_from_only_the_known_docume
 
     corpus = tmp_path / "corpus"
     corpus.mkdir()
-    first_text = "method evidence " * 300 + "unrelated " * 300 + "method result " * 300
+    first_text = "method evidence " * 300 + "\n\n" + "method result " * 300
     documents = [
         {
             "doc_id": "paper_a", "title": "Known paper", "text": first_text,

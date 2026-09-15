@@ -259,7 +259,7 @@ def load_snapshot(snapshot: Path) -> tuple[dict, dict]:
 
 
 def run_question(snapshot: Path, question: dict, policy, output: Path, max_steps: int = 10,
-                 server_hardware: str = "unrecorded") -> dict:
+                 server_hardware: str = "unrecorded", paper_reranker=None) -> dict:
     if max_steps < 1:
         raise ValueError("max_steps must be positive")
     if output.suffix != ".json":
@@ -280,10 +280,14 @@ def run_question(snapshot: Path, question: dict, policy, output: Path, max_steps
         "git_commit": commit, "git_dirty": dirty,
         "client_hardware": platform.platform(), "server_hardware": server_hardware,
         "max_steps": max_steps, "execution": "validated_tool_dispatch",
+        "within_paper_retriever": (
+            paper_reranker.config if paper_reranker is not None
+            else {"kind": "lexical_paragraph", "version": "v1"}
+        ),
         "prompt_hash": configuration_hash({"system": SYSTEM_PROMPT}),
         "trajectory": [], "submission": None, "checks": None, "status": "running",
     }
-    tools = ResearchTools(snapshot / "corpus")
+    tools = ResearchTools(snapshot / "corpus", paper_reranker=paper_reranker)
     observation = (
         f"Question: {question['question']}\nSnapshot retrieved: {manifest['retrieved_at']}\n"
         f"Coverage: {manifest['coverage_note']}\nPaper count: {len(docs)}\n"

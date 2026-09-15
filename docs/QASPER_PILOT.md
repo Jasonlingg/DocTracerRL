@@ -65,6 +65,46 @@ evidence selection and abstention. Open-ended discovery needs separate search-or
 indexed ranker; connected multi-step behavior still needs MuSiQue/Hotpot-style examples and actual
 tool trajectories.
 
+## Within-paper retrieval gate
+
+The base smoke exposed a harness limitation before it justified training: `paper` reveals section
+boundaries, but the agent otherwise has to read a long section linearly or guess an opaque
+character offset. Gold-derived offset jumps would make invalid supervision because the deployed
+agent cannot derive them.
+
+`research-tools-v3` therefore adds `search_paper(doc_id, query, top_k)`. The first lexical
+paragraph ranker reached a human evidence paragraph in the top three for only 11 of 32 answerable
+pilot questions with mapped evidence (34.38%). A version-pinned
+`cross-encoder/ms-marco-MiniLM-L6-v2` reranker at revision
+`233902d25c440f23af6f7d6e94d2946bac0bee0a`, scoring section-plus-paragraph candidates and
+returning 2,400-character context, produced:
+
+| Metric | Result |
+| --- | ---: |
+| Gold evidence recall at 1 | 56.25% (18/32) |
+| Gold evidence recall at 3 | 84.38% (27/32) |
+| Gold evidence recall at 5 | 87.50% (28/32) |
+
+This passes the predeclared top-three continuation threshold of 80%. The diagnostic used the
+original QASPER question as the query; labels were used only to score overlap. It measures evidence
+access rather than answer quality. One of the 33 nominally answerable selected rows has no mapped
+text evidence and is reported separately rather than used in the denominator or supervision. The
+full ignored artifact is
+`out/research/qasper-train-pilot-v2-paper-search-msmarco-minilm-v1.json`.
+
+Reproduce the CPU diagnostic with:
+
+```bash
+python scripts/eval_qasper_paper_search.py \
+  --snapshot out/research/qasper-train-pilot-v2 \
+  --questions out/research/qasper-train-pilot-v2/questions.json \
+  --output out/research/qasper-paper-search.json
+```
+
+The cross encoder is a small retrieval component, separate from Qwen. The standard retrieval
+pattern is to retrieve candidates cheaply and rerank query-passage pairs; it does not make the
+reader model larger or train it on paper contents.
+
 ## Next experiment
 
 Generate a handful of known-paper QASPER trajectories with the current base Qwen worker and inspect
@@ -80,6 +120,15 @@ question. Run it against an existing Qwen server with:
 ```bash
 export RESEARCH_MODEL_REVISION=b968826d9c46dd6066d109eabc6255188de91218
 export RESEARCH_SERVER_HARDWARE='1x A40; BF16; vLLM 0.10.2; context 16384; eager'
+bash scripts/run_qasper_smoke.sh
+```
+
+The matched tool-change rerun uses `data/research/qasper_smoke_reranker_v1.json` and adds:
+
+```bash
+export RESEARCH_PLAN=data/research/qasper_smoke_reranker_v1.json
+export RESEARCH_PAPER_RERANKER_MODEL=cross-encoder/ms-marco-MiniLM-L6-v2
+export RESEARCH_PAPER_RERANKER_REVISION=233902d25c440f23af6f7d6e94d2946bac0bee0a
 bash scripts/run_qasper_smoke.sh
 ```
 

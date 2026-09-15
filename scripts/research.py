@@ -46,6 +46,11 @@ def main():
     ask.add_argument("--max-tokens", type=int, default=1800)
     ask.add_argument("--structured-output", choices=["none", "json_schema"], default="none",
                      help="Request constrained JSON generation; recorded as a new policy setting")
+    ask.add_argument("--paper-reranker-model",
+                     help="Optional cross encoder used by the search_paper action")
+    ask.add_argument("--paper-reranker-revision",
+                     help="Required immutable model revision with --paper-reranker-model")
+    ask.add_argument("--paper-reranker-device", default="cpu")
     ask.add_argument("--output", type=Path, required=True, help="New .json run artifact")
     args = parser.parse_args()
     try:
@@ -88,6 +93,17 @@ def main():
             args.endpoint, args.model, args.revision, args.seed, args.max_tokens,
             structured_output=args.structured_output,
         )
+        paper_reranker = None
+        if args.paper_reranker_model:
+            if not args.paper_reranker_revision:
+                raise ValueError("--paper-reranker-revision is required with its model")
+            from src.research.reranker import CrossEncoderReranker
+
+            paper_reranker = CrossEncoderReranker(
+                model_id=args.paper_reranker_model,
+                revision=args.paper_reranker_revision,
+                device=args.paper_reranker_device,
+            )
         result = run_question(
             args.snapshot,
             question,
@@ -95,6 +111,7 @@ def main():
             args.output,
             max_steps=args.max_steps,
             server_hardware=args.server_hardware,
+            paper_reranker=paper_reranker,
         )
         print(f"Status: {result['status']}; review: {args.output.with_suffix('.md')}")
         return 0 if result["status"] == "submitted" else 1

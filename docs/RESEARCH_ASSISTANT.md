@@ -158,9 +158,11 @@ the hardware description for a comparison. Token limits are per action; context 
 across turns. If the server's context limit is reached, the run records the failure rather than
 silently dropping evidence.
 
-The research model emits one validated JSON action per turn. The application exposes only four
-read-only operations—list papers, search passages, inspect paper metadata, and read a bounded
-passage—and rejects unknown actions or extra arguments. Qwen does not write or execute Python.
+The research model emits one validated JSON action per turn. The application exposes five
+read-only operations—list papers, search across papers, search within one known paper, inspect
+paper metadata, and read a bounded passage—and rejects unknown actions or extra arguments. The
+within-paper search can use a version-pinned cross encoder and records that retriever in the run
+artifact. Qwen does not write or execute Python.
 The older MuSiQue RLM environment still uses its separate Python REPL and Docker sandbox.
 
 The JSON contains the full trajectory; the adjacent `.md` file contains the answer, quotations,
@@ -304,7 +306,8 @@ The first live Qwen3-8B run submitted an answer and used a valid snapshot span, 
 actions, hit a Python syntax failure, covered only one of the requested comparison approaches,
 and has not received semantic human review. That is a protocol/provenance signal, not evidence of
 research quality. That run used the superseded `research-evidence-v1` Python-action protocol; the
-current `research-tools-v2` protocol was introduced to remove that syntax failure mode. The
+`research-tools-v2` protocol removed that syntax failure mode. The current `research-tools-v3`
+adds bounded within-paper search after the QASPER smoke exposed expensive linear reading. The
 disposable RunPod GPU was stopped after the run.
 
 Still needed: run and review the eight-question base pilot; expand and lock the final held-out

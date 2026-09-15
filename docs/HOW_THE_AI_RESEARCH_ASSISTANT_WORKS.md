@@ -73,10 +73,11 @@ Qwen does not execute code. It emits one constrained JSON request:
 }
 ```
 
-The application validates the request and executes it. Only four read-only actions are available:
+The application validates the request and executes it. Five read-only actions are available:
 
 - `papers`: list papers in the current snapshot;
 - `search_papers`: find relevant passage windows;
+- `search_paper`: rank passages inside one known paper for a focused question;
 - `paper`: inspect one paper's metadata and section offsets;
 - `passage`: read a bounded exact span of one paper.
 

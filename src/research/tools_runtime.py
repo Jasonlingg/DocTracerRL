@@ -9,7 +9,7 @@ from pathlib import Path
 class ResearchTools:
     """A bounded, read-only API over one frozen corpus directory."""
 
-    def __init__(self, corpus_dir: Path):
+    def __init__(self, corpus_dir: Path, paper_reranker=None):
         self.documents = {
             doc["doc_id"]: doc
             for path in sorted(corpus_dir.glob("*.json"))
@@ -17,6 +17,7 @@ class ResearchTools:
         }
         if not self.documents:
             raise ValueError("research corpus contains no documents")
+        self.paper_reranker = paper_reranker
 
     def papers(self):
         return [
@@ -116,19 +117,53 @@ class ResearchTools:
             raise ValueError("top_k must be 1..10")
 
         doc = self.documents[doc_id]
-        terms = set(re.findall(r"\w+", query.lower()))
-        results = []
-        for section in doc["sections"]:
-            for start in range(section["start"], section["end"], 1200):
-                end = min(start + 1600, section["end"])
-                words = re.findall(r"\w+", doc["text"][start:end].lower())
+        candidates = []
+        cursor = 0
+        for paragraph in doc["text"].split("\n\n"):
+            start = doc["text"].find(paragraph, cursor)
+            end = start + len(paragraph)
+            cursor = end + 2
+            if not paragraph.strip():
+                continue
+            section = next(
+                item for item in doc["sections"] if item["start"] <= start < item["end"]
+            )
+            candidates.append({
+                "paragraph_start": start,
+                "paragraph_end": end,
+                "section": section,
+                "ranking_text": f'{section["section"]}. {paragraph}',
+            })
+
+        if self.paper_reranker is not None:
+            ranked = self.paper_reranker.rank(
+                query, [candidate["ranking_text"] for candidate in candidates]
+            )
+            retriever = self.paper_reranker.config
+        else:
+            terms = set(re.findall(r"\w+", query.lower()))
+            ranked = []
+            for index, candidate in enumerate(candidates):
+                words = re.findall(r"\w+", candidate["ranking_text"].lower())
                 score = sum(words.count(term) / (1 + len(words) / 200) for term in terms)
                 if score:
-                    results.append({
-                        **self.passage(doc_id, start, end - start),
-                        "title": doc["title"],
-                        "section": section["section"],
-                        "score": round(score, 4),
-                    })
-        results.sort(key=lambda result: (-result["score"], result["start"]))
-        return results[:top_k]
+                    ranked.append((index, score))
+            ranked.sort(key=lambda item: (-item[1], candidates[item[0]]["paragraph_start"]))
+            retriever = {"kind": "lexical_paragraph", "version": "v1"}
+
+        results = []
+        for index, score in ranked[:top_k]:
+            candidate = candidates[index]
+            section = candidate["section"]
+            center = (candidate["paragraph_start"] + candidate["paragraph_end"]) // 2
+            start = max(section["start"], center - 1200)
+            end = min(section["end"], start + 2400)
+            start = max(section["start"], end - 2400)
+            results.append({
+                **self.passage(doc_id, start, end - start),
+                "title": doc["title"],
+                "section": section["section"],
+                "score": round(score, 4),
+                "retriever": retriever,
+            })
+        return results
