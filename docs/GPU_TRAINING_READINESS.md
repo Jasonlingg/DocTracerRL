@@ -88,7 +88,11 @@ In `src/env/repl.py`, both implementations truncate cumulative process output to
 
 Only SyntaxError causes rollback. A direct probe executing `raise ValueError("old failure")`, then `print("RECOVERED")`, re-raised the old exception and never executed the recovery action.
 
-Extract current-step output before truncation and define recovery from runtime errors. Add regression tests for both probes. Longer term, use a persistent isolated worker that executes each action once: cumulative replay currently repeats earlier actions and does not preserve process-local caches between calls. Public live arbitrary-code execution requires real isolation; LocalREPL is a host process.
+Extract current-step output before truncation and define recovery from runtime errors. Add
+regression tests for both probes. **September 15 update:** `LocalREPL`, the backend used by the GPU
+training environment, now uses one persistent worker per episode and executes each action once.
+Parallel episodes have separate worker processes. Docker still uses cumulative replay, and public
+live arbitrary-code execution still requires container isolation.
 
 ### 3. Align generated trajectories with the policy loss
 

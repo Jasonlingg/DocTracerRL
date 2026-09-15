@@ -1,16 +1,17 @@
-"""Persistent REPL for sandboxed code execution across episode steps.
+"""Persistent REPL for code execution across episode steps.
 
-Supports Docker containers (primary) and local subprocess fallback.
-State persists via a cumulative script that grows each step.
+The local backend uses one long-lived worker per episode, while the Docker
+backend retains the cumulative-script transport until Docker parity is added.
 """
 
 from __future__ import annotations
 
 import ast
+import json
 import os
+import select
 import subprocess
 import sys
-import tempfile
 from abc import ABC, abstractmethod
 
 from loguru import logger
@@ -24,10 +25,9 @@ STEP_MARKER = "___STEP_OUTPUT_MARKER___"
 def _auto_print_trailing_expression(code: str) -> str:
     """Rewrite a trailing bare expression statement into a print() call.
 
-    Each step runs as `python3 script.py`, not an interactive REPL, so a bare
-    `search(...)` at the end of a step produces no output at all — the model
-    silently loses its own tool results and keeps retrying blind. This mirrors
-    what an interactive session already does for the last expression.
+    Python scripts do not display bare expressions, so a trailing `search(...)`
+    would otherwise produce no output. This mirrors what an interactive session
+    does for the last expression.
 
     Rebuilds via ast.unparse rather than slicing source lines: statements can
     share one physical line (e.g. `import time; time.sleep(10)`), where a
@@ -230,81 +230,87 @@ class DockerREPL(BaseREPL):
 
 
 class LocalREPL(BaseREPL):
-    """Persistent REPL using a local subprocess with cumulative script.
-
-    Fallback when Docker is unavailable.
-    """
+    """Persistent REPL using one long-lived local subprocess per episode."""
 
     def __init__(self, corpus_path: str = "data/corpus", extra_preamble: str = "") -> None:
         self.corpus_path = os.path.abspath(corpus_path)
         self.extra_preamble = extra_preamble
-        self._cumulative_script: str = ""
         self._step: int = 0
-        self._tmpdir: tempfile.TemporaryDirectory | None = None
-        self._last_execution_failed = False
+        self._process: subprocess.Popen[str] | None = None
 
     def start_session(self) -> None:
-        """Initialize the local REPL session with tool preamble."""
-        self._tmpdir = tempfile.TemporaryDirectory()
-        self._cumulative_script = TOOL_PREAMBLE + "\n" + self.extra_preamble
-        self._step = 0
-
-        output = self._run_script(self._cumulative_script)
-        logger.info("Local REPL session started")
-        logger.debug(f"Preamble output: {output[:200]}")
-
-    def execute(self, code: str, timeout: int = 30) -> str:
-        """Execute a candidate step; retain it only when the process succeeds."""
-        if self._tmpdir is None:
-            raise RuntimeError("No active session — call start_session() first")
-        self._step += 1
-        previous_script = self._cumulative_script
-        marker_line = _step_marker()
-        code = _auto_print_trailing_expression(code)
-        self._cumulative_script += f"\n# --- Step {self._step} ---{marker_line}{code}\n"
-        output = self._run_script(self._cumulative_script, timeout=timeout)
-
-        # Extract only the latest step's output (after the marker)
-        output = _extract_step_output(output)
-
-        if self._last_execution_failed:
-            logger.warning(f"Step {self._step} failed — rolling back")
-            self._cumulative_script = previous_script
-
-        return output
-
-    def _run_script(self, script: str, timeout: int = 30) -> str:
-        """Write cumulative script to temp file and execute."""
-        if self._tmpdir is None:
-            raise RuntimeError("No active session — call start_session() first")
-
-        script_path = os.path.join(self._tmpdir.name, "step.py")
-        with open(script_path, "w") as f:
-            f.write(script)
-
+        """Start the worker and initialize its namespace with the tool preamble."""
+        self.kill_session()
         env = os.environ.copy()
         env["CORPUS_DIR"] = self.corpus_path
+        self._process = subprocess.Popen(
+            [sys.executable, "-u", "-m", "src.env.repl_worker"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            env=env,
+        )
+        self._step = 0
+        response = self._request(TOOL_PREAMBLE + "\n" + self.extra_preamble, timeout=30)
+        if not response["ok"]:
+            self.kill_session()
+            raise RuntimeError(f"REPL preamble failed: {response['stderr']}")
+        logger.info("Local REPL session started")
+        logger.debug(f"Preamble output: {response['stdout'][:200]}")
 
-        try:
-            result = subprocess.run(
-                [sys.executable, script_path],
-                capture_output=True, text=True, timeout=timeout,
-                env=env,
-            )
-            self._last_execution_failed = result.returncode != 0
-            output = _process_output(result)
-        except subprocess.TimeoutExpired:
-            self._last_execution_failed = True
-            output = f"ERROR: Execution timed out after {timeout}s"
+    def execute(self, code: str, timeout: int = 30) -> str:
+        """Execute only the new action in the worker's persistent namespace."""
+        if self._process is None:
+            raise RuntimeError("No active session — call start_session() first")
+        self._step += 1
+        code = _auto_print_trailing_expression(code)
+        response = self._request(code, timeout=timeout)
+        output = response["stdout"]
+        if response["stderr"]:
+            output += "\nSTDERR:\n" + response["stderr"]
+        return _extract_step_output(output)
 
-        return output
+    def _request(self, code: str, timeout: int) -> dict:
+        """Send one framed request and wait for its framed response."""
+        process = self._process
+        if process is None or process.stdin is None or process.stdout is None:
+            raise RuntimeError("REPL worker is unavailable")
+        if process.poll() is not None:
+            raise RuntimeError("REPL worker exited unexpectedly")
+        process.stdin.write(json.dumps({"code": code, "timeout": timeout}) + "\n")
+        process.stdin.flush()
+        ready, _, _ = select.select([process.stdout], [], [], timeout + 1)
+        if not ready:
+            self.kill_session()
+            return {
+                "ok": False,
+                "stdout": "",
+                "stderr": f"ERROR: Execution timed out after {timeout}s",
+            }
+        line = process.stdout.readline()
+        if not line:
+            stderr = process.stderr.read() if process.stderr is not None else ""
+            self.kill_session()
+            raise RuntimeError(f"REPL worker exited unexpectedly: {stderr}")
+        return json.loads(line)
 
     def kill_session(self) -> None:
-        """Clean up temp directory."""
-        if self._tmpdir:
-            self._tmpdir.cleanup()
-            self._tmpdir = None
-            self._cumulative_script = ""
+        """Terminate the episode's worker process."""
+        process = self._process
+        if process is not None:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=2)
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream is not None:
+                    stream.close()
+            self._process = None
             self._step = 0
             logger.info("Local REPL session ended")
 

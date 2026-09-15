@@ -33,6 +33,10 @@ Imported snapshots stay outside the vault and are immutable for reproducible run
 - A real local Obsidian vault imported successfully into the existing corpus schema. `read()` and
   `extract()` worked immediately. That smoke exposed a one-document TF-IDF bug in `search()`, now
   covered by a regression test.
+- The local/GPU execution backend now assigns one long-lived Python worker to each episode. An
+  action executes once, variables remain in that worker, and parallel episodes use separate
+  processes. The Docker backend still uses cumulative replay and needs a parity change before it
+  is treated as an equivalent evaluation backend.
 - These facts do not yet establish that the trained model is a useful personal research agent. The
   vault needs substantive notes, named questions, reviewed answers, and a base-versus-SFT run.
 

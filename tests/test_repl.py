@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -35,6 +36,44 @@ def test_function_persistence(repl: LocalREPL) -> None:
     repl.execute("def double(n): return n * 2")
     output = repl.execute("print(double(21))")
     assert "42" in output
+
+
+def test_successful_action_is_not_replayed_on_next_turn(
+    repl: LocalREPL, tmp_path,
+) -> None:
+    """A persistent worker executes each action once instead of replaying history."""
+    marker = tmp_path / "executions.txt"
+    repl.execute(f'open({str(marker)!r}, "a").write("executed\\n")')
+    repl.execute('print("next turn")')
+    assert marker.read_text().splitlines() == ["executed"]
+
+
+def test_same_worker_process_handles_successive_turns(repl: LocalREPL) -> None:
+    first_pid = repl.execute("__import__('os').getpid()").strip()
+    second_pid = repl.execute("__import__('os').getpid()").strip()
+    assert first_pid == second_pid
+
+
+def test_concurrent_sessions_keep_processes_and_state_isolated() -> None:
+    def run_session(value: int) -> tuple[str, str]:
+        session = LocalREPL(corpus_path="data/corpus")
+        session.start_session()
+        try:
+            session.execute(f"private_value = {value}")
+            pid = session.execute("__import__('os').getpid()").strip()
+            observed = session.execute("private_value").strip()
+            return pid, observed
+        finally:
+            session.kill_session()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(run_session, 11)
+        second = pool.submit(run_session, 29)
+        first_pid, first_value = first.result()
+        second_pid, second_value = second.result()
+
+    assert first_pid != second_pid
+    assert (first_value, second_value) == ("11", "29")
 
 
 def test_tools_available(repl: LocalREPL) -> None:
