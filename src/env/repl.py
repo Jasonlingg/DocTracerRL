@@ -6,6 +6,7 @@ State persists via a cumulative script that grows each step.
 
 from __future__ import annotations
 
+import ast
 import os
 import subprocess
 import sys
@@ -18,6 +19,35 @@ from src.env.tools import TOOL_PREAMBLE
 
 MAX_OUTPUT_CHARS = 8000
 STEP_MARKER = "___STEP_OUTPUT_MARKER___"
+
+
+def _auto_print_trailing_expression(code: str) -> str:
+    """Rewrite a trailing bare expression statement into a print() call.
+
+    Each step runs as `python3 script.py`, not an interactive REPL, so a bare
+    `search(...)` at the end of a step produces no output at all — the model
+    silently loses its own tool results and keeps retrying blind. This mirrors
+    what an interactive session already does for the last expression.
+
+    Rebuilds via ast.unparse rather than slicing source lines: statements can
+    share one physical line (e.g. `import time; time.sleep(10)`), where a
+    line-based rewrite would clobber everything else on that line.
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return code
+    if not tree.body or not isinstance(tree.body[-1], ast.Expr):
+        return code
+    last = tree.body[-1]
+    if (isinstance(last.value, ast.Call) and isinstance(last.value.func, ast.Name)
+            and last.value.func.id == "print"):
+        return code
+    tree.body[-1] = ast.Expr(value=ast.Call(
+        func=ast.Name(id="print", ctx=ast.Load()), args=[last.value], keywords=[],
+    ))
+    ast.fix_missing_locations(tree)
+    return ast.unparse(tree)
 
 
 def _extract_step_output(raw_output: str) -> str:
@@ -109,7 +139,9 @@ class DockerREPL(BaseREPL):
                 "docker", "create",
                 "--memory", self.memory_limit,
                 "--network", "none",
-                "--mount", f"type=bind,src={self.corpus_path},dst={self._container_corpus_dir},readonly",
+                "--mount",
+                f"type=bind,src={self.corpus_path},"
+                f"dst={self._container_corpus_dir},readonly",
                 "-e", f"CORPUS_DIR={self._container_corpus_dir}",
                 "-i", self.image,
                 "python3", "-i",
@@ -140,6 +172,7 @@ class DockerREPL(BaseREPL):
         previous_script = self._cumulative_script
         # Insert marker before this step's code so we can isolate its output
         marker_line = _step_marker()
+        code = _auto_print_trailing_expression(code)
         self._cumulative_script += f"\n# --- Step {self._step} ---{marker_line}{code}\n"
         output = self._run_script(self._cumulative_script, timeout=timeout)
 
@@ -227,6 +260,7 @@ class LocalREPL(BaseREPL):
         self._step += 1
         previous_script = self._cumulative_script
         marker_line = _step_marker()
+        code = _auto_print_trailing_expression(code)
         self._cumulative_script += f"\n# --- Step {self._step} ---{marker_line}{code}\n"
         output = self._run_script(self._cumulative_script, timeout=timeout)
 

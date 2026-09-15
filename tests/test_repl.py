@@ -1,10 +1,17 @@
 """Tests for the persistent REPL."""
 
-import pytest
+import json
 import subprocess
 import sys
 
-from src.env.repl import DockerREPL, LocalREPL, PersistentREPL
+import pytest
+
+from src.env.repl import (
+    DockerREPL,
+    LocalREPL,
+    PersistentREPL,
+    _auto_print_trailing_expression,
+)
 
 
 @pytest.fixture
@@ -43,10 +50,71 @@ def test_search_tool(repl: LocalREPL) -> None:
     assert any(c.isdigit() and int(c) > 0 for c in output.split() if c.isdigit())
 
 
+def test_search_finds_a_match_in_a_single_document_corpus(tmp_path) -> None:
+    """A personal vault may begin with one note; matching terms must stay searchable."""
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "only_note.json").write_text(json.dumps({
+        "doc_id": "only_note",
+        "title": "Only note",
+        "text": "trajectory distillation improves a compact research agent",
+    }))
+    repl = LocalREPL(corpus_path=str(corpus))
+    repl.start_session()
+    try:
+        output = repl.execute('search("trajectory")')
+    finally:
+        repl.kill_session()
+    assert "only_note" in output
+
+
 def test_read_tool(repl: LocalREPL) -> None:
     """read() should return document text."""
     output = repl.execute('text = read("apex_corp_2024_financial"); print("Apex" in text)')
     assert "True" in output
+
+
+def test_bare_search_call_auto_prints_its_result(repl: LocalREPL) -> None:
+    """A bare search(...) with no print() must still produce visible output —
+    otherwise the model gets zero feedback and keeps retrying blind."""
+    output = repl.execute('search("revenue")')
+    assert output.strip()
+    assert "doc_id" in output or "[" in output
+
+
+def test_multiline_step_still_auto_prints_only_the_trailing_expression(
+    repl: LocalREPL,
+) -> None:
+    output = repl.execute('x = 1\nsearch("revenue")')
+    assert output.strip()
+
+
+def test_print_already_present_is_not_double_wrapped() -> None:
+    code = 'print(search("revenue"))'
+    assert _auto_print_trailing_expression(code) == code
+
+
+def test_trailing_assignment_is_left_untouched() -> None:
+    code = 'results = search("revenue")'
+    assert _auto_print_trailing_expression(code) == code
+
+
+def test_trailing_for_loop_is_left_untouched() -> None:
+    code = 'for r in search("revenue"):\n    pass'
+    assert _auto_print_trailing_expression(code) == code
+
+
+def test_invalid_syntax_is_returned_unchanged() -> None:
+    code = "def broken("
+    assert _auto_print_trailing_expression(code) == code
+
+
+def test_semicolon_separated_statements_on_one_line_are_all_preserved() -> None:
+    """A line-based rewrite would clobber the import when it shares a line
+    with the trailing expression; the fix must not drop it."""
+    rewritten = _auto_print_trailing_expression("import time; time.sleep(0)")
+    assert "import time" in rewritten
+    compile(rewritten, "<test>", "exec")
 
 
 def test_timeout(repl: LocalREPL) -> None:

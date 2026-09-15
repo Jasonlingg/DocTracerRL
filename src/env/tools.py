@@ -82,7 +82,10 @@ def _idf_scores() -> dict[str, float]:
         terms = set(doc["text"].lower().split())
         for t in terms:
             df[t] += 1
-    idf = {t: math.log(n / (1 + freq)) for t, freq in df.items()}
+    # Smoothed IDF stays positive even for a one-document corpus. The old
+    # log(n / (1 + freq)) formula made every term negative when n == 1, so
+    # search() discarded every matching result via its score > 0 check.
+    idf = {t: math.log((n + 1) / (freq + 1)) + 1.0 for t, freq in df.items()}
     _memo["_idf"] = idf
     return idf
 
@@ -200,7 +203,10 @@ def list_docs() -> list[dict]:
         for d in _load_all_docs()
     ]
 
-print("Tools loaded: search(), read(), extract(), aggregate(), search_within(), verify(), list_docs()")
+print(
+    "Tools loaded: search(), read(), extract(), aggregate(), "
+    "search_within(), verify(), list_docs()"
+)
 print(f"Corpus: {len(list_docs())} documents available")
 print("TIP: search(q) for doc-level, search(q, method='chunk') for chunk-level search")
 '''
