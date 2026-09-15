@@ -1,5 +1,77 @@
 # Weekly AI research radar
 
+## Scope contract
+
+This document is the active scope. Keep the project centered on one outcome:
+
+> Deliver a useful weekly update on state-of-the-art research in selected AI areas, accumulate an
+> evidence-backed second brain in Obsidian, and let Claude, GPT, or another main assistant query it
+> through MCP. Demonstrate that training measurably improves the Qwen code-execution worker used
+> inside that product.
+
+The project has two non-negotiable success gates.
+
+### 1. The product must be useful
+
+A successful weekly run must:
+
+- find newly published or meaningfully revised papers in the selected topics;
+- rank a short list that the user considers relevant;
+- explain why each selected paper matters to the user's projects;
+- ground material claims in exact, inspectable paper passages;
+- connect new findings to papers and questions already saved in Obsidian;
+- create a readable weekly digest and durable paper notes; and
+- make the saved evidence queryable through MCP from a larger assistant.
+
+A pipeline that only downloads papers, produces valid JSON, or writes Markdown does not pass this
+gate. The user must be able to use the result to decide what to read, what changed, and what might
+affect an AI project.
+
+### 2. Training must improve Qwen
+
+Every model claim uses the same held-out questions, paper corpus, tool interface, prompt, decoding
+settings, step budget, and seed. Compare at least base Qwen and the trained Qwen checkpoint. Report:
+
+- supported-answer rate;
+- citation and exact-span accuracy;
+- ranking or retrieval success where applicable;
+- completion and submission rate;
+- syntax, runtime, empty-search, and repeated-action failures;
+- latency, generated tokens, and GPU cost; and
+- paired per-question differences, not only aggregate averages.
+
+The trained checkpoint passes only if it improves the primary held-out quality metric and the
+improvement is not explained by a harness difference or a few cherry-picked questions. Execution
+failures, latency, and cost must remain acceptable for the weekly workflow. If Qwen does not
+improve, diagnose data, reward, and harness alignment before starting a larger training run.
+
+The existing MuSiQue result—outcome 0.176 for SFT versus 0.158 for base—is encouraging evidence,
+but it is not the final product claim. The required transfer test is base versus trained Qwen on
+the frozen AI-paper code-execution task.
+
+### Scope guardrails
+
+Work belongs in the active scope when it directly improves one of these stages:
+
+1. weekly discovery and deduplication;
+2. topic relevance and ranking;
+3. Qwen's executable investigation of papers;
+4. evidence validation and comparison with saved knowledge;
+5. Obsidian notes and weekly digest usability;
+6. MCP access from a larger assistant; or
+7. reproducible evaluation of the product or Qwen improvement.
+
+MuSiQue remains a controlled training benchmark. QASPER may supply paper questions or evidence
+labels only when converted to the code-execution protocol. Knowledge graphs, new rerankers, an
+Obsidian plugin, additional model families, and new RL algorithms wait until a measured failure in
+the active product justifies them.
+
+Before accepting a new direction, answer three questions:
+
+1. Which product-stage failure does it fix?
+2. What measurable signal should improve?
+3. What result would tell us to stop?
+
 ## The product
 
 Every week, the system finds new papers in AI areas selected by the user, removes duplicates,

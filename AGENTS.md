@@ -26,3 +26,14 @@ trajectories.
 
 The user wants an evidence-based improvement, not a speculative rewrite. State the hypothesis,
 the expected signal, and the decision rule before each material experiment.
+
+The project succeeds only if both gates pass:
+
+1. **Usability:** the user receives a useful weekly AI-research digest in Obsidian and can query
+   the accumulated evidence through MCP from a larger assistant.
+2. **Model improvement:** on the same held-out code-execution tasks, trained Qwen must outperform
+   base Qwen on supported-answer quality without unacceptable regressions in execution failures,
+   latency, or cost.
+
+Do not substitute MuSiQue reward, QASPER conversion coverage, valid JSON, real quotation spans, or
+a working MCP connection for those product gates. They are component checks, not project success.
