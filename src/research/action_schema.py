@@ -1,4 +1,4 @@
-"""Generation contract for research-tools-v3; source support remains a separate check."""
+"""Generation contract for research-tools-v4; source support remains a separate check."""
 
 import json
 

@@ -306,9 +306,11 @@ The first live Qwen3-8B run submitted an answer and used a valid snapshot span, 
 actions, hit a Python syntax failure, covered only one of the requested comparison approaches,
 and has not received semantic human review. That is a protocol/provenance signal, not evidence of
 research quality. That run used the superseded `research-evidence-v1` Python-action protocol; the
-`research-tools-v2` protocol removed that syntax failure mode. The current `research-tools-v3`
-adds bounded within-paper search after the QASPER smoke exposed expensive linear reading. The
-disposable RunPod GPU was stopped after the run.
+`research-tools-v2` protocol removed that syntax failure mode. `research-tools-v3` added bounded
+within-paper search after the QASPER smoke exposed expensive linear reading. The current
+`research-tools-v4` also rejects an identical tool action instead of executing it again and
+duplicating a large observation in the serving context. The disposable RunPod GPU was stopped
+after the run.
 
 Still needed: run and review the eight-question base pilot; expand and lock the final held-out
 paper set; create reviewed training trajectories from disjoint papers; then compare base and SFT

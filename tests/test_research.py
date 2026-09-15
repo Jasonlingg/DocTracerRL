@@ -281,6 +281,42 @@ def test_policy_failure_still_saves_artifacts(snapshot, tmp_path):
     assert "server offline" in output.with_suffix(".md").read_text()
 
 
+def test_duplicate_tool_action_is_recorded_but_not_executed(snapshot, tmp_path):
+    class RepeatingPolicy:
+        config = {"backend": "scripted_test"}
+
+        def __init__(self):
+            self.observations = []
+
+        def act(self, observation):
+            self.observations.append(observation)
+            if len(self.observations) < 3:
+                return json.dumps({
+                    "action": "search_papers",
+                    "arguments": {"query": "search", "top_k": 2},
+                })
+            return json.dumps({
+                "action": "submit",
+                "answer": {"claims": [], "recommendation": "", "limitations": [
+                    "The repeated action did not add evidence."
+                ]},
+            })
+
+    policy = RepeatingPolicy()
+    result = run_question(
+        snapshot,
+        {"id": "test", "question": "What was studied?"},
+        policy,
+        tmp_path / "duplicate.json",
+        max_steps=3,
+    )
+
+    assert result["status"] == "submitted"
+    assert "identical tool action" in policy.observations[2]
+    assert result["trajectory"][1]["action_rejected"] == "duplicate_tool_action"
+    assert result["trajectory"][1]["output"].startswith("Action rejected:")
+
+
 def test_custom_corpus_is_mounted_readonly_into_docker(monkeypatch, tmp_path):
     calls = []
 

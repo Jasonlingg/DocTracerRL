@@ -144,6 +144,33 @@ The next isolated prompt test explicitly routes known-document questions through
 It is recorded separately in `data/research/qasper_smoke_reranker_routing_v1.json`; it keeps the
 model, questions, snapshot, decoding settings, and reranker fixed.
 
+That routing test ran on September 15, 2026 from commit `71e79d4` with the same base model,
+five questions, A40 serving configuration, decoding settings, and frozen snapshot. The prompt did
+make all five runs call `search_paper` (18 calls in total), so the routing instruction had its
+intended local effect. The end-to-end result nevertheless failed every continuation threshold:
+
+| Metric | Routing result |
+| --- | ---: |
+| Valid submission rate | 40% (2/5) |
+| Claims with valid source spans | 50% (1/2) |
+| Answerable questions citing gold evidence | 0% (0/4) |
+| Unanswerable questions correctly abstained | 0% (0/1) |
+| Questions with repeated identical tool actions | 3/5 |
+
+The failure is downstream of basic routing. One search exposed the gold dataset paragraph, but
+Qwen repeated a truncated submit object until the action budget ended. Another exposed the exact
+paragraph listing seven methods, but Qwen returned the question wording as its claim and an empty
+evidence span. The unanswerable case repeated the same search seven times. Two runs accumulated
+enough large search results for the 16,384-token server to reject the next request with HTTP 400.
+
+A transparent Codex semantic review found zero fully correct answers, one incomplete answer, one
+incorrect answer, and three missing answers. This is a regression from the original base smoke,
+so the prompt is not accepted as a fix. The result supports using QASPER labels to create supervised
+examples for four observed behaviors: use the known-paper search, stop once sufficient evidence is
+visible, copy returned citation spans correctly, and abstain when the paper does not answer the
+question. It also motivates a runtime guard against executing identical tool actions repeatedly;
+that guard is a production reliability measure, not evidence that model behavior improved.
+
 ## Base-Qwen smoke result
 
 The fixed smoke ran on September 14, 2026 with base `Qwen/Qwen3-8B` revision
