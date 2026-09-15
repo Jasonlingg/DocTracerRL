@@ -233,6 +233,32 @@ held-out run only if at least four questions submit, at least three answerable q
 evidence, no server error occurs, and semantic quality does not regress from the original base
 smoke. The locked smoke plan is `data/research/qasper_smoke_structured_v1.json`.
 
+The structured smoke ran from commit `831f827` with the same model revision, A40, snapshot,
+reranker, decoding seed, and action budget. Strict schema decoding eliminated malformed actions and
+the v4 duplicate guard prevented repeated results from crashing the serving context. All five runs
+submitted and all claims used valid snapshot spans. The research result still failed:
+
+| Metric | Structured result |
+| --- | ---: |
+| Valid submission rate | 100% (5/5) |
+| Claims with valid source spans | 100% (5/5) |
+| Answerable questions citing gold evidence | 25% (1/4) |
+| Unanswerable questions correctly abstained | 0% (0/1) |
+| Questions with repeated identical tool actions | 3/5 |
+
+Semantic review found no fully correct answers, three partial answers, and two incorrect answers.
+Qwen read the complete dataset-size evidence but omitted the development and test sizes. It again
+misread the boolean “only” question, failed to list the seven requested methods, and answered the
+human-judge question despite its unanswerable label. Strict decoding is therefore useful as a
+serving constraint, but it does not solve evidence selection, completeness, or abstention.
+
+The locked rule rejects this configuration for the 55-question run, so the larger GPU evaluation
+was not started. The five-question artifacts are under
+`out/research/qasper-base-qwen3-8b-structured-smoke-v1/`, and all RunPod pods were stopped after the
+bundle was copied locally. The next experiment should improve or supervise research behavior on the
+train split before paying for the held-out baseline; do not keep stacking prompt edits on these same
+five questions.
+
 ## Base-Qwen smoke result
 
 The fixed smoke ran on September 14, 2026 with base `Qwen/Qwen3-8B` revision
