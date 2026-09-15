@@ -1,0 +1,119 @@
+{
+  "schema_version": "qasper-held-out-eval-v1",
+  "experiment_id": "qasper-validation-heldout-v1",
+  "status": "locked_before_research_sft",
+  "source_dataset": "allenai/qasper",
+  "source_revision": "13b496d2a5359329b110e3419628de3cf791843b",
+  "source_split": "validation",
+  "selection_seed": 314159,
+  "snapshot_corpus_hash": "7a071d2e913c2ac0fd5ecca3d8f8f6d614b1c3d8c7bdf9e5f0a9e785f56e2336",
+  "training_snapshot_corpus_hash": "2647fb92032a2ac812adc6840fe8e27d9fb05cba0a7670263c144ac2ef6821a0",
+  "paper_overlap_with_training_snapshot": 0,
+  "question_ids": [
+    "qasper_validation_003d6f9722ddc2ee13e879fefafc315fb8e87cb9",
+    "qasper_validation_00c57e45ac6afbdfa67350a57e81b4fad0ed2885",
+    "qasper_validation_04bde1d2b445f971e97bb46ade2d0290981c7a32",
+    "qasper_validation_0752d71a0a1f73b3482a888313622ce9e9870d6e",
+    "qasper_validation_0767ca8ff1424f7a811222ca108a33b6411aaa8a",
+    "qasper_validation_0ab3df10f0b7203e859e9b62ffa7d6d79ffbbe50",
+    "qasper_validation_0f6216b9e4e59252b0c1adfd1a848635437dfcdc",
+    "qasper_validation_10d450960907091f13e0be55f40bcb96f44dd074",
+    "qasper_validation_113d791df6fcfc9cecfb7b1bebaf32cc2e4402ab",
+    "qasper_validation_14b8ae5656e7d4ee02237288372d9e682b24fdb8",
+    "qasper_validation_18c5d366b1da8447b5404eab71f4cc658ba12e6f",
+    "qasper_validation_1c0ba6958da09411deded4a14dfea5be55687619",
+    "qasper_validation_206739417251064b910ae9e5ff096e867ee10fb8",
+    "qasper_validation_3355918bbdccac644afe441f085d0ffbbad565d7",
+    "qasper_validation_352bc6de5c5068c6c19062bad1b8f644919b1145",
+    "qasper_validation_3a6e843c6c81244c14730295cfb8b865cd7ede46",
+    "qasper_validation_3fad42be0fb2052bb404b989cc7d58b440cd23a0",
+    "qasper_validation_43f074bacabd0a355b4e0f91a1afd538c0a6244f",
+    "qasper_validation_45a5961a4e1d1c22874c4918e5c98bd3c0a670b3",
+    "qasper_validation_4907096cf16d506937e592c50ae63b642da49052",
+    "qasper_validation_4944cd597b836b62616a4e37c045ce48de8c82ca",
+    "qasper_validation_55507f066073b29c1736b684c09c045064053ba9",
+    "qasper_validation_55c8f7acbfd4f5cde634aaecd775b3bb32e9ffa3",
+    "qasper_validation_6a31db1aca57a818f36bba9002561724655372a7",
+    "qasper_validation_6bf93968110c6e3e3640360440607744007a5228",
+    "qasper_validation_73bddaaf601a4f944a3182ca0f4de85a19cdc1d2",
+    "qasper_validation_777bb3dcdbc32e925df0f7ec3adb96f15dd3dc47",
+    "qasper_validation_78292bc57ee68fdb93ed45430d80acca25a9e916",
+    "qasper_validation_81a35b9572c9d574a30cc2164f47750716157fc8",
+    "qasper_validation_861187338c5ad445b9acddba8f2c7688785667b1",
+    "qasper_validation_8a7615fc6ff1de287d36ab21bf2c6a3b2914f73d",
+    "qasper_validation_8ce11515634236165cdb06ba80b9a36a8b9099a2",
+    "qasper_validation_92bb41cf7bd1f7886784796a8220ed5aa07bc49b",
+    "qasper_validation_93beae291b455e5d3ecea6ac73b83632a3ae7ec7",
+    "qasper_validation_a253749e3b4c4f340778235f640ce694642a4555",
+    "qasper_validation_a3bb9a936f61bafb509fa12ac0a61f91abcc5106",
+    "qasper_validation_b0dbe75047310fec4d4ce787be5c32935fc4e37b",
+    "qasper_validation_b6ae8e10c6a0d34c834f18f66ab730b670fb528c",
+    "qasper_validation_b6f7fadaa1bb828530c2d6780289f12740229d84",
+    "qasper_validation_bdf93053b1b9b0a21f77ed370cf4d5a10df70e3e",
+    "qasper_validation_c0e341c4d2253eb42c8840381b082aae274eddad",
+    "qasper_validation_cb196725edc9cdb2c54b72364f3bbf7c76471490",
+    "qasper_validation_cb384dc5366b693f28680374d31ff45356af0461",
+    "qasper_validation_d1ec42b2b5a3c956ff528543636e024bfde5e5ba",
+    "qasper_validation_d41e20ec716b5904a272938e5a8f5f3f15a7779e",
+    "qasper_validation_d4db7df65aa4ece63e1de813e5ce98ce1b4dbe7f",
+    "qasper_validation_d6191c4643201262a770947fc95a613f57bedb6b",
+    "qasper_validation_d650101712e36594bd77b45930a990402a455222",
+    "qasper_validation_e1ab11885f72b4658263a60751d956ba661c1d61",
+    "qasper_validation_e35a7f9513ff1cc0f0520f1d4ad9168a47dc18bb",
+    "qasper_validation_e48e750743aef36529fbea4328b8253dbe928b4d",
+    "qasper_validation_e8a32460fba149003566969f92ab5dd94a8754a4",
+    "qasper_validation_ed2eb4e54b641b7670ab5a7060c7b16c628699ab",
+    "qasper_validation_f225a9f923e4cdd836dd8fe097848da06ec3e0cc",
+    "qasper_validation_fd753ab5177d7bd27db0e0afc12411876ee607df"
+  ],
+  "excluded_questions": [
+    {
+      "question_id": "qasper_validation_00050f7365e317dc0487e282a4c33804b58b1fb3",
+      "reasons": [
+        "annotator_disagreement"
+      ]
+    },
+    {
+      "question_id": "qasper_validation_1062a0506c3691a93bb914171c2701d2ae9621cb",
+      "reasons": [
+        "ambiguous_evidence_location"
+      ]
+    },
+    {
+      "question_id": "qasper_validation_9ca447c8959a693a3f7bdd0a2c516f4b86f95718",
+      "reasons": [
+        "annotator_disagreement"
+      ]
+    },
+    {
+      "question_id": "qasper_validation_c08aab979dcdc8f4fe8ec1337c3c8290ab13414e",
+      "reasons": [
+        "annotator_disagreement"
+      ]
+    },
+    {
+      "question_id": "qasper_validation_c7b6e6cb997de1660fd24d31759fe6bb21c7863f",
+      "reasons": [
+        "annotator_disagreement"
+      ]
+    }
+  ],
+  "coverage": {
+    "question_count": 55,
+    "unique_paper_count": 50,
+    "answerability": {
+      "insufficient": 6,
+      "sufficient": 49
+    },
+    "answer_types": {
+      "abstractive": 14,
+      "boolean": 5,
+      "extractive": 41,
+      "unanswerable": 6
+    }
+  },
+  "hypothesis": "QASPER-derived tool trajectories teach Qwen3-8B transferable within-paper evidence use on unseen validation papers.",
+  "expected_signal": "Compared under identical tools and decoding, the adapter improves fully supported answers and reduces unsupported claims while preserving submission and answerability accuracy.",
+  "decision_rule": "Accept the SFT result only if fully supported answers improve by at least 15 percentage points and unsupported claims fall by at least one third, while submission rate and answerability accuracy each decline by no more than 5 percentage points. Report paired question-level uncertainty intervals.",
+  "evaluation_boundary": "Known-paper evidence QA only. This does not measure open-corpus paper discovery or multi-paper synthesis."
+}

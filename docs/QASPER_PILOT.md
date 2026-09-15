@@ -171,6 +171,61 @@ visible, copy returned citation spans correctly, and abstain when the paper does
 question. It also motivates a runtime guard against executing identical tool actions repeatedly;
 that guard is a production reliability measure, not evidence that model behavior improved.
 
+## First QASPER supervision batch
+
+The failed routing smoke justifies a small supervised conversion, not a training claim. The
+`qasper-demonstrations-v1` converter uses the original question as the `search_paper` query and
+accepts an answerable row only when the pinned runtime reranker returns every evidence span for one
+QASPER human annotation. It then replays search, bounded passage reads, and the labeled answer
+through the real action validator. A cited window must have appeared in a tool result before the
+submission. The converter does not put a gold offset directly into a trajectory and does not call a
+teacher model.
+
+The September 15 conversion of the 40-question train pilot produced:
+
+| Conversion result | Count |
+| --- | ---: |
+| Replay-verified trajectories | 32 |
+| Answerable trajectories | 25 |
+| Labeled abstentions | 7 |
+| Excluded answerable rows | 8 |
+| Assistant action turns | 90 |
+
+All eight exclusions are explicit retrieval-coverage failures; they are not rewritten into easier
+examples. A five-example Codex audit covered extractive, abstractive, boolean, and unanswerable
+cases, including the dataset-size and seven-method questions that base Qwen mishandled. The sampled
+answers matched their selected QASPER annotations, their citations were observed before submission,
+and no hidden offset jump was found. This is a transparent conversion audit, not an independent
+quality judgment.
+
+The ignored, reproducible artifact is
+`out/research/qasper-train-demonstrations-msmarco-v1/`. Its manifest records the dataset and model
+revisions, corpus and run hashes, all excluded question IDs, and the remaining gates. Thirty-two
+examples are enough to validate this component of the data pipeline but not enough for the planned
+training mixture. Before renting another GPU, lock a paper-disjoint QASPER validation/test slice and
+verify that the final SFT loader applies loss only to assistant actions.
+
+## Locked held-out evaluation
+
+`data/research/qasper_validation_heldout_v1.json` locks the first decision-scale evaluation before
+research SFT. It selects 55 questions over 50 papers from the official QASPER validation split:
+49 answerable and 6 unanswerable, with extractive, abstractive, and boolean answers represented.
+The frozen validation snapshot contains 281 papers and has corpus hash
+`7a071d2e913c2ac0fd5ecca3d8f8f6d614b1c3d8c7bdf9e5f0a9e785f56e2336`.
+
+Validation checks prove that its paper IDs have zero overlap with the train snapshot. Four sampled
+rows with annotator disagreement and one row with an ambiguous duplicate evidence location are
+listed in the plan and excluded. The validator also rejects a changed corpus hash, unknown or
+duplicate question IDs, missing answerable evidence, a non-reserved usage label, and any future
+train-paper overlap. The evaluation measures known-paper evidence QA on unseen papers; it still does
+not measure open-corpus discovery or multi-paper synthesis.
+
+The before/after decision rule was fixed before training: accept the adapter only if fully supported
+answers improve by at least 15 percentage points and unsupported claims fall by at least one third,
+while submission rate and answerability accuracy each decline by no more than 5 percentage points.
+Report paired question-level uncertainty intervals rather than treating 55 examples as a precise
+population estimate.
+
 ## Base-Qwen smoke result
 
 The fixed smoke ran on September 14, 2026 with base `Qwen/Qwen3-8B` revision

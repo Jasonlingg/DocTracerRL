@@ -284,6 +284,17 @@ The first training implementation should use Unsloth QLoRA on RunPod and preserv
 chat template at inference. Do not rent the training GPU until the expanded benchmark is locked,
 the base checkpoint has been scored, and reviewed training examples pass contamination checks.
 
+The first QASPER train conversion now provides 32 replay-verified trajectories: 25 answerable
+search/read/submit paths and 7 human-labeled abstentions. It is a pipeline component, not the whole
+training set. Eight answerable rows were excluded because the pinned within-paper retriever did not
+return all evidence needed by a human annotation. See `docs/QASPER_PILOT.md` for the locked counts,
+decision boundary, and sample audit.
+
+The paired QASPER evaluation is also locked before SFT: 55 clean questions over 50 papers from the
+official validation split, with zero paper overlap against the train snapshot. Its plan is
+`data/research/qasper_validation_heldout_v1.json`; run
+`scripts/validate_qasper_evaluation.py` against both snapshot manifests before evaluating a model.
+
 ## Validation and remaining work
 
 Offline tests cover snapshots, provenance checks, multi-turn replay, failed runs, endpoint
