@@ -8,6 +8,11 @@ to a larger assistant. The small model does the bounded, repeatable work: write 
 with source IDs. The larger assistant can decide when research is needed and explain the returned
 evidence to the user.
 
+The user-facing product is a weekly research radar: discover new work in selected AI topics, rank
+what matters, investigate the strongest candidates, save durable notes and a weekly digest to
+Obsidian, and expose the resulting library to Claude, GPT, or another host through MCP. See
+[the weekly product plan](WEEKLY_RESEARCH_RADAR.md).
+
 The differentiated capability is reliable exploration through executable code. The Obsidian vault
 is the first useful domain, while MuSiQue remains the labeled benchmark for measuring whether the
 same exploration skill improves after training.

@@ -5,9 +5,10 @@ the training or reward code. It records the current evidence, research, and orde
 
 The user chose the executable-code track on September 15, 2026: Qwen writes Python against
 `search()`, `read()`, and `extract()` to explore a personal Obsidian snapshot. Read
-[the code-execution second-brain plan](docs/CODE_EXECUTION_SECOND_BRAIN.md). The JSON-action
-research agent and QASPER routing/reranker track are paused unless their data is retargeted to
-code-execution trajectories.
+[the code-execution second-brain plan](docs/CODE_EXECUTION_SECOND_BRAIN.md) and
+[the weekly research radar product plan](docs/WEEKLY_RESEARCH_RADAR.md). The JSON-action research
+agent and QASPER routing/reranker track are paused unless their data is retargeted to code-execution
+trajectories.
 
 - Preserve the user's uncommitted changes in `scripts/train_grpo_custom.py`,
   `tests/test_grpo_loss.py`, and `docs/QWEN_TRAINING_RESEARCH_AND_IMPROVEMENTS.md`.
