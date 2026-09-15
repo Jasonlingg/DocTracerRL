@@ -13,6 +13,7 @@ research_snapshot="${RESEARCH_SNAPSHOT:-out/research/qasper-train-pilot-v2}"
 research_questions="${RESEARCH_QUESTIONS:-$research_snapshot/questions.json}"
 research_plan="${RESEARCH_PLAN:-data/research/qasper_smoke_v1.json}"
 research_output="${RESEARCH_OUTPUT:-out/research/qasper-smoke-$(date -u +%Y%m%dT%H%M%SZ)}"
+research_structured_output="${RESEARCH_STRUCTURED_OUTPUT:-none}"
 reranker_args=()
 if [[ -n "${RESEARCH_PAPER_RERANKER_MODEL:-}" ]]; then
   : "${RESEARCH_PAPER_RERANKER_REVISION:?Set the exact paper reranker revision}"
@@ -60,6 +61,7 @@ while IFS= read -r research_question; do
     --revision "$RESEARCH_MODEL_REVISION" \
     --server-hardware "$RESEARCH_SERVER_HARDWARE" \
     --max-steps 10 --max-tokens 1800 --seed 42 \
+    --structured-output "$research_structured_output" \
     "${reranker_args[@]}" \
     --output "$research_output/runs/$research_question.json" || true
 done < <("$research_python" -c \

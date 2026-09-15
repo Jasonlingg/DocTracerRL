@@ -226,6 +226,13 @@ while submission rate and answerability accuracy each decline by no more than 5 
 Report paired question-level uncertainty intervals rather than treating 55 examples as a precise
 population estimate.
 
+Before running all 55 questions, use the original five train-development questions for a final
+configuration smoke with strict JSON-schema decoding and the `research-tools-v4` duplicate-action
+guard. This isolates serving reliability from training. Promote that configuration to the paired
+held-out run only if at least four questions submit, at least three answerable questions cite gold
+evidence, no server error occurs, and semantic quality does not regress from the original base
+smoke. The locked smoke plan is `data/research/qasper_smoke_structured_v1.json`.
+
 ## Base-Qwen smoke result
 
 The fixed smoke ran on September 14, 2026 with base `Qwen/Qwen3-8B` revision

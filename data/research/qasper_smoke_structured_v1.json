@@ -1,0 +1,26 @@
+{
+  "schema_version": "qasper-known-paper-smoke-v1",
+  "experiment_id": "qasper-base-qwen3-8b-structured-smoke-v1",
+  "comparison_experiment_id": "qasper-base-qwen3-8b-reranker-routing-smoke-v1",
+  "source_dataset": "allenai/qasper",
+  "source_revision": "13b496d2a5359329b110e3419628de3cf791843b",
+  "source_split": "train",
+  "snapshot_corpus_hash": "2647fb92032a2ac812adc6840fe8e27d9fb05cba0a7670263c144ac2ef6821a0",
+  "selection_seed": 42,
+  "question_ids": [
+    "qasper_train_022e5c996a72aeab890401a7fdb925ecd0570529",
+    "qasper_train_1c4cd22d6eaefffd47b93c2124f6779a06d2d9e1",
+    "qasper_train_4debd7926941f1a02266b1a7be2df8ba6e79311a",
+    "qasper_train_aa0d67c2a1bc222d1f2d9e5d51824352da5bb6dc",
+    "qasper_train_0e57a0983b4731eba9470ba964d131045c8c7ea7"
+  ],
+  "coverage": {
+    "extractive": 2,
+    "abstractive": 1,
+    "boolean": 1,
+    "unanswerable": 1
+  },
+  "hypothesis": "Strict JSON-schema decoding and duplicate-action rejection improve protocol reliability while preserving known-paper evidence use.",
+  "expected_signal": "All five runs use search_paper, no run ends in a server error, at least four submit, at least three answerable runs cite gold evidence, and semantic quality does not regress from the original base smoke.",
+  "decision_rule": "Use this configuration for the held-out baseline only if at least four runs submit, at least three answerable runs reach gold evidence, no server error occurs, and semantic review finds no regression from the original base smoke."
+}
