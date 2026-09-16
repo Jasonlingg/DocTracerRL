@@ -44,6 +44,14 @@ Imported snapshots stay outside the vault and are immutable for reproducible run
   is treated as an equivalent evaluation backend.
 - These facts do not yet establish that the trained model is a useful personal research agent. The
   vault needs substantive notes, named questions, reviewed answers, and a base-versus-SFT run.
+- Base Qwen3-8B (untrained) scored 0.445 average reward on the frozen 10-question AI-paper pilot
+  after fixing a Qwen3-specific bug: `qwen_common.py` never disabled the model's native thinking
+  mode, so it burned its whole token budget on `<think>` reasoning and never reached executable
+  code. Citation precision/recall are strong (0.85/0.95) — retrieval already works. The gap is in
+  answer discipline: it fails an abstention trap outright, drops explicit "keep separate"
+  framing instructions, and once misdescribed a correctly-cited paper's actual mechanism. See
+  [the full pilot writeup](QWEN3_BASELINE_PILOT.md) for per-question detail and the reproduce
+  command.
 
 ## Paused work
 

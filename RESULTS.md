@@ -331,6 +331,22 @@ reasons, not because this eval favored one over the other.
 
 ---
 
+## Phase 6: Qwen3-8B Baseline + External Validation (2026-09-16)
+
+Full writeup: `docs/QWEN3_BASELINE_PILOT.md`. Summary: base Qwen3-8B (untrained) scored 0.445
+on our own 10-question AI-paper code-execution pilot and 0.355 on 20 real questions from
+QASPER's actual test split (external, independently authored) — after fixing a Qwen3-specific
+bug where the model's native thinking mode consumed its entire token budget before reaching
+executable code (`src/policies/qwen_common.py`, `enable_thinking=False`).
+
+Citation retrieval is strong and consistent across both datasets (0.80–0.85 precision,
+0.95 recall on both) — not the bottleneck. Answer synthesis is, via five specific,
+independently-observed failure modes, most notably: it does not reliably abstain on
+unanswerable questions, confirmed on both our own pilot and a QASPER-native unanswerable
+question we did not design. Full detail and examples in the linked doc.
+
+---
+
 ## 6. Next Steps
 
 ### Immediate

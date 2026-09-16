@@ -17,6 +17,8 @@ QASPER_CONFIG = "qasper"
 QASPER_REVISION = "13b496d2a5359329b110e3419628de3cf791843b"
 CONVERTER_VERSION = "qasper-research-v2"
 FLOAT_MARKER = "FLOAT SELECTED"
+CODE_EXEC_BENCHMARK_SCHEMA = "research-benchmark-v1"
+CODE_EXEC_CONVERTER_VERSION = "qasper-code-exec-v1"
 
 
 def _records(value) -> list[dict]:
@@ -389,3 +391,136 @@ def build_qasper_snapshot(
         }
         (output / "manifest.failed.json").write_text(json.dumps(failure, indent=2) + "\n")
         raise
+
+
+def _to_code_exec_question(converted: dict) -> dict | None:
+    """Map a research-tools-v2/v3 converted QASPER question to the code-execution
+    benchmark schema validated by src/research/benchmark.py:validate_benchmark.
+
+    Returns None for annotator-disagreement cases, which that schema has no slot
+    for (it only accepts sufficient/insufficient).
+    """
+    if converted["expected_answerability"] not in {"sufficient", "insufficient"}:
+        return None
+    doc_id = converted["target_doc_ids"][0]
+    unanswerable = converted["expected_answerability"] == "insufficient"
+    reference = converted["answer_annotations"][0]
+    grader_notes = [
+        item["text"] for annotation in converted["answer_annotations"]
+        for item in annotation["evidence"]
+    ][:5]
+    return {
+        "id": converted["id"],
+        "split": "pilot_evaluation",
+        "focus": "qasper_known_paper_evidence_qa",
+        "expected_answerability": converted["expected_answerability"],
+        "minimum_distinct_sources": 0 if unanswerable else 1,
+        "required_doc_ids": [] if unanswerable else [doc_id],
+        "expected_citations": [] if unanswerable else [doc_id],
+        "question": converted["question"],
+        "answer": reference["answer_text"],
+        "grader_notes": grader_notes or [
+            "QASPER-derived reference; check the cited paper directly if evidence is thin."
+        ],
+    }
+
+
+def build_qasper_code_exec_benchmark(
+    rows: Iterable[dict],
+    output: Path,
+    source_split: str = "test",
+    revision: str = QASPER_REVISION,
+    num_questions: int | None = 20,
+    seed: int = 42,
+) -> tuple[dict, dict]:
+    """Build a code-execution-protocol benchmark (src/env/ format) from QASPER.
+
+    Reuses the same paper/document conversion as build_qasper_snapshot — that part
+    is already protocol-agnostic — and only adapts the question schema, since the
+    code-execution harness (scripts/run_eval.py + src/research/benchmark.py) expects
+    a different shape than the paused JSON-action protocol's questions.json.
+    """
+    if num_questions is not None and num_questions < 1:
+        raise ValueError("num_questions must be positive or None")
+    output.mkdir(parents=True, exist_ok=False)
+    corpus_dir = output / "corpus"
+    corpus_dir.mkdir()
+
+    papers = []
+    converted_questions = []
+    paper_ids = set()
+    for row in rows:
+        document, locations = _paper_document(row, source_split)
+        paper_id = document["metadata"]["qasper_paper_id"]
+        if paper_id in paper_ids:
+            raise ValueError(f"Duplicate QASPER paper ID: {paper_id}")
+        paper_ids.add(paper_id)
+        path = corpus_dir / f"{document['doc_id']}.json"
+        path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n")
+        papers.append(document["doc_id"])
+        for qa in _records(row.get("qas")):
+            converted = _convert_question(qa, document, locations, source_split)
+            if converted["conversion_issues"]:
+                continue
+            mapped = _to_code_exec_question(converted)
+            if mapped is not None:
+                converted_questions.append(mapped)
+
+    if not papers:
+        raise ValueError("QASPER input contained no papers")
+    if not converted_questions:
+        raise ValueError("No QASPER questions survived conversion to the code-exec schema")
+
+    converted_questions.sort(key=lambda question: question["id"])
+    rng = random.Random(seed)
+    rng.shuffle(converted_questions)
+    if num_questions is not None:
+        if len(converted_questions) < num_questions:
+            raise ValueError(
+                f"Only {len(converted_questions)} eligible questions; "
+                f"cannot select {num_questions}"
+            )
+        converted_questions = converted_questions[:num_questions]
+    converted_questions.sort(key=lambda question: question["id"])
+
+    corpus_hash = content_hash(corpus_dir)
+    benchmark = {
+        "schema_version": CODE_EXEC_BENCHMARK_SCHEMA,
+        "benchmark_id": f"qasper-{source_split}-code-exec-v1",
+        "status": (
+            "External held-out benchmark converted from QASPER's own "
+            f"{source_split} split, independent of this project's hand-built pilots. "
+            "Human review of answer correctness is the primary score; token-overlap "
+            "answer scoring is diagnostic only."
+        ),
+        "domain": "Evidence-grounded question answering over NLP research papers (QASPER)",
+        "corpus_hash": corpus_hash,
+        "reserved_doc_ids": papers,
+        "training_exclusion": (
+            f"QASPER {source_split}-split papers and questions — do not use in training data."
+        ),
+        "converter_version": CODE_EXEC_CONVERTER_VERSION,
+        "source_dataset": QASPER_DATASET,
+        "source_revision": revision,
+        "source_split": source_split,
+        "selection_seed": seed,
+        "questions": converted_questions,
+    }
+    (output / "benchmark.json").write_text(
+        json.dumps(benchmark, ensure_ascii=False, indent=2) + "\n"
+    )
+    manifest = {
+        "schema_version": "research-snapshot-v1",
+        "parser_version": CONVERTER_VERSION,
+        "source_dataset": QASPER_DATASET,
+        "source_revision": revision,
+        "source_split": source_split,
+        "papers": [{"doc_id": doc_id} for doc_id in papers],
+        "paper_count": len(papers),
+        "corpus_hash": corpus_hash,
+        "status": "complete",
+    }
+    (output / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+    )
+    return manifest, benchmark

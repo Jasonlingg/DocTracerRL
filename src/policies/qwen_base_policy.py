@@ -14,7 +14,12 @@ import os
 
 from loguru import logger
 
-from src.policies.qwen_common import BaseQwenPolicy, load_qwen_base_model, load_qwen_tokenizer
+from src.policies.qwen_common import (
+    DEFAULT_MAX_TOKENS,
+    BaseQwenPolicy,
+    load_qwen_base_model,
+    load_qwen_tokenizer,
+)
 
 DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
@@ -25,7 +30,7 @@ class QwenBasePolicy(BaseQwenPolicy):
     def __init__(
         self,
         base_model: str | None = None,
-        max_tokens: int = 1024,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         temperature: float = 0.0,
     ) -> None:
         super().__init__(max_tokens=max_tokens, temperature=temperature)

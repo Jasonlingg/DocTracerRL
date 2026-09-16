@@ -29,6 +29,8 @@ When you have the answer:
 SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]
 """
 
+DEFAULT_MAX_TOKENS = 1024
+
 
 def clean_action(text: str) -> str:
     """Extract a SUBMIT line or bare code block from raw model output."""
@@ -87,7 +89,11 @@ class BaseQwenPolicy:
     """Shared act()/reset() for local Qwen inference. Subclasses set
     self._tokenizer and self._model in __init__ before calling act()."""
 
-    def __init__(self, max_tokens: int = 1024, temperature: float = 0.0) -> None:
+    def __init__(
+        self,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = 0.0,
+    ) -> None:
         self._max_tokens = max_tokens
         self._temperature = temperature
         self.history: list[dict] = []
@@ -99,7 +105,7 @@ class BaseQwenPolicy:
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}] + self.history
         text = self._tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
+            messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
         )
         inputs = self._tokenizer(text, return_tensors="pt").to(self._model.device)
 
