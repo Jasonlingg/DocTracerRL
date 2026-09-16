@@ -55,7 +55,7 @@ there is no background watcher yet. Never update the frozen corpus used by an ea
 
 Choose an existing vault and a relative folder, for example `/path/to/My Vault` and `Research`.
 Only `.md` and `.pdf` files inside that selected folder are imported recursively. The importer skips
-hidden files, symlinks, and notes marked `generated_by: rlm-explorer`. It does not follow wikilinks
+hidden files, symlinks, and notes marked `generated_by: envoy`. It does not follow wikilinks
 outside the collection or change your existing notes.
 
 For PDF import, install the optional dependency in your project environment:

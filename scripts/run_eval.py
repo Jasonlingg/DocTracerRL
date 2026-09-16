@@ -37,7 +37,7 @@ for _k in ("ANTHROPIC_API_KEY", "DEMO_API_KEY"):
         del os.environ[_k]
 load_dotenv()
 
-app = typer.Typer(help="RLM Explorer Evaluation CLI")
+app = typer.Typer(help="Envoy Evaluation CLI")
 console = Console()
 
 
@@ -129,7 +129,7 @@ def main(
     ),
 ) -> None:
     """Run evaluation: policies through the document exploration environment."""
-    console.print("[bold]RLM Explorer — Evaluation[/bold]\n")
+    console.print("[bold]Envoy — Evaluation[/bold]\n")
     if output is not None and (output.exists() or output.with_suffix(".manifest.json").exists()):
         raise typer.BadParameter(f"Output already exists: {output}")
     random.seed(seed)

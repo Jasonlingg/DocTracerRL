@@ -24,7 +24,7 @@ def collection(tmp_path):
 
 def test_import_preserves_revision_and_excludes_generated_hidden_and_symlink_notes(collection):
     vault, source, snapshot = collection
-    (source.parent / "AI.md").write_text("---\ngenerated_by: rlm-explorer\n---\nInvented claim")
+    (source.parent / "AI.md").write_text("---\ngenerated_by: envoy\n---\nInvented claim")
     (source.parent / ".private.md").write_text("Hidden note")
     (source.parent / "link.md").symlink_to(source)
     first = import_vault(vault, "Research", snapshot)
@@ -124,7 +124,7 @@ def test_scripted_pipeline_exports_links_and_refuses_tampered_evidence(collectio
     result = run_explanation(run, Explainer(), explanation)
     note = export_explanation(explanation, snapshot, vault, "Answers/Claim check.md")
     text = note.read_text()
-    assert "generated_by: rlm-explorer" in text
+    assert "generated_by: envoy" in text
     assert "../Research/My%20note.md" in text
     assert "[E1](#E1)" in text
     with pytest.raises(FileExistsError):

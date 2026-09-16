@@ -55,7 +55,7 @@ TEMPLATE_DIR = Path(__file__).parent / "templates"
 _LOCAL_ONLY = True
 REPLAY_DIR = Path(__file__).parent / "replays"
 
-app = FastAPI(title="RLM Explorer — Trajectory Viewer")
+app = FastAPI(title="Envoy — Trajectory Viewer")
 cli = typer.Typer()
 
 # ---------------------------------------------------------------------------
@@ -322,7 +322,7 @@ def main(
             "WARNING: binding to a non-loopback address. The ANTHROPIC_API_KEY\n"
             "         fallback is disabled; visitors must supply their own key."
         )
-    typer.echo(f"RLM Explorer Viewer -> http://{host}:{port}")
+    typer.echo(f"Envoy Viewer -> http://{host}:{port}")
     uvicorn.run(app, host=host, port=port, log_level="warning")
 
 

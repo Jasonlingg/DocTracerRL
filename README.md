@@ -1,25 +1,71 @@
-# DocTracerRL
+# Envoy *(GitHub repo still named `DocTracerRL` — see [Naming](#naming) below)*
 
-**Current direction:** an evidence-backed assistant for researching retrieval and tool-using
-AI agents. It searches versioned papers, inspects passages across turns, and produces a review
-artifact with exact source quotations. Start with the [research assistant runbook](docs/RESEARCH_ASSISTANT.md).
-The prototype includes six starter papers and 20 draft development questions. Model quality and
-training improvements have not yet been established. The MuSiQue setup below remains available
-as the earlier experimental track.
+A Gym-compatible RL environment for training language models to actively **explore document
+collections via code execution** in a persistent REPL, rather than passively consuming retrieved
+context — plus a real product built on top of it: a small-model research agent that investigates
+an Obsidian vault and AI papers, and reports what it found with exact source citations.
 
-An RL environment for training language models to actively explore **document collections** via code execution in a persistent REPL, rather than passively consuming retrieved context. Inspired by this paper: https://arxiv.org/pdf/2512.24601
+> Inspired by: https://arxiv.org/pdf/2512.24601
 
-<img width="1250" height="879" alt="image" src="https://github.com/user-attachments/assets/e905f6e3-8952-4888-896c-45b0afffd451" />
+## Use case: a dispatched subagent, not a chat interface
 
-## Todo
-download script for MuSiQue + HotpotQA and mount the data
+The trained policy (currently **Qwen Envoy**, a Qwen2.5/Qwen3 checkpoint) is not meant to be
+talked to directly. It's meant to be **called as a subagent by a larger assistant** — Claude, GPT,
+or another host — over MCP: the host decides when research is needed, dispatches Qwen Envoy with a
+question, the subagent spends several REPL turns searching/reading/extracting across the vault or
+paper corpus, and returns a short answer plus exact cited evidence. The host then explains that
+evidence to the user in conversation. This is why the reward function scores citation
+precision/recall as heavily as answer correctness: a subagent that guesses without evidence is
+useless to the assistant that called it. See
+[`src/research/knowledge_tool.py`](src/research/knowledge_tool.py) (`query_papers()`) for the
+current integration point, and
+[`docs/CODE_EXECUTION_SECOND_BRAIN.md`](docs/CODE_EXECUTION_SECOND_BRAIN.md) for the full product
+framing.
 
-## Why This Matters
-![Uploading image.png…]()
+## Current direction (as of 2026-09-15)
 
-There's a fundamental difference between a researcher who knows how to use a library card. There's searching, cross-referencing, computing, iterating, and someone who reads whatever you put on their desk. Standard RAG is the latter: retrieve top-k chunks, stuff them into a prompt, hope for the best. RLM Explorer is the former: the agent writes Python code to search, read, extract, and compute across documents, iterating until it's confident in its answer.
+The project has two layers now, and this README was out of date on both:
 
-Research shows iterative exploration outperforms single-pass RAG by up to +25 percentage points on multi-hop questions, even when the single-pass system is given perfect oracle context.
+1. **The environment** — `env.reset()` → `env.step(code)` → `env.step(SUBMIT)` → reward. This is
+   the reusable core: a persistent Python REPL, a document corpus, and a verifiable reward. It
+   hasn't changed in kind, but the execution backend has (see [Architecture](#architecture)).
+2. **The product** — a **weekly AI research radar**: a Qwen-powered agent that searches a frozen
+   snapshot of an Obsidian vault and/or AI papers, investigates across turns using
+   `search()` / `read()` / `extract()`, and submits an answer with citable evidence. See
+   [`docs/CODE_EXECUTION_SECOND_BRAIN.md`](docs/CODE_EXECUTION_SECOND_BRAIN.md) for the product
+   goal and [`docs/WEEKLY_RESEARCH_RADAR.md`](docs/WEEKLY_RESEARCH_RADAR.md) for the scope
+   contract. The environment's MuSiQue benchmark remains the labeled dataset for measuring whether
+   training actually improves this exploration skill; the vault/papers are the target domain.
+
+The synthetic 43-document business corpus and its hard question set (below) were the original
+proving ground and still exist as a fast local sanity check, but MuSiQue and the AI-paper pilot are
+now the datasets that matter for training claims.
+
+## What's actually been measured (not claimed)
+
+Two real, dated findings supersede everything this README used to say about training status:
+
+- **SFT beats base; GRPO does not (yet) beat SFT — measured, not assumed.** On 50 real MuSiQue dev
+  questions, untrained Qwen2.5-7B scores **0.158** outcome reward, the SFT checkpoint scores
+  **0.176**, and the published GRPO checkpoint scores **0.172** (noise-level vs. SFT, n=50). This
+  is the first time these three checkpoints were actually evaluated against each other — they sat
+  unevaluated for three months after a June training run, during which the team's working belief
+  was that GRPO had "flatlined." Full writeup: [`RESULTS.md`](RESULTS.md) §Phase 5.
+- **The GRPO training loop had a real bug, now fixed.** The custom GRPO update was computing its
+  PPO importance ratio from `generate()`'s `scores`, which are distorted by every logits warper
+  (temperature, top-k) rather than reflecting actual policy change — measured on a sanity model,
+  top_k=50 alone shrank the ratio to 0.037. This silently killed gradient signal on
+  negative-advantage samples. Fixed via per-token ratios computed from a fresh forward pass
+  (commit `3f57a12`), with regression tests in `tests/test_grpo_loss.py`.
+- **Base Qwen3-8B, evaluated for the first time on the AI-paper pilot, retrieves well but doesn't
+  reason carefully.** 0.445 avg outcome reward, 0.85/0.95 citation precision/recall — retrieval is
+  not the bottleneck. The gap is three distinct, buildable failure modes: it fails an abstention
+  trap outright (confidently answers a question it should refuse), silently drops an explicit
+  "keep these separate" framing instruction, and once misdescribed a correctly-cited paper's actual
+  mechanism. Getting this measurement required fixing a Qwen3-specific bug first: `qwen_common.py`
+  never disabled the model's native `<think>` mode, so it burned its whole token budget reasoning
+  and never reached executable code. Full writeup:
+  [`docs/QWEN3_BASELINE_PILOT.md`](docs/QWEN3_BASELINE_PILOT.md).
 
 ## The Core Loop
 
@@ -31,7 +77,12 @@ env.step(code)       →  Agent computes aggregations, verifies findings
 env.step(SUBMIT)     →  Agent submits answer + citations → receives reward
 ```
 
-Each episode reconstructs Python state by replaying successful actions. Variables and helper functions are available across steps; failed actions are removed from subsequent replay. External side effects are not rolled back. The reward signal measures answer token overlap F1 and citation precision/recall.
+Each episode reconstructs Python state by replaying successful actions. Variables and helper
+functions are available across steps; failed actions are removed from subsequent replay. The
+local/GPU execution backend now assigns one long-lived Python worker per episode, so an action
+executes exactly once and state persists naturally (the Docker backend still uses cumulative
+replay and is not yet at parity). The reward signal measures answer token-overlap F1 and citation
+precision/recall.
 
 ## Agent Tools
 
@@ -47,18 +98,8 @@ The REPL comes pre-loaded with tools the agent can call via Python code:
 | `verify(doc_id, claim)` | Quick check if a claim's keywords appear in a document. Returns `{found, match_ratio, excerpt}` |
 | `list_docs()` | List all documents in the corpus with titles and character counts |
 
-The agent learns to compose these tools across steps. For example, a multi-hop question might require:
-
-```
-Step 1: search("Project Phoenix")           → finds board minutes
-Step 2: search_within(board_doc, "partner")  → finds "refer to codename registry"
-Step 3: search("codename registry")          → finds registry document
-Step 4: read(registry_doc)                   → discovers Phoenix = Meridian Ltd
-Step 5: search("Meridian compliance")        → finds compliance report
-Step 6: SUBMIT answer with citations from all 3 documents
-```
-
-Variables persist across steps, so the agent can track discoveries in a `known_facts = {}` dictionary and use them in subsequent searches.
+The agent learns to compose these tools across steps, tracking discoveries in a Python dict
+(`known_facts = {}`) that persists across steps.
 
 ## Architecture
 
@@ -66,15 +107,18 @@ Variables persist across steps, so the agent can track discoveries in a `known_f
 src/
 ├── env/
 │   ├── document_env.py   # Gym-compatible environment: reset(), step(), reward()
-│   ├── repl.py           # Persistent REPL: Docker sandbox + local fallback
+│   ├── repl.py           # Persistent REPL: one long-lived worker/episode (local), Docker sandbox (not yet at parity)
 │   ├── corpus.py         # Load docs, chunk, embed, FAISS index
-│   ├── reward.py         # Verifiable reward: answer F1 and citation P/R
+│   ├── reward.py         # Verifiable reward: answer F1, citation P/R (current version: outcome-v1)
 │   └── tools.py          # Tool preamble: search(), read(), extract(), search_within(), verify()
 ├── policies/
 │   ├── claude_policy.py  # Reference policy: Claude explores iteratively
+│   ├── qwen_common.py    # Shared Qwen2.5/Qwen3 policy plumbing (chat template, thinking-mode handling)
 │   ├── naive_rag.py      # Baseline: top-k retrieve → answer in 1 step
 │   ├── stuffing.py       # Baseline: concatenate all docs → answer in 1 step
 │   └── single_shot.py    # Baseline: minimal retrieval → answer in 1 step
+├── research/              # Vault/paper ingestion + the paused JSON-action research agent
+│   └── knowledge_tool.py  # query_papers() wrapper for main-agent integration
 └── eval/
     ├── harness.py        # Run policies through env, collect trajectories
     ├── scorer.py         # Scoring functions
@@ -84,15 +128,15 @@ src/
 ## Quick Start
 
 ```bash
-# Clone and install
-git clone https://github.com/jasonlingg/rlm-explorer.git
-cd rlm-explorer
+# Clone and install (repo is still hosted as DocTracerRL until the GitHub rename lands)
+git clone https://github.com/Jasonlingg/DocTracerRL.git
+cd DocTracerRL
 pip install -e ".[dev]"
 
 # GPU-only: GRPO training stack (verifiers, vllm, etc.) — do NOT install on CPU
 # pip install -e ".[training]"
 
-# Generate synthetic corpus (43 cross-referencing business documents)
+# Generate the synthetic sanity-check corpus (43 cross-referencing business documents)
 python scripts/setup_corpus.py
 
 # Run tests
@@ -106,7 +150,16 @@ python scripts/run_eval.py
 
 # Run hard multi-hop evaluation (12 questions, 2-5 hops)
 python scripts/run_eval.py --hard --max-steps 15
+
+# Freeze an Obsidian vault or paper folder into a queryable corpus
+python scripts/research_vault.py import --help
+
+# Reproduce the Qwen3-8B AI-paper baseline pilot (GPU required)
+CHECKPOINT_PATH=jasonlingg/doctracerrl-sft-qwen2.5-7b ./scripts/run_ai_paper_code_eval.sh
 ```
+
+See [GPU readiness and fixes](docs/GPU_TRAINING_READINESS.md) before launching training, and
+[`docs/EVAL_RUNBOOK.md`](docs/EVAL_RUNBOOK.md) before running a base/SFT/GRPO comparison.
 
 ## Reward Signal
 
@@ -116,50 +169,68 @@ The reward is designed for GRPO training:
 reward = 0.8 × answer_F1 + 0.1 × citation_precision + 0.1 × citation_recall
 ```
 
-- **Answer F1**: Token overlap between predicted and gold answer
-- **Citation Precision**: Fraction of cited documents that are correct
-- **Citation Recall**: Fraction of required documents that were cited
-
-Current reward version: `outcome-v1`. Exploration actions receive zero reward;
-printing answer words or taking extra steps earns no bonus. New transcripts store
-outcome reward, shaping reward (currently zero), episode return, and reward weights.
-Historical results use earlier reward versions and are not directly comparable.
-
-See [GPU readiness and fixes](docs/GPU_TRAINING_READINESS.md) before launching training.
+Current reward version: `outcome-v1`. Exploration actions receive zero reward; printing answer
+words or taking extra steps earns no bonus. Historical results use earlier reward versions and are
+not directly comparable — see `RESULTS.md` for the version each number was measured under.
 
 ## Question Types
 
 ### Easy Set (18 questions)
-- **Cross-document aggregation**: Combine numbers from multiple documents
-- **Cross-document comparison**: Compare metrics or clauses across documents
-- **Multi-hop reasoning**: Find X in doc A → look up related info in doc B
-- **Single-document extraction**: Straightforward lookups (baseline sanity check)
-- **Contradiction detection**: Identify inconsistencies across documents
+Cross-document aggregation, cross-document comparison, multi-hop reasoning, single-document
+extraction, contradiction detection.
 
 ### Hard Set (12 questions, 2-5 hops)
-Designed with [MuSiQue](https://arxiv.org/abs/2108.00573) anti-shortcut methodology — no single chunk or document can answer any question, and competing distractor entities exist for every answer type.
+Designed with [MuSiQue](https://arxiv.org/abs/2108.00573) anti-shortcut methodology — no single
+chunk or document can answer any question, and competing distractor entities exist for every
+answer type: hidden bridge, disambiguation, fan-out aggregation, parallel comparison, codename
+bridging.
 
-- **Hidden bridge**: Answer depends on an intermediate entity NOT named in the question (e.g., codename → real company)
-- **Disambiguation**: Multiple competing candidates match the description; agent must use relational attributes to pick the right one
-- **Fan-out aggregation**: Identify N entities from an index document, look up each one, then compute across all
-- **Parallel comparison**: Two independent discovery chains, then compare results
-- **Codename bridging**: Project codenames map to real entities via a separate registry document
+## Docs Map
 
-## Future Work
+- [`docs/CODE_EXECUTION_SECOND_BRAIN.md`](docs/CODE_EXECUTION_SECOND_BRAIN.md) — active product
+  goal and architecture (start here for the current direction)
+- [`docs/WEEKLY_RESEARCH_RADAR.md`](docs/WEEKLY_RESEARCH_RADAR.md) — product scope contract and
+  success gates
+- [`docs/QWEN3_BASELINE_PILOT.md`](docs/QWEN3_BASELINE_PILOT.md) — Qwen3-8B baseline findings on
+  the AI-paper pilot
+- [`docs/EVAL_RUNBOOK.md`](docs/EVAL_RUNBOOK.md) — how to run a base/SFT/GRPO comparison correctly
+- [`docs/GPU_TRAINING_READINESS.md`](docs/GPU_TRAINING_READINESS.md) — GPU setup and known fixes
+- [`docs/OBSIDIAN_WORKFLOW.md`](docs/OBSIDIAN_WORKFLOW.md) — importing a real vault
+- [`RESULTS.md`](RESULTS.md) — dated experiment log, including Phase 5 (the first real
+  base/SFT/GRPO comparison)
+- [`STATUS.md`](STATUS.md) — environment build log and open bugs
 
-Plug in an open-weight model (Llama, Qwen) with GRPO on Prime Intellect to train a model that learns exploration behavior from this environment's reward signal.
+## Naming
+
+The project is renamed to **Envoy** — a dispatched agent that goes, investigates, and returns with
+evidence, matching the actual MCP-subagent architecture (see
+[Use case](#use-case-a-dispatched-subagent-not-a-chat-interface) above). The specific trained
+policy keeps its model name as a prefix — **Qwen Envoy** for the current Qwen2.5/Qwen3 checkpoint
+— since the environment's core principle is that policies are swappable (`CLAUDE.md`): a future
+Llama- or other-model-backed policy would be "Llama Envoy," not a different project.
+
+Applied: `pyproject.toml` (`name = "envoy"`), `CLAUDE.md`, `AGENTS.md`, `PLAN.md`, and the
+`Envoy`/`envoy` strings baked into scripts and tests (CLI titles, the vault's
+`generated_by` marker, the paper-fetch User-Agent).
+
+Not yet applied: the GitHub repo itself is still `Jasonlingg/DocTracerRL` — renaming that is a
+separate, confirmed step since it changes a shared remote resource GitHub URLs and any external
+links depend on.
 
 ## Built With
 
 - [Claude API](https://docs.anthropic.com) — Reference policy
+- [Qwen2.5 / Qwen3](https://huggingface.co/Qwen) — Trained policy (SFT + GRPO)
 - [sentence-transformers](https://sbert.net) — Document embeddings (all-MiniLM-L6-v2)
 - [FAISS](https://github.com/facebookresearch/faiss) — Vector search
-- [Docker](https://www.docker.com) — Sandboxed code execution
+- [Docker](https://www.docker.com) — Sandboxed code execution (not yet at parity with the local backend)
 
 ## Development Stack
 
-- [Claude Code](https://claude.ai/claude-code) — AI-assisted development, debugging, and implementation
-- [Google NotebookLM](https://notebooklm.google.com) — Research synthesis and project documentation. The notebook aggregates multi-hop RAG papers, codebase source files, and eval run logs into a single queryable knowledge base for iterating on environment design. Used agentic skill for Google NotebookLM.
+- [Claude Code](https://claude.ai/claude-code) — AI-assisted development, debugging, and
+  implementation
+- [Google NotebookLM](https://notebooklm.google.com) — Research synthesis and project
+  documentation
 
 ## License
 

@@ -18,7 +18,7 @@ from src.research.agent import load_snapshot
 from src.research.explainer import check_explanation
 
 IMPORT_VERSION = "vault-import-v1"
-GENERATED_BY = "rlm-explorer"
+GENERATED_BY = "envoy"
 
 
 def _inside(root: Path, relative: str) -> Path:

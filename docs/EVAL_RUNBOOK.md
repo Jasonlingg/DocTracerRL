@@ -58,7 +58,7 @@ peak VRAM requirements: measure the five-question smoke evaluation before select
 a larger run. Training also needs a separate backward/save/reload smoke test.
 
 ```bash
-git clone <this repo> && cd rlm-explorer
+git clone <this repo> && cd DocTracerRL  # repo directory name until the GitHub rename lands
 pip install -r requirements-pod.lock
 pip install -e . --no-deps
 

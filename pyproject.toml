@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rlm-explorer"
+name = "envoy"
 version = "0.1.0"
-description = "Gym-compatible RL environment for training LLMs to explore document collections via code execution"
+description = "Gym-compatible RL environment for training LLMs to explore document collections via code execution, plus a code-execution subagent (Qwen Envoy) dispatched over MCP to research a document corpus and report cited evidence"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [

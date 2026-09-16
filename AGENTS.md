@@ -1,4 +1,4 @@
-# RLM Explorer agent guide
+# Envoy agent guide
 
 Read [the Astra improvement brief](docs/GPT_ASTRA_IMPROVEMENT_BRIEF.md) before changing
 the training or reward code. It records the current evidence, research, and order of work.

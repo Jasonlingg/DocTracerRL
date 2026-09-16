@@ -19,7 +19,7 @@ PARSER_VERSION = "arxiv-paragraphs-v1"
 
 
 def fetch(url: str) -> bytes:
-    request = Request(url, headers={"User-Agent": "DocTracerRL-research/0.1"})
+    request = Request(url, headers={"User-Agent": "Envoy-research/0.1"})
     with urlopen(request, timeout=30) as response:
         return response.read()
 

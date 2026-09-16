@@ -1,4 +1,4 @@
-"""Download MuSiQue dataset and convert to RLM Explorer corpus + question format.
+"""Download MuSiQue dataset and convert to Envoy corpus + question format.
 
 MuSiQue (Multi-hop Questions via Single-hop Question Composition) provides
 multi-hop QA over Wikipedia passages. This creates a corpus too large for
@@ -25,7 +25,7 @@ CORPUS_DIR = MUSIQUE_DIR / "corpus"
 QUESTIONS_DIR = MUSIQUE_DIR / "questions"
 
 console = Console()
-app = typer.Typer(help="Download and prepare MuSiQue corpus for RLM Explorer")
+app = typer.Typer(help="Download and prepare MuSiQue corpus for Envoy")
 
 
 def slugify(text: str) -> str:
@@ -120,7 +120,7 @@ def build_questions(
     para_key_to_doc_id: dict[str, str],
     id_prefix: str = "m",
 ) -> list[dict]:
-    """Convert MuSiQue examples to RLM Explorer eval format."""
+    """Convert MuSiQue examples to Envoy eval format."""
     questions: list[dict] = []
 
     for i, ex in enumerate(examples):
@@ -169,7 +169,7 @@ def main(
         help="Prefix for question IDs (e.g. 'train_', 'dev_', 'test_')",
     ),
 ) -> None:
-    """Download MuSiQue and build corpus + questions for RLM Explorer."""
+    """Download MuSiQue and build corpus + questions for Envoy."""
     examples = download_musique(split=split, num_questions=num_questions, skip=skip)
 
     console.print("Building corpus from paragraphs...")

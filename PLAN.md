@@ -1,4 +1,4 @@
-# RLM Explorer — Implementation Plan
+# Envoy — Implementation Plan
 
 ## Context
 

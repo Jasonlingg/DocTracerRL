@@ -1,6 +1,6 @@
-# RLM Explorer
+# Envoy
 
-This is a Gym-compatible RL environment for training LLMs to explore document collections via code execution in a persistent REPL. The agent receives a multi-document question, writes Python code to search/read/compute across a corpus, and submits a final answer for a verifiable reward.
+This is a Gym-compatible RL environment for training LLMs to explore document collections via code execution in a persistent REPL. The agent receives a multi-document question, writes Python code to search/read/compute across a corpus, and submits a final answer for a verifiable reward. The trained policy (Qwen Envoy) is designed to run as a subagent dispatched over MCP by a larger assistant, not as a standalone chat interface — see [README.md](README.md) for the current product framing.
 
 ## Repo Structure
 

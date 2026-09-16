@@ -24,7 +24,7 @@
 
 ## Mission
 
-RLM Explorer trains an open-weight model to answer multi-hop questions by writing Python in a
+Envoy trains an open-weight model to answer multi-hop questions by writing Python in a
 persistent REPL. The research question is whether training teaches a Qwen 7B model to explore
 documents better than its base model. The common-split evaluation now shows that SFT improves the
 outcome score from 0.158 to 0.176. The two public GRPO repositories contain byte-identical adapters
@@ -169,7 +169,7 @@ Only after that baseline should you run these ablations, one per experiment:
 
 Use the following as Astra's task instruction after it has read this repository and this brief:
 
-> You are the research engineer for RLM Explorer. Build the executable-code knowledge-query agent
+> You are the research engineer for Envoy. Build the executable-code knowledge-query agent
 > over a frozen Obsidian snapshot. Use the completed MuSiQue comparison as evidence that SFT helped,
 > and treat the two GRPO Hub IDs as one checkpoint. Preserve uncommitted optimizer changes. Record
 > experiment manifests and make each conclusion traceable to a saved transcript. When an
