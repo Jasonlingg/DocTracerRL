@@ -1,4 +1,4 @@
-# Envoy *(GitHub repo still named `DocTracerRL` — see [Naming](#naming) below)*
+# *Qwen-Envoy*
 
 A Gym-compatible RL environment for training language models to actively **explore document
 collections via code execution** in a persistent REPL, rather than passively consuming retrieved
