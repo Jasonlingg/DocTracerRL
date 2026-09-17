@@ -5,7 +5,14 @@ successful abstention after seeing the numbers would let the definition drift
 toward whatever the model happened to do.
 """
 
-from src.eval.abstention import abstention_metrics, is_abstention
+import pytest
+
+from src.eval.abstention import (
+    abstention_metrics,
+    compare_abstention_runs,
+    fisher_exact_two_sided,
+    is_abstention,
+)
 
 
 def test_plain_refusal_counts_as_abstention():
@@ -74,3 +81,58 @@ def test_missing_questions_are_ignored_not_counted_as_failures():
         [{"question_id": "unknown", "predicted_answer": "whatever"}], _bench()
     )
     assert m["unanswerable_total"] == 0 and m["answerable_total"] == 0
+
+
+def test_fisher_exact_matches_preregistered_example():
+    # The preregistration states that 4/20 -> 12/20 gives p approximately 0.02.
+    assert fisher_exact_two_sided(((4, 16), (12, 8))) == pytest.approx(0.0225, abs=0.0001)
+
+
+def test_comparison_applies_significance_and_guardrail():
+    questions = [
+        *[
+            {"id": f"u{i}", "expected_answerability": "insufficient"}
+            for i in range(20)
+        ],
+        *[
+            {"id": f"a{i}", "expected_answerability": "sufficient"}
+            for i in range(20)
+        ],
+    ]
+
+    def make_results(correct: int, false: int) -> list[dict]:
+        return [
+            {
+                "question_id": question["id"],
+                "predicted_answer": (
+                    "Unanswerable — not stated."
+                    if (
+                        question["id"].startswith("u")
+                        and int(question["id"][1:]) < correct
+                    )
+                    or (
+                        question["id"].startswith("a")
+                        and int(question["id"][1:]) < false
+                    )
+                    else "The paper provides an answer."
+                ),
+            }
+            for question in questions
+        ]
+
+    result = compare_abstention_runs(
+        make_results(correct=4, false=1),
+        make_results(correct=12, false=3),
+        questions,
+    )
+    assert result["decision"] == "success"
+    assert result["guardrail_passed"] is True
+
+
+def test_comparison_rejects_incomplete_run():
+    with pytest.raises(ValueError, match="missing"):
+        compare_abstention_runs(
+            [{"question_id": "u1", "predicted_answer": "answer"}],
+            [],
+            [{"id": "u1", "expected_answerability": "insufficient"}],
+        )
