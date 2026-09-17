@@ -42,6 +42,16 @@ pattern is an answer wearing an abstention's clothes and is scored as answering.
   is **not** a valid comparison point; base must be re-measured.
 - Identical decoding, seed, and max_steps for both.
 
+Operational clarification recorded on September 17 while the prefix-aligned run
+was at step 8/94 and before any behavioral result from it existed: both policies
+receive the question-only initial observation used in the training trajectories
+(`--question-only-observation`), with deterministic decoding, seed 42, and ten
+steps. Evidence-span instructions are omitted because they are absent from the
+training protocol. The earlier base artifact at commit `d7e6efa` duplicated tool
+instructions in the initial user observation and is excluded from this comparison.
+The fixed decision criteria below are unchanged. The executable protocol is
+`scripts/run_qwen3_qasper_abstention_eval.sh`.
+
 ## Success criteria, fixed in advance
 
 - **Success** — `abstention_recall` improves over base at p < 0.05 (Fisher exact,
