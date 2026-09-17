@@ -1,257 +1,255 @@
-# *Qwen-Envoy*
+# Qwen Envoy
 
-A Gym-compatible RL environment for training language models to actively **explore document
-collections via code execution** in a persistent REPL, rather than passively consuming retrieved
-context — plus a real product built on top of it: a small-model research agent that investigates
-an Obsidian vault and AI papers, and reports what it found with exact source citations.
+Qwen Envoy is an experimental research worker that answers questions by writing Python against a
+document collection. It can search, read, extract, compare, and verify evidence across several
+turns before returning an answer with source IDs.
 
-> Inspired by: https://arxiv.org/pdf/2512.24601
+The intended deployment is an agent-as-tool system. A larger assistant decides when research is
+needed, sends a bounded question to Envoy, and receives an evidence packet it can explain or use in
+a broader task. The first product target is a weekly AI-research workflow over papers and an
+Obsidian vault.
 
-## Use case: a dispatched subagent, not a chat interface
+This repository contains the working code-execution environment, data and training pipelines,
+Qwen and Claude policies, reproducible evaluation harnesses, and the vault importer. The scheduled
+weekly pipeline and MCP server are still planned work.
 
-The trained policy (**Qwen Envoy** — currently a Qwen2.5-7B SFT checkpoint, with a Qwen3-8B one in
-progress) is not meant to be talked to directly. It's meant to be **called as a subagent by a larger assistant** — Claude, GPT,
-or another host — over MCP: the host decides when research is needed, dispatches Qwen Envoy with a
-question, the subagent spends several REPL turns searching/reading/extracting across the vault or
-paper corpus, and returns a short answer plus exact cited evidence. The host then explains that
-evidence to the user in conversation. This is why the reward function scores citation
-precision/recall as heavily as answer correctness: a subagent that guesses without evidence is
-useless to the assistant that called it. See
-[`src/research/knowledge_tool.py`](src/research/knowledge_tool.py) (`query_papers()`) for the
-current integration point, and
-[`docs/CODE_EXECUTION_SECOND_BRAIN.md`](docs/CODE_EXECUTION_SECOND_BRAIN.md) for the full product
-framing.
+The environment was inspired by [arXiv:2512.24601](https://arxiv.org/abs/2512.24601).
 
-## Current direction (as of 2026-09-17)
+## What the agent does
 
-The project has two layers now, and this README was out of date on both:
+Each episode gives the model a question and a persistent Python REPL with document tools already
+loaded:
 
-1. **The environment** — `env.reset()` → `env.step(code)` → `env.step(SUBMIT)` → reward. This is
-   the reusable core: a persistent Python REPL, a document corpus, and a verifiable reward. It
-   hasn't changed in kind, but the execution backend has (see [Architecture](#architecture)).
-2. **The product** — a **weekly AI research radar**: a Qwen-powered agent that searches a frozen
-   snapshot of an Obsidian vault and/or AI papers, investigates across turns using
-   `search()` / `read()` / `extract()`, and submits an answer with citable evidence. See
-   [`docs/CODE_EXECUTION_SECOND_BRAIN.md`](docs/CODE_EXECUTION_SECOND_BRAIN.md) for the product
-   goal and [`docs/WEEKLY_RESEARCH_RADAR.md`](docs/WEEKLY_RESEARCH_RADAR.md) for the scope
-   contract.
-
-Training work has moved from MuSiQue to the code-execution protocol on research papers. MuSiQue
-remains the historical labeled benchmark behind the Qwen2.5 SFT/GRPO numbers below, but the
-current target is Qwen3-8B on AI papers and an Obsidian vault, measured against the frozen
-10-question AI-paper pilot and a 20-question conversion of QASPER's test split. QASPER's train
-split is used as a source of questions with expert answerability labels for building training
-trajectories — not as an evaluation set.
-
-The synthetic 43-document business corpus and its hard question set (below) were the original
-proving ground and still exist as a fast local sanity check, but MuSiQue and the AI-paper pilot are
-now the datasets that matter for training claims.
-
-## What's actually been measured (not claimed)
-
-These real, dated findings supersede everything this README used to say about training status:
-
-- **SFT beats base; GRPO does not (yet) beat SFT — measured, not assumed.** On 50 real MuSiQue dev
-  questions, untrained Qwen2.5-7B scores **0.158** outcome reward, the SFT checkpoint scores
-  **0.176**, and the published GRPO checkpoint scores **0.172** (noise-level vs. SFT, n=50). This
-  is the first time these three checkpoints were actually evaluated against each other — they sat
-  unevaluated for three months after a June training run, during which the team's working belief
-  was that GRPO had "flatlined." Full writeup: [`RESULTS.md`](RESULTS.md) §Phase 5.
-- **The GRPO training loop had a real bug, now fixed.** The custom GRPO update was computing its
-  PPO importance ratio from `generate()`'s `scores`, which are distorted by every logits warper
-  (temperature, top-k) rather than reflecting actual policy change — measured on a sanity model,
-  top_k=50 alone shrank the ratio to 0.037. This silently killed gradient signal on
-  negative-advantage samples. Fixed via per-token ratios computed from a fresh forward pass
-  (commit `3f57a12`), with regression tests in `tests/test_grpo_loss.py`.
-- **Base Qwen3-8B, evaluated for the first time on the AI-paper pilot, retrieves well but doesn't
-  reason carefully.** 0.445 avg outcome reward, 0.85/0.95 citation precision/recall — retrieval is
-  not the bottleneck. The gap is five distinct, buildable failure modes, the clearest being that it
-  fails an abstention trap outright (confidently answers a question it should refuse), silently
-  drops an explicit "keep these separate" framing instruction, and once misdescribed a
-  correctly-cited paper's actual mechanism. Getting this measurement required fixing a
-  Qwen3-specific bug first: `qwen_common.py` never disabled the model's native `<think>` mode, so
-  it burned its whole token budget reasoning and never reached executable code. Full writeup:
-  [`docs/QWEN3_BASELINE_PILOT.md`](docs/QWEN3_BASELINE_PILOT.md).
-- **The failure modes replicate on an external benchmark, so they aren't an artifact of our own
-  question-writing.** The same base Qwen3-8B scores 0.355 outcome reward on 20 questions converted
-  from QASPER's own test split (independently authored, expert-annotated answerability labels),
-  with citation precision/recall again strong at 0.80/0.95. The abstention failure reproduces there
-  on a QASPER-native unanswerable question we did not design.
-
-## The Core Loop
-
-```
-env.reset()          →  Agent receives question + tool descriptions
-env.step(code)       →  Agent writes Python, observes stdout/stderr
-env.step(code)       →  Agent refines search, cross-references docs
-env.step(code)       →  Agent computes aggregations, verifies findings
-env.step(SUBMIT)     →  Agent submits answer + citations → receives reward
+```text
+Question
+   |
+   v
+Qwen writes Python  ──>  search / read / extract / verify
+   ^                              |
+   |                              v
+   +──────────── stdout and errors
+   |
+   v
+SUBMIT: <answer> CITATIONS: [<document IDs>]
 ```
 
-The local/GPU execution backend assigns one long-lived Python worker per episode, so an action
-executes exactly once and variables and helper functions persist across steps naturally. The
-Docker backend still rebuilds state by replaying successful actions (failed ones are dropped from
-the replay), which is not yet at parity. The reward signal measures answer token-overlap F1 and
-citation precision/recall.
+The same Python process lives for the whole episode, so variables and intermediate results survive
+between actions. This lets the policy do more than issue isolated tool calls: it can filter search
+results, inspect multiple documents, run regular expressions, aggregate metadata, and revise a
+query based on earlier output.
 
-## Agent Tools
+An episode looks like this:
 
-The REPL comes pre-loaded with tools the agent can call via Python code:
+```text
+# action 1
+hits = search("retrieval token masking ablation", top_k=5)
+print([(h["doc_id"], h["title"]) for h in hits])
 
-| Tool | Description |
-|------|-------------|
-| `search(query, top_k=5)` | Document-level keyword search with TF-IDF scoring. Returns `[{"doc_id", "title", "chunk", "score"}]` |
-| `search(query, method="chunk")` | Chunk-level search over 500-char overlapping windows — finds facts buried in long documents |
-| `read(doc_id)` | Read full document text by ID |
-| `passage(doc_id, start=0, length=1600)` | Exact, bounded passage with stable character offsets — used to cite precise evidence spans |
-| `extract(doc_id, pattern)` | Regex extraction from a document |
-| `aggregate(doc_ids, field)` | Pull a JSON metadata field across multiple documents |
-| `search_within(doc_id, query)` | Search inside a specific document — returns the most relevant 500-char windows ranked by score |
-| `verify(doc_id, claim)` | Quick check if a claim's keywords appear in a document. Returns `{found, match_ratio, excerpt}` |
-| `list_docs()` | List all documents in the corpus with titles and character counts |
+# action 2, after seeing stdout
+text = read(hits[0]["doc_id"])
+print(extract(hits[0]["doc_id"], r"(?i).{0,180}mask.{0,240}"))
 
-The agent learns to compose these tools across steps, tracking discoveries in a Python dict
-(`known_facts = {}`) that persists across steps.
-
-## Architecture
-
-```
-src/
-├── env/
-│   ├── document_env.py   # Gym-compatible environment: reset(), step(), reward()
-│   ├── repl.py           # Persistent REPL: one long-lived worker/episode (local), Docker sandbox (not yet at parity)
-│   ├── corpus.py         # Load docs, chunk, embed, FAISS index
-│   ├── reward.py         # Verifiable reward: answer F1, citation P/R (current version: outcome-v1)
-│   └── tools.py          # Tool preamble: search(), read(), passage(), extract(), aggregate(), search_within(), verify(), list_docs()
-├── policies/
-│   ├── claude_policy.py  # Reference policy: Claude explores iteratively
-│   ├── qwen_common.py    # Shared Qwen2.5/Qwen3 policy plumbing (chat template, thinking-mode handling)
-│   ├── naive_rag.py      # Baseline: top-k retrieve → answer in 1 step
-│   ├── stuffing.py       # Baseline: concatenate all docs → answer in 1 step
-│   └── single_shot.py    # Baseline: minimal retrieval → answer in 1 step
-├── research/              # Vault/paper ingestion + the paused JSON-action research agent
-│   └── knowledge_tool.py  # query_papers() wrapper for main-agent integration
-└── eval/
-    ├── harness.py        # Run policies through env, collect trajectories
-    ├── scorer.py         # Scoring functions
-    └── report.py         # Results tables
+# final action
+SUBMIT: The paper excludes retrieved tokens from the policy loss ... CITATIONS: ["paper_id"]
 ```
 
-## Quick Start
+## Project status
+
+| Component | Status |
+| --- | --- |
+| Persistent local/GPU Python worker | Working; one isolated process per episode |
+| Search, read, passage, extraction, and verification tools | Working |
+| Reproducible transcripts and experiment manifests | Working |
+| Markdown/PDF and Obsidian snapshot import | Working |
+| Qwen2.5-7B SFT and GRPO comparison on MuSiQue | Complete |
+| Qwen3-8B baseline on AI-paper and QASPER tasks | Complete |
+| Qwen3-8B QLoRA on QASPER code trajectories | Training; behavioral result pending |
+| Weekly paper discovery and ranking | Designed, not complete |
+| MCP server for host assistants | Interface drafted, server not complete |
+
+## Results
+
+### Historical MuSiQue experiment
+
+The original model experiment used 50 held-out MuSiQue development questions. All three policies
+used the same corpus, prompt, step budget, decoding settings, and reward implementation.
+
+| Policy | Outcome reward | Answer F1 | Citation precision | Citation recall |
+| --- | ---: | ---: | ---: | ---: |
+| Qwen2.5-7B base | 0.158 | 0.127 | 0.350 | 0.215 |
+| Qwen2.5-7B + SFT | **0.176** | 0.140 | **0.400** | **0.238** |
+| Qwen2.5-7B + SFT + GRPO | 0.172 | **0.146** | 0.350 | 0.207 |
+
+SFT improved the measured task. The surviving GRPO artifact did not beat SFT, and the two
+published GRPO model IDs turned out to contain the same adapter. See [RESULTS.md](RESULTS.md) for
+the full protocol and per-run manifests.
+
+### Qwen3-8B research baseline
+
+Base Qwen3-8B was evaluated before domain training. These datasets differ from MuSiQue and from
+each other, so their reward values should not be compared across rows.
+
+| Evaluation | Questions | Outcome reward | Citation precision | Citation recall |
+| --- | ---: | ---: | ---: | ---: |
+| Frozen AI-paper pilot | 10 | 0.445 | 0.850 | 0.950 |
+| QASPER test conversion | 20 | 0.355 | 0.800 | 0.950 |
+
+The model usually found the right paper but was less reliable at using it. It guessed on
+unanswerable questions, sometimes answered the general topic instead of the requested fact, and
+occasionally mischaracterized a correctly cited passage. That diagnosis led to the current
+QASPER-grounded SFT experiment. See
+[docs/QWEN3_BASELINE_PILOT.md](docs/QWEN3_BASELINE_PILOT.md).
+
+The Qwen3 training result is deliberately omitted until the adapter and base model have been run
+through the same locked 40-question evaluation. Training loss and token accuracy alone are not
+evidence that research behavior improved.
+
+## Training approach
+
+The current run distills QASPER-grounded research trajectories into Qwen3-8B with rank-4 QLoRA:
+
+1. QASPER supplies paper questions, evidence, and expert answerability labels.
+2. A stronger teacher produces multi-step Python trajectories against the frozen corpus.
+3. The pipeline replays trajectories and checks that actions execute and cited documents exist;
+   QASPER's labels provide the answerability target.
+4. Each assistant action becomes a next-action example containing its complete preceding history.
+5. Loss is applied only to the action tokens, using the same non-thinking Qwen3 chat prefix used at
+   inference.
+6. Base and trained Qwen are compared with identical tools, prompts, questions, decoding, and
+   step limits.
+
+The per-action representation fixed a real failure in the first Qwen3 run: intermediate code
+actions had been formatted differently during training and inference, while the inference prefix
+appeared only before `SUBMIT` in the training data. The model learned that accidental correlation
+and submitted too early. The diagnosis and token-level checks are documented in
+[docs/QWEN3_SFT_PREFIX_DIAGNOSIS.md](docs/QWEN3_SFT_PREFIX_DIAGNOSIS.md).
+
+The project also found and fixed an independent GRPO bug. PPO ratios were computed from warped
+generation scores instead of fresh policy logits, which suppressed gradients for some samples.
+Regression coverage lives in `tests/test_grpo_loss.py`.
+
+## Evaluation
+
+Every evaluation writes full trajectories plus a manifest containing the checkpoint, question
+IDs, corpus hash, prompt settings, decoding settings, reward version, hardware, seed, and source
+commit. Results with different protocol hashes are not treated as checkpoint comparisons.
+
+The Qwen3 abstention experiment uses 40 held-out QASPER test questions: 20 answerable and 20
+unanswerable, with no paper overlap with training. Its pre-registered decision rule requires:
+
+- a statistically significant increase in abstention recall;
+- no more than a 0.15 absolute increase in false abstentions on answerable questions; and
+- identical base and adapter inference conditions.
+
+See [docs/SFT_ABSTENTION_PREREGISTRATION.md](docs/SFT_ABSTENTION_PREREGISTRATION.md) and
+`scripts/run_qwen3_qasper_abstention_eval.sh`.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `src/env/` | Gym-style document environment, persistent REPL, corpus, tools, and reward |
+| `src/policies/` | Qwen base/SFT/GRPO policies, Claude reference policy, and RAG baselines |
+| `src/eval/` | Evaluation harness, manifests, scoring, and abstention metrics |
+| `src/research/` | Paper/vault ingestion and the earlier structured research-agent path |
+| `scripts/train_sft.py` | Qwen3 QLoRA training with per-action target masking |
+| `scripts/train_grpo_custom.py` | Custom GRPO loop for the historical MuSiQue experiment |
+| `scripts/run_eval.py` | Shared policy evaluation entry point |
+| `scripts/research_vault.py` | Immutable Markdown/PDF/Obsidian snapshot import and export |
+| `scripts/viewer.py` | Browser viewer for saved trajectories |
+
+The local worker executes each action once. The optional Docker backend still rebuilds state by
+replaying successful actions and is not considered behaviorally equivalent yet.
+
+Core stack: Python, PyTorch, Hugging Face Transformers, TRL, PEFT/QLoRA, bitsandbytes, FAISS,
+sentence-transformers, Docker, and pytest.
+
+## Getting started
 
 ```bash
-# Clone and install (repo is still hosted as DocTracerRL until the GitHub rename lands)
 git clone https://github.com/Jasonlingg/DocTracerRL.git
 cd DocTracerRL
+python -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
 
-# GPU-only: GRPO training stack (verifiers, vllm, etc.) — do NOT install on CPU
-# pip install -e ".[training]"
-
-# Generate the synthetic sanity-check corpus (43 cross-referencing business documents)
+# Build the small synthetic corpus used by local tests and examples.
 python scripts/setup_corpus.py
 
-# Run tests
-pytest tests/ -v
+# Run the test suite.
+pytest -q
+```
 
-# Run Claude policy on one question
-python scripts/run_eval.py --policy claude_policy --question q01 --verbose
+Import a folder from an Obsidian vault into an immutable corpus snapshot:
 
-# Run full evaluation (all policies, all 18 easy questions)
-python scripts/run_eval.py
+```bash
+pip install -e ".[vault]"
+python scripts/research_vault.py import \
+  --vault /path/to/MyVault \
+  --collection "AI Research" \
+  --output out/research/my-vault-snapshot
+```
 
-# Run hard multi-hop evaluation (12 questions, 2-5 hops)
-python scripts/run_eval.py --hard --max-steps 15
+Run base Qwen3-8B on the frozen AI-paper pilot (GPU required):
 
-# Freeze an Obsidian vault or paper folder into a queryable corpus
-python scripts/research_vault.py import --help
-
-# Reproduce the Qwen3-8B AI-paper baseline pilot (GPU required).
-# BASE_MODEL_PATH is required — the Qwen policies default to Qwen2.5-7B-Instruct.
+```bash
+pip install -e ".[training]"
 BASE_MODEL_PATH=Qwen/Qwen3-8B python scripts/run_eval.py \
   --policy qwen_base_policy \
   --questions data/research/code_exec_pilot_v1.json \
   --corpus out/research/starter-2026-09-12/corpus \
-  --max-steps 10 --seed 42 --require-evidence --no-vector-index \
-  --run-label qwen3_base --output out/research/qwen3-baseline/base.json
-
-# Base-vs-SFT comparison on the same frozen pilot (Qwen2.5 checkpoints)
-CHECKPOINT_PATH=jasonlingg/doctracerrl-sft-qwen2.5-7b ./scripts/run_ai_paper_code_eval.sh
+  --max-steps 10 \
+  --seed 42 \
+  --require-evidence \
+  --no-vector-index \
+  --run-label qwen3_base \
+  --output out/research/qwen3-baseline/base.json
 ```
 
-See [GPU readiness and fixes](docs/GPU_TRAINING_READINESS.md) before launching training, and
-[`docs/EVAL_RUNBOOK.md`](docs/EVAL_RUNBOOK.md) before running a base/SFT/GRPO comparison.
+Compare a Qwen3 adapter with base Qwen on the locked abstention evaluation:
 
-## Reward Signal
-
-The reward is designed for GRPO training:
-
-```
-reward = 0.8 × answer_F1 + 0.1 × citation_precision + 0.1 × citation_recall
+```bash
+CHECKPOINT_PATH=/path/to/adapter/final \
+  ./scripts/run_qwen3_qasper_abstention_eval.sh
 ```
 
-Current reward version: `outcome-v1`. Exploration actions receive zero reward; printing answer
-words or taking extra steps earns no bonus. Historical results use earlier reward versions and are
-not directly comparable — see `RESULTS.md` for the version each number was measured under.
+See [docs/GPU_TRAINING_READINESS.md](docs/GPU_TRAINING_READINESS.md) before starting a GPU run and
+[docs/EVAL_RUNBOOK.md](docs/EVAL_RUNBOOK.md) before comparing checkpoints.
 
-## Question Types
+## Agent tools
 
-### Easy Set (18 questions)
-Cross-document aggregation, cross-document comparison, multi-hop reasoning, single-document
-extraction, contradiction detection.
+| Tool | Description |
+| --- | --- |
+| `search(query, top_k=5)` | Document-level TF-IDF search |
+| `search(query, method="chunk")` | Search overlapping windows inside the corpus |
+| `read(doc_id)` | Read a complete document |
+| `passage(doc_id, start, length)` | Return an exact passage with stable character offsets |
+| `extract(doc_id, pattern)` | Run a regular expression over one document |
+| `aggregate(doc_ids, field)` | Collect a metadata field across documents |
+| `search_within(doc_id, query)` | Rank passages inside one document |
+| `verify(doc_id, claim)` | Check claim keywords and return a matching excerpt |
+| `list_docs()` | List document IDs, titles, and lengths |
 
-### Hard Set (12 questions, 2-5 hops)
-Designed with [MuSiQue](https://arxiv.org/abs/2108.00573) anti-shortcut methodology — no single
-chunk or document can answer any question, and competing distractor entities exist for every
-answer type: hidden bridge, disambiguation, fan-out aggregation, parallel comparison, codename
-bridging.
+## Current limitations
 
-## Docs Map
+- The MCP server and unattended weekly scheduler are not implemented yet.
+- Citation existence is checked mechanically; whether a passage supports a claim still needs a
+  semantic metric or human review.
+- The current research training set is small. Its value must be established on held-out papers.
+- Qwen inference and training require a CUDA GPU; the vault importer and environment tests run on
+  CPU.
+- Docker execution does not yet match the persistent local worker exactly.
 
-- [`docs/CODE_EXECUTION_SECOND_BRAIN.md`](docs/CODE_EXECUTION_SECOND_BRAIN.md) — active product
-  goal and architecture (start here for the current direction)
-- [`docs/WEEKLY_RESEARCH_RADAR.md`](docs/WEEKLY_RESEARCH_RADAR.md) — product scope contract and
-  success gates
-- [`docs/QWEN3_BASELINE_PILOT.md`](docs/QWEN3_BASELINE_PILOT.md) — Qwen3-8B baseline findings on
-  the AI-paper pilot
-- [`docs/EVAL_RUNBOOK.md`](docs/EVAL_RUNBOOK.md) — how to run a base/SFT/GRPO comparison correctly
-- [`docs/GPU_TRAINING_READINESS.md`](docs/GPU_TRAINING_READINESS.md) — GPU setup and known fixes
-- [`docs/OBSIDIAN_WORKFLOW.md`](docs/OBSIDIAN_WORKFLOW.md) — importing a real vault
-- [`RESULTS.md`](RESULTS.md) — dated experiment log, including Phase 5 (the first real
-  base/SFT/GRPO comparison)
-- [`STATUS.md`](STATUS.md) — environment build log and open bugs
+## Documentation
 
-## Naming
-
-The project is renamed to **Envoy** — a dispatched agent that goes, investigates, and returns with
-evidence, matching the actual MCP-subagent architecture (see
-[Use case](#use-case-a-dispatched-subagent-not-a-chat-interface) above). The specific trained
-policy keeps its model name as a prefix — **Qwen Envoy** for the current Qwen2.5/Qwen3 checkpoint
-— since the environment's core principle is that policies are swappable (`CLAUDE.md`): a future
-Llama- or other-model-backed policy would be "Llama Envoy," not a different project.
-
-Applied: `pyproject.toml` (`name = "envoy"`), `CLAUDE.md`, `AGENTS.md`, `PLAN.md`, and the
-`Envoy`/`envoy` strings baked into scripts and tests (CLI titles, the vault's
-`generated_by` marker, the paper-fetch User-Agent).
-
-Not yet applied: the GitHub repo itself is still `Jasonlingg/DocTracerRL` — renaming that is a
-separate, confirmed step since it changes a shared remote resource GitHub URLs and any external
-links depend on.
-
-## Built With
-
-- [Claude API](https://docs.anthropic.com) — Reference policy
-- [Qwen2.5 / Qwen3](https://huggingface.co/Qwen) — Trained policy (Qwen2.5-7B: SFT + GRPO; Qwen3-8B: baseline measured, SFT in progress)
-- [sentence-transformers](https://sbert.net) — Document embeddings (all-MiniLM-L6-v2)
-- [FAISS](https://github.com/facebookresearch/faiss) — Vector search
-- [Docker](https://www.docker.com) — Sandboxed code execution (not yet at parity with the local backend)
-
-## Development Stack
-
-- [Claude Code](https://claude.ai/claude-code) — AI-assisted development, debugging, and
-  implementation
-- [Google NotebookLM](https://notebooklm.google.com) — Research synthesis and project
-  documentation
+- [Code-execution second brain](docs/CODE_EXECUTION_SECOND_BRAIN.md): product boundary and active
+  model architecture
+- [Weekly research radar](docs/WEEKLY_RESEARCH_RADAR.md): product scope and remaining components
+- [Qwen3 baseline pilot](docs/QWEN3_BASELINE_PILOT.md): measured research-agent failures
+- [Qwen3 SFT prefix diagnosis](docs/QWEN3_SFT_PREFIX_DIAGNOSIS.md): failed run analysis and repair
+- [Evaluation runbook](docs/EVAL_RUNBOOK.md): reproducible checkpoint comparison
+- [Obsidian workflow](docs/OBSIDIAN_WORKFLOW.md): snapshot import and cited-note export
+- [Results](RESULTS.md): dated experiment history
 
 ## License
 
