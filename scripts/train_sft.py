@@ -124,14 +124,22 @@ def train(
         output_dir=out_dir,
         num_train_epochs=epochs,
         per_device_train_batch_size=batch_size,
+        # Must be set explicitly: HF defaults eval batch to 8, which OOMs on a
+        # 24GB card once sequences approach the 8k limit even though training at
+        # batch 1 fits comfortably.
+        per_device_eval_batch_size=batch_size,
         gradient_accumulation_steps=grad_accum,
         learning_rate=lr,
         lr_scheduler_type="cosine",
         warmup_ratio=0.05,
         bf16=True,
         logging_steps=10,
-        save_steps=100,
-        save_total_limit=2,
+        # Per-epoch, not save_steps: a short run can finish in fewer steps than
+        # save_steps, in which case no intermediate checkpoint is ever written and
+        # a crash loses everything. Saving per epoch also makes the epoch-1
+        # checkpoint available if epoch-2 eval loss shows memorisation.
+        save_strategy="epoch",
+        save_total_limit=3,
         packing=False,
         max_length=max_seq_len,
         report_to="none",
