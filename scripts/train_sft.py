@@ -23,11 +23,16 @@ from rich.console import Console
 console = Console()
 app = typer.Typer()
 
-BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+BASE_MODEL = "Qwen/Qwen3-8B"
 
+# r=4, not 16: with ~190 short-assistant-span examples the dataset carries far
+# less information than even a rank-1 adapter can hold, so the binding risk is
+# memorisation, not capacity. Lower rank is free regularisation here.
+# alpha tracks r to hold the alpha/r update scale at 2 — leaving alpha at 32
+# while dropping r would quadruple the effective step size on top of the LR.
 LORA_CONFIG = {
-    "r": 16,
-    "lora_alpha": 32,
+    "r": 4,
+    "lora_alpha": 8,
     "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     "lora_dropout": 0.05,
     "bias": "none",
@@ -52,9 +57,13 @@ def _load_training_deps():
 @app.command()
 def train(
     data: Path = typer.Option(..., "--data", "-d", help="JSONL file from collect_sft_data.py"),
+    val_data: Path = typer.Option(None, "--val-data",
+        help="Held-out JSONL. Eval loss diverging from train loss means memorisation."),
     out: Path = typer.Option(Path("checkpoints/sft_qwen_1.5b"), "--out", "-o"),
     epochs: int = typer.Option(1, "--epochs", "-e"),
-    lr: float = typer.Option(2e-5, "--lr"),
+    # LoRA needs a markedly higher LR than full fine-tuning; 2e-5 is a
+    # full-fine-tune value and barely moves a rank-4 adapter.
+    lr: float = typer.Option(2e-4, "--lr"),
     batch_size: int = typer.Option(1, "--batch-size"),
     grad_accum: int = typer.Option(4, "--grad-accum"),
     max_seq_len: int = typer.Option(8192, "--max-seq-len"),
@@ -69,10 +78,24 @@ def train(
 
     dataset = Dataset.from_list(rows)
 
+    eval_dataset = None
+    if val_data:
+        val_rows = [json.loads(line) for line in val_data.read_text().splitlines() if line.strip()]
+        eval_dataset = Dataset.from_list(val_rows)
+        console.print(f"Loaded {len(val_rows)} held-out conversations from {val_data}")
+
     # Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    # Qwen3's stock template has no {% generation %} block, so assistant_only_loss
+    # would silently mask nothing and train on garbage. Raises if it can't verify.
+    if "qwen3" in base_model.lower():
+        from src.policies.qwen3_chat_template import patch_tokenizer_for_assistant_masking
+
+        patch_tokenizer_for_assistant_masking(tokenizer)
+        console.print("[green]Patched Qwen3 chat template for assistant-only loss[/green]")
 
     # Model
     bnb_config = None
@@ -112,10 +135,14 @@ def train(
         packing=False,
         max_length=max_seq_len,
         report_to="none",
+        gradient_checkpointing=True,
+        eval_strategy="epoch" if eval_dataset is not None else "no",
         # Without this, loss is computed over the entire sequence — including the
         # long tool-output text (search results, REPL prints) in user turns, which
-        # the model never needs to generate. Qwen2.5 is in TRL's supported model
-        # list, so the chat template is auto-patched with {% generation %} markers.
+        # the model never needs to generate. On our data only ~20% of tokens are
+        # assistant tokens, so this is the difference between training on the
+        # trajectory and training mostly on search output. Qwen3 needs the
+        # chat-template patch applied above for this to mask anything at all.
         assistant_only_loss=True,
     )
 
@@ -125,6 +152,7 @@ def train(
         model=model,
         processing_class=tokenizer,
         train_dataset=dataset,
+        eval_dataset=eval_dataset,
         peft_config=lora_config,
         args=sft_config,
     )

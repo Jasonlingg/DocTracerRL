@@ -28,6 +28,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", choices=["train", "validation", "test"], default="test")
     parser.add_argument("--num-questions", type=int, default=20)
+    parser.add_argument("--min-insufficient", type=int, default=None,
+                         help="Oversample this many 'insufficient' (unanswerable) questions "
+                              "above QASPER's natural ~16%% rate")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--revision", default=QASPER_REVISION)
     parser.add_argument(
@@ -53,6 +56,7 @@ def main() -> int:
         revision=args.revision,
         num_questions=args.num_questions,
         seed=args.seed,
+        min_insufficient=args.min_insufficient,
     )
     print(
         json.dumps(

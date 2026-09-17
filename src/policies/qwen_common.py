@@ -25,6 +25,10 @@ Tools (already imported):
 Each turn: write Python code OR a SUBMIT line. Never both. Never prose. Never markdown.
 Variables persist across turns. Use print() to see output.
 
+Before you SUBMIT: does the question have more than one distinct part (e.g. two
+different numbers or facts)? If so, confirm you have explicit support for EACH
+part, not just the one that seems most central, before submitting.
+
 When you have the answer:
 SUBMIT: <your answer> CITATIONS: ["doc_id_1", "doc_id_2"]
 """

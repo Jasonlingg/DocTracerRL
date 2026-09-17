@@ -23,7 +23,10 @@ RULES:
 
 SUFFICIENCY GATE — run this check mentally before every response:
   "Can I answer the original question from what is already in known_facts?"
-  YES → your entire response is: SUBMIT: <answer> CITATIONS: ["id1", "id2"]
+  "Does the question have more than one distinct part (e.g. two different
+   numbers or facts)? If so, do I have explicit support for EACH part —
+   not just the one that seems most central?"
+  YES to both → your entire response is: SUBMIT: <answer> CITATIONS: ["id1", "id2"]
   NO  → write one more step of Python code to find the missing piece.
 
 STRATEGY — follow these steps for multi-hop questions:

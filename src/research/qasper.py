@@ -432,8 +432,14 @@ def build_qasper_code_exec_benchmark(
     revision: str = QASPER_REVISION,
     num_questions: int | None = 20,
     seed: int = 42,
+    min_insufficient: int | None = None,
 ) -> tuple[dict, dict]:
     """Build a code-execution-protocol benchmark (src/env/ format) from QASPER.
+
+    min_insufficient oversamples "insufficient" (unanswerable) questions above their
+    natural ~16% rate in QASPER — useful for building teacher-generation pools that
+    need many abstention examples, not just an unbiased eval sample. Leave it None
+    (default) for plain random sampling, unchanged from prior behavior.
 
     Reuses the same paper/document conversion as build_qasper_snapshot — that part
     is already protocol-agnostic — and only adapts the question schema, since the
@@ -475,12 +481,34 @@ def build_qasper_code_exec_benchmark(
     rng = random.Random(seed)
     rng.shuffle(converted_questions)
     if num_questions is not None:
-        if len(converted_questions) < num_questions:
-            raise ValueError(
-                f"Only {len(converted_questions)} eligible questions; "
-                f"cannot select {num_questions}"
-            )
-        converted_questions = converted_questions[:num_questions]
+        if min_insufficient is not None:
+            insufficient = [
+                q for q in converted_questions if q["expected_answerability"] == "insufficient"
+            ]
+            sufficient = [
+                q for q in converted_questions if q["expected_answerability"] != "insufficient"
+            ]
+            if len(insufficient) < min_insufficient:
+                raise ValueError(
+                    f"Only {len(insufficient)} insufficient questions eligible; "
+                    f"cannot select {min_insufficient}"
+                )
+            if min_insufficient > num_questions:
+                raise ValueError("min_insufficient cannot exceed num_questions")
+            remaining = num_questions - min_insufficient
+            if len(sufficient) < remaining:
+                raise ValueError(
+                    f"Only {len(sufficient)} sufficient questions eligible; "
+                    f"cannot fill remaining {remaining}"
+                )
+            converted_questions = insufficient[:min_insufficient] + sufficient[:remaining]
+        else:
+            if len(converted_questions) < num_questions:
+                raise ValueError(
+                    f"Only {len(converted_questions)} eligible questions; "
+                    f"cannot select {num_questions}"
+                )
+            converted_questions = converted_questions[:num_questions]
     converted_questions.sort(key=lambda question: question["id"])
 
     corpus_hash = content_hash(corpus_dir)

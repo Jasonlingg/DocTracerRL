@@ -155,3 +155,60 @@ def test_requesting_more_questions_than_eligible_raises(tmp_path):
         build_qasper_code_exec_benchmark(
             [paper()], output, source_split="test", num_questions=5, seed=1
         )
+
+
+def paper_with_ratio(paper_id: str, n_sufficient: int, n_insufficient: int) -> dict:
+    method = "The model retrieves two passages before producing an answer."
+    questions, ids, writers, answers = [], [], [], []
+    for i in range(n_sufficient):
+        questions.append(f"How many passages does the model retrieve ({i})?")
+        ids.append(f"{paper_id}-s{i}")
+        writers.append("w1")
+        answers.append([annotation(f"{paper_id}-s{i}-a", evidence=[method],
+                                    extractive=["two passages"])])
+    for i in range(n_insufficient):
+        questions.append(f"Does the paper prove X ({i})?")
+        ids.append(f"{paper_id}-u{i}")
+        writers.append("w1")
+        answers.append([annotation(f"{paper_id}-u{i}-a", unanswerable=True)])
+    n = len(questions)
+    return {
+        "id": paper_id,
+        "title": f"Paper {paper_id}",
+        "abstract": "An abstract.",
+        "full_text": {"section_name": ["Method"], "paragraphs": [[method]]},
+        "qas": {
+            "question": questions,
+            "question_id": ids,
+            "nlp_background": ["five"] * n,
+            "topic_background": ["familiar"] * n,
+            "paper_read": ["yes"] * n,
+            "search_query": [""] * n,
+            "question_writer": writers,
+            "answers": answers,
+        },
+    }
+
+
+def test_min_insufficient_oversamples_unanswerable_questions(tmp_path):
+    rows = [
+        paper_with_ratio("2000.00001", n_sufficient=3, n_insufficient=1),
+        paper_with_ratio("2000.00002", n_sufficient=3, n_insufficient=1),
+        paper_with_ratio("2000.00003", n_sufficient=3, n_insufficient=1),
+    ]
+    output = tmp_path / "qasper-code-exec"
+    _, benchmark = build_qasper_code_exec_benchmark(
+        rows, output, source_split="test", num_questions=4, seed=1, min_insufficient=3,
+    )
+    answerability = [q["expected_answerability"] for q in benchmark["questions"]]
+    assert answerability.count("insufficient") == 3
+    assert answerability.count("sufficient") == 1
+
+
+def test_min_insufficient_raises_when_not_enough_available(tmp_path):
+    rows = [paper_with_ratio("2000.00001", n_sufficient=3, n_insufficient=1)]
+    output = tmp_path / "qasper-code-exec"
+    with pytest.raises(ValueError, match="insufficient questions eligible"):
+        build_qasper_code_exec_benchmark(
+            rows, output, source_split="test", num_questions=4, seed=1, min_insufficient=3,
+        )
