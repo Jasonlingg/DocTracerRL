@@ -76,6 +76,7 @@ class DocumentExplorationEnv:
         use_docker: bool | None = None,
         corpus_path: str = "data/corpus",
         require_evidence: bool = False,
+        include_preamble: bool = True,
     ) -> None:
         self.corpus = corpus
         self.questions = questions
@@ -83,6 +84,7 @@ class DocumentExplorationEnv:
         self._use_docker = use_docker
         self._corpus_path = corpus_path
         self.require_evidence = require_evidence
+        self.include_preamble = include_preamble
         self.repl = PersistentREPL(
             use_docker=use_docker, corpus_path=corpus_path,
         )
@@ -120,8 +122,8 @@ class DocumentExplorationEnv:
         self.repl.start_session()
 
         # Build initial observation
-        preamble = SYSTEM_PREAMBLE
-        if self.require_evidence:
+        preamble = SYSTEM_PREAMBLE if self.include_preamble else ""
+        if self.require_evidence and self.include_preamble:
             preamble += (
                 "\nFor this research evaluation, inspect exact passages and append source spans:\n"
                 'SUBMIT: <answer> CITATIONS: ["id"] EVIDENCE: '
@@ -130,7 +132,11 @@ class DocumentExplorationEnv:
                 "your important claims. The evaluator checks spans separately from answer "
                 "quality.\n"
             )
-        observation = f"{preamble}\n\nQuestion: {q['question']}\n"
+        observation = (
+            f"{preamble}\n\nQuestion: {q['question']}\n"
+            if preamble
+            else f"Question: {q['question']}\n"
+        )
         logger.info(f"Episode started: {q['id']} — {q['question'][:80]}")
         return observation
 

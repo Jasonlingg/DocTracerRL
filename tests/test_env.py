@@ -41,6 +41,24 @@ def test_reset_returns_observation(env: DocumentExplorationEnv) -> None:
     assert "Apex Corp" in obs
 
 
+def test_question_only_observation_avoids_duplicate_policy_instructions(
+    corpus: Corpus, questions: list[dict]
+) -> None:
+    env = DocumentExplorationEnv(
+        corpus=corpus,
+        questions=questions,
+        use_docker=False,
+        include_preamble=False,
+    )
+    try:
+        observation = env.reset(question_idx=0)
+        assert observation == f"Question: {questions[0]['question']}\n"
+        assert "SUBMIT: <answer>" not in observation
+        assert "Python REPL" not in observation
+    finally:
+        env.close()
+
+
 def test_step_with_code(env: DocumentExplorationEnv) -> None:
     env.reset(question_idx=0)
     obs, reward, done, info = env.step('print("hello")')

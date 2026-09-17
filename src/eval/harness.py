@@ -114,6 +114,7 @@ def _run_one_question(
     use_docker: bool | None,
     corpus_path: str,
     require_evidence: bool = False,
+    include_preamble: bool = True,
 ) -> EvalResult:
     """Run one question with a fresh env + policy instance (safe for parallel use)."""
     q = questions[q_idx]
@@ -124,6 +125,7 @@ def _run_one_question(
         use_docker=use_docker,
         corpus_path=corpus_path,
         require_evidence=require_evidence,
+        include_preamble=include_preamble,
     )
     try:
         policy = policy_factory()
@@ -164,6 +166,7 @@ def run_eval(
     question_ids: list[str] | None = None,
     workers: int = 1,
     require_evidence: bool = False,
+    include_preamble: bool = True,
 ) -> list[EvalResult]:
     """Run all policies on all (or selected) questions.
 
@@ -195,6 +198,7 @@ def run_eval(
                     result = _run_one_question(
                         corpus, questions, q_idx, policy_name, factory,
                         max_steps, use_docker, corpus_path, require_evidence,
+                        include_preamble,
                     )
                     results.append(result)
                     logger.info(
@@ -209,6 +213,7 @@ def run_eval(
                             _run_one_question,
                             corpus, questions, q_idx, policy_name, factory,
                             max_steps, use_docker, corpus_path, require_evidence,
+                            include_preamble,
                         )
                         futures[fut] = q_idx
 

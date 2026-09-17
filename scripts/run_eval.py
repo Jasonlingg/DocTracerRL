@@ -127,6 +127,11 @@ def main(
     no_vector_index: bool = typer.Option(
         False, "--no-vector-index", help="Skip unused FAISS index for code-execution policies"
     ),
+    question_only_observation: bool = typer.Option(
+        False,
+        "--question-only-observation",
+        help="Omit the duplicate tool preamble when the policy system prompt already provides it",
+    ),
 ) -> None:
     """Run evaluation: policies through the document exploration environment."""
     console.print("[bold]Envoy — Evaluation[/bold]\n")
@@ -194,6 +199,7 @@ def main(
         question_ids=question_ids,
         workers=workers,
         require_evidence=require_evidence,
+        include_preamble=not question_only_observation,
     )
 
     # Always print and save, even on partial results
@@ -206,6 +212,7 @@ def main(
         "corpus_sha256": content_hash(Path(corpus_path)),
         "max_steps": max_steps, "seed": seed, "reward_version": REWARD_VERSION,
         "workers": workers, "require_evidence": require_evidence,
+        "observation_preamble": not question_only_observation,
         "vector_index": not no_vector_index,
         "decoding": sorted({
             json.dumps({"max_tokens": getattr(p, "_max_tokens", None),
