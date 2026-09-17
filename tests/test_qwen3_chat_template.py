@@ -71,6 +71,31 @@ def test_patch_keeps_rendered_text_identical(tokenizer):
     assert before == after
 
 
+def test_every_next_action_has_the_same_prefix_as_inference(tokenizer):
+    """Each SFT target must begin after the exact prompt used by act()."""
+    patch_tokenizer_for_assistant_masking(tokenizer)
+    for index, message in enumerate(MESSAGES):
+        if message["role"] != "assistant":
+            continue
+        history = MESSAGES[:index]
+        inference_prefix = tokenizer.apply_chat_template(
+            history,
+            tokenize=True,
+            add_generation_prompt=True,
+            enable_thinking=False,
+        )
+        training_sequence = tokenizer.apply_chat_template(
+            history + [message],
+            tokenize=True,
+            enable_thinking=False,
+        )
+        if hasattr(inference_prefix, "keys"):
+            inference_prefix = inference_prefix["input_ids"]
+        if hasattr(training_sequence, "keys"):
+            training_sequence = training_sequence["input_ids"]
+        assert training_sequence[:len(inference_prefix)] == inference_prefix
+
+
 def test_patch_refuses_when_template_structure_is_unrecognised(tokenizer):
     tokenizer.chat_template = "{{ 'totally different template' }}"
     with pytest.raises(ValueError, match="no longer matches the expected structure"):

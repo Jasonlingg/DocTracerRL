@@ -1,20 +1,25 @@
-"""LoRA SFT on Qwen2.5-1.5B-Instruct using high-reward Claude trajectories.
+"""QLoRA SFT on code-execution trajectories.
 
 Requires the [training] extra:
   pip install -e ".[training]"
 
 Run on a GPU box (single H100/A100/A10G):
-  python scripts/train_sft.py --data data/sft/qwen_traj_smoke.jsonl --epochs 1
-  python scripts/train_sft.py --data data/sft/qwen_traj_full.jsonl --epochs 2 --out checkpoints/sft_qwen_1.5b
+  python scripts/train_sft.py train --data data/sft/qwen_traj_smoke.jsonl --epochs 1
+  python scripts/train_sft.py train --data data/sft/qwen_traj_full.jsonl \
+      --epochs 2 --out checkpoints/sft_qwen_1.5b
 
 After training, sanity-check the checkpoint:
-  python scripts/train_sft.py --sanity-check --model checkpoints/sft_qwen_1.5b/final
+  python scripts/train_sft.py sanity-check --model checkpoints/sft_qwen_1.5b/final
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
+import platform
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import typer
@@ -24,6 +29,7 @@ console = Console()
 app = typer.Typer()
 
 BASE_MODEL = "Qwen/Qwen3-8B"
+BASE_REVISION = "b968826d9c46dd6066d109eabc6255188de91218"
 
 # r=4, not 16: with ~190 short-assistant-span examples the dataset carries far
 # less information than even a rank-1 adapter can hold, so the binding risk is
@@ -38,6 +44,110 @@ LORA_CONFIG = {
     "bias": "none",
     "task_type": "CAUSAL_LM",
 }
+
+
+def _expand_per_action(rows: list[dict]) -> list[dict]:
+    """Turn each trajectory into one next-action example per assistant turn.
+
+    Qwen3's non-thinking generation prefix is present only for the assistant turn
+    being generated. A whole-conversation SFT row therefore gives intermediate
+    actions a different prefix from inference. Splitting by action preserves the
+    complete preceding history while making every target the final assistant turn.
+    """
+    examples: list[dict] = []
+    for row_index, row in enumerate(rows):
+        messages = row.get("messages")
+        if not isinstance(messages, list):
+            raise ValueError(f"row {row_index} has no conversational 'messages' list")
+        for message_index, message in enumerate(messages):
+            if message.get("role") != "assistant":
+                continue
+            prompt = messages[:message_index]
+            if not prompt or prompt[-1].get("role") != "user":
+                raise ValueError(
+                    f"row {row_index}, message {message_index}: assistant target must "
+                    "immediately follow a user observation"
+                )
+            examples.append({"prompt": prompt, "completion": [message]})
+    if not examples:
+        raise ValueError("dataset contains no assistant actions")
+    return examples
+
+
+def _tokenize_per_action(
+    tokenizer, examples: list[dict], max_seq_len: int, split_name: str
+) -> tuple[list[dict], dict]:
+    """Create labels only for the next action and prove prefix equality.
+
+    Building labels here avoids relying on trainer-version-specific chat-template
+    preprocessing. The exact token prefix used for training must equal the prompt
+    produced by Qwen3 at inference with thinking disabled.
+    """
+    tokenized: list[dict] = []
+    lengths: list[int] = []
+    supervised_tokens = 0
+
+    def input_ids(rendered) -> list[int]:
+        # transformers 4.x returns a list here; 5.x may return a
+        # BatchEncoding when the template contains generation markers.
+        return rendered["input_ids"] if hasattr(rendered, "keys") else rendered
+
+    for row_index, example in enumerate(examples):
+        prompt = example["prompt"]
+        completion = example["completion"]
+        prompt_ids = input_ids(tokenizer.apply_chat_template(
+            prompt,
+            tokenize=True,
+            add_generation_prompt=True,
+            enable_thinking=False,
+        ))
+        full_ids = input_ids(tokenizer.apply_chat_template(
+            prompt + completion,
+            tokenize=True,
+            enable_thinking=False,
+        ))
+        if full_ids[: len(prompt_ids)] != prompt_ids:
+            raise ValueError(
+                f"{split_name} action {row_index}: training tokens do not start with "
+                "the inference generation prefix"
+            )
+        if len(full_ids) > max_seq_len:
+            raise ValueError(
+                f"{split_name} action {row_index}: {len(full_ids)} tokens exceeds "
+                f"--max-seq-len {max_seq_len}; refusing silent target truncation"
+            )
+        target_tokens = len(full_ids) - len(prompt_ids)
+        if target_tokens <= 0:
+            raise ValueError(f"{split_name} action {row_index}: empty supervised target")
+        labels = [-100] * len(prompt_ids) + full_ids[len(prompt_ids):]
+        tokenized.append({
+            "input_ids": full_ids,
+            "attention_mask": [1] * len(full_ids),
+            "labels": labels,
+        })
+        lengths.append(len(full_ids))
+        supervised_tokens += target_tokens
+
+    return tokenized, {
+        "actions": len(tokenized),
+        "input_tokens": sum(lengths),
+        "supervised_tokens": supervised_tokens,
+        "max_tokens": max(lengths),
+    }
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _git_output(*args: str) -> str:
+    return subprocess.run(
+        ["git", *args], capture_output=True, text=True, check=False
+    ).stdout.strip()
 
 
 def _load_training_deps():
@@ -68,7 +178,22 @@ def train(
     grad_accum: int = typer.Option(4, "--grad-accum"),
     max_seq_len: int = typer.Option(8192, "--max-seq-len"),
     base_model: str = typer.Option(BASE_MODEL, "--base-model"),
+    base_revision: str = typer.Option(BASE_REVISION, "--base-revision"),
     load_in_4bit: bool = typer.Option(True, "--4bit/--no-4bit"),
+    per_action: bool = typer.Option(
+        True,
+        "--per-action/--full-conversation",
+        help="Supervise each next action with the exact inference prefix",
+    ),
+    max_steps: int = typer.Option(-1, "--max-steps"),
+    save_steps: int = typer.Option(
+        0, "--save-steps", help="Save every N optimizer steps; 0 saves per epoch"
+    ),
+    save_total_limit: int = typer.Option(10, "--save-total-limit"),
+    seed: int = typer.Option(42, "--seed"),
+    corpus_manifest: Path = typer.Option(
+        None, "--corpus-manifest", help="Source-corpus manifest recorded with the run"
+    ),
 ) -> None:
     torch, Dataset, LoraConfig, get_peft_model, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, SFTConfig, SFTTrainer = _load_training_deps()
 
@@ -76,16 +201,15 @@ def train(
     rows = [json.loads(line) for line in data.read_text().splitlines() if line.strip()]
     console.print(f"Loaded {len(rows)} conversations from {data}")
 
-    dataset = Dataset.from_list(rows)
-
-    eval_dataset = None
+    val_rows = None
     if val_data:
         val_rows = [json.loads(line) for line in val_data.read_text().splitlines() if line.strip()]
-        eval_dataset = Dataset.from_list(val_rows)
         console.print(f"Loaded {len(val_rows)} held-out conversations from {val_data}")
 
     # Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        base_model, revision=base_revision, trust_remote_code=True
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -96,6 +220,39 @@ def train(
 
         patch_tokenizer_for_assistant_masking(tokenizer)
         console.print("[green]Patched Qwen3 chat template for assistant-only loss[/green]")
+
+    train_stats = {"conversations": len(rows)}
+    val_stats = {"conversations": len(val_rows)} if val_rows is not None else None
+    if per_action:
+        action_rows = _expand_per_action(rows)
+        tokenized_rows, action_stats = _tokenize_per_action(
+            tokenizer, action_rows, max_seq_len, "train"
+        )
+        train_stats.update(action_stats)
+        dataset = Dataset.from_list(tokenized_rows)
+        eval_dataset = None
+        if val_rows is not None:
+            val_action_rows = _expand_per_action(val_rows)
+            tokenized_val, val_action_stats = _tokenize_per_action(
+                tokenizer, val_action_rows, max_seq_len, "validation"
+            )
+            val_stats.update(val_action_stats)
+            eval_dataset = Dataset.from_list(tokenized_val)
+        console.print(
+            f"[green]Verified exact inference-prefix alignment for "
+            f"{train_stats['actions']} training actions[/green]"
+        )
+    else:
+        if "qwen3" in base_model.lower() and any(
+            sum(m.get("role") == "assistant" for m in row.get("messages", [])) > 1
+            for row in rows
+        ):
+            raise ValueError(
+                "Qwen3 full-conversation training misaligns intermediate action prefixes. "
+                "Use the default --per-action mode."
+            )
+        dataset = Dataset.from_list(rows)
+        eval_dataset = Dataset.from_list(val_rows) if val_rows is not None else None
 
     # Model
     bnb_config = None
@@ -109,6 +266,7 @@ def train(
 
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
+        revision=base_revision,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
@@ -138,8 +296,9 @@ def train(
         # save_steps, in which case no intermediate checkpoint is ever written and
         # a crash loses everything. Saving per epoch also makes the epoch-1
         # checkpoint available if epoch-2 eval loss shows memorisation.
-        save_strategy="epoch",
-        save_total_limit=3,
+        save_strategy="steps" if save_steps > 0 else "epoch",
+        save_steps=save_steps if save_steps > 0 else 500,
+        save_total_limit=save_total_limit,
         packing=False,
         max_length=max_seq_len,
         report_to="none",
@@ -151,7 +310,14 @@ def train(
         # assistant tokens, so this is the difference between training on the
         # trajectory and training mostly on search output. Qwen3 needs the
         # chat-template patch applied above for this to mask anything at all.
-        assistant_only_loss=True,
+        # Per-action rows are pre-tokenized above with explicit -100 prompt
+        # labels. Conversational rows use the generation markers in the patched
+        # template instead.
+        assistant_only_loss=not per_action,
+        completion_only_loss=False if per_action else None,
+        max_steps=max_steps,
+        seed=seed,
+        data_seed=seed,
     )
 
     tokenizer.model_max_length = max_seq_len
@@ -165,7 +331,43 @@ def train(
         args=sft_config,
     )
 
-    console.print(f"[bold]Training on {len(dataset)} examples, {epochs} epoch(s)[/bold]")
+    out.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "schema_version": "qwen-sft-run-v1",
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "base_model": base_model,
+        "base_revision": base_revision,
+        "training_format": "per-action-prefix-aligned" if per_action else "conversation",
+        "data": {"path": str(data), "sha256": _sha256(data), **train_stats},
+        "validation": (
+            {"path": str(val_data), "sha256": _sha256(val_data), **val_stats}
+            if val_data is not None and val_stats is not None else None
+        ),
+        "corpus_manifest": (
+            {"path": str(corpus_manifest), "sha256": _sha256(corpus_manifest)}
+            if corpus_manifest is not None else None
+        ),
+        "lora": LORA_CONFIG,
+        "training_script_sha256": _sha256(Path(__file__)),
+        "training": {
+            "epochs": epochs, "max_steps": max_steps, "learning_rate": lr,
+            "batch_size": batch_size, "gradient_accumulation_steps": grad_accum,
+            "max_sequence_length": max_seq_len, "load_in_4bit": load_in_4bit,
+            "save_steps": save_steps, "save_total_limit": save_total_limit,
+            "seed": seed,
+        },
+        "git_commit": _git_output("rev-parse", "HEAD"),
+        "git_status": _git_output("status", "--porcelain").splitlines(),
+        "python": platform.python_version(),
+        "torch": torch.__version__,
+        "gpu": torch.cuda.get_device_name() if torch.cuda.is_available() else None,
+    }
+    (out / "run-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+    console.print(
+        f"[bold]Training on {len(dataset)} action examples from {len(rows)} conversations, "
+        f"{epochs} epoch(s)[/bold]"
+    )
     trainer.train()
     trainer.save_model(final_dir)
     tokenizer.save_pretrained(final_dir)
