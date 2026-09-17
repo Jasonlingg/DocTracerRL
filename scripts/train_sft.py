@@ -180,6 +180,11 @@ def train(
     base_model: str = typer.Option(BASE_MODEL, "--base-model"),
     base_revision: str = typer.Option(BASE_REVISION, "--base-revision"),
     load_in_4bit: bool = typer.Option(True, "--4bit/--no-4bit"),
+    activation_offloading: bool = typer.Option(
+        False,
+        "--activation-offloading/--no-activation-offloading",
+        help="Move saved forward activations to CPU to fit long sequences",
+    ),
     per_action: bool = typer.Option(
         True,
         "--per-action/--full-conversation",
@@ -318,6 +323,7 @@ def train(
         max_steps=max_steps,
         seed=seed,
         data_seed=seed,
+        activation_offloading=activation_offloading,
     )
 
     tokenizer.model_max_length = max_seq_len
@@ -353,6 +359,7 @@ def train(
             "epochs": epochs, "max_steps": max_steps, "learning_rate": lr,
             "batch_size": batch_size, "gradient_accumulation_steps": grad_accum,
             "max_sequence_length": max_seq_len, "load_in_4bit": load_in_4bit,
+            "activation_offloading": activation_offloading,
             "save_steps": save_steps, "save_total_limit": save_total_limit,
             "seed": seed,
         },

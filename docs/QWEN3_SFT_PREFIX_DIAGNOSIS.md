@@ -171,3 +171,11 @@ close to the control while the repeated history raises total processed input fro
 684,271 to 3,404,896 tokens per training epoch. A one-update GPU smoke completed a
 real forward pass, backward pass, optimizer update, and adapter save before the
 full run was launched.
+
+That first smoke happened to contain only 404 tokens. The first full attempt
+later reached an action long enough to exceed the L4's 22 GiB usable memory and
+stopped before saving a checkpoint. A 6,999-token forced smoke reproduced the
+capacity failure even with PyTorch's fragmentation-resistant allocator. The
+relaunch therefore enables TRL activation offloading. A forced 6,999-token
+forward/backward/save smoke passed with exit code 0 before the relaunch; this
+changes memory placement rather than the data, model, optimizer, or loss.
