@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RLM Explorer — Trajectory Viewer</title>
+<title>Envoy — Research Agent</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
@@ -127,8 +127,8 @@
   .live-question { padding: 12px 24px; background: var(--bg); border-bottom: 1px solid var(--border);
     font-size: 15px; font-weight: 600; min-height: 44px; }
 
-  .race-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 0; overflow: hidden; }
+  .race-grid { flex: 1; display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0; overflow: auto; }
   .race-lane { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
   .race-lane:last-child { border-right: none; }
   .lane-header { padding: 10px 14px; background: var(--bg2); border-bottom: 1px solid var(--border);
@@ -141,6 +141,13 @@
   .lane-status.waiting { background: var(--bg3); color: var(--text2); }
   .lane-reward { font-size: 20px; font-weight: 700; padding: 8px 14px;
     text-align: center; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+  .lane-result { padding: 12px 14px; background: rgba(63,185,80,0.05);
+    border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .lane-result-title { color: var(--green); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.5px; margin-bottom: 6px; text-transform: uppercase; }
+  .lane-result-answer { font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+  .lane-result-citations { color: var(--text2); font-size: 11px; margin-top: 8px;
+    font-family: 'SF Mono', monospace; word-break: break-word; }
   .lane-steps { flex: 1; overflow-y: auto; padding: 8px; }
 
   .mini-step { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 6px;
@@ -165,7 +172,7 @@
 </head>
 <body>
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('live')">Live Race</div>
+    <div class="tab active" onclick="switchTab('live')">Live Agent</div>
     <div class="tab" onclick="switchTab('history')">History</div>
   </div>
 
@@ -174,33 +181,29 @@
     <div class="live-container">
       <div class="live-controls">
         <label>Corpus:</label>
-        <select id="liveCorpus" onchange="loadQuestionList()">
-          <option value="musique">MuSiQue (2940 docs)</option>
-          <option value="synthetic">Synthetic (43 docs)</option>
-        </select>
-        <label>Question:</label>
-        <select id="liveQuestion" style="min-width:400px"></select>
+        <select id="liveCorpus" onchange="loadQuestionList()"></select>
+        <label>Policy:</label>
+        <select id="livePolicy"></select>
+        <label>Saved question:</label>
+        <select id="liveQuestion" style="min-width:280px"></select>
+        <input id="customQuestion" type="text"
+          placeholder="Or type a question for this corpus" style="min-width:300px">
         <label>Steps:</label>
         <input id="liveSteps" type="number" value="10" min="1" max="20" style="width:60px">
-        <label>API Key:</label>
-        <input id="apiKey" type="password" placeholder="sk-ant-... (optional)" style="min-width:200px">
-        <button class="btn btn-primary" id="btnStart" onclick="startRace()">Start Race</button>
+        <label>Anthropic key:</label>
+        <input id="apiKey" type="password" placeholder="Only needed for Claude" style="min-width:190px">
+        <button class="btn btn-primary" id="btnStart" onclick="startRace()">Run Agent</button>
         <button class="btn" id="btnReplay" onclick="playReplay()" style="background:var(--purple);color:#fff">Watch Replay</button>
       </div>
-      <div class="live-question" id="liveQuestionText">Select a question and click Start Race</div>
-      <div class="race-grid" id="raceGrid">
-        <div class="race-lane" id="lane-claude_policy"><div class="lane-header"><span class="lane-name policy-claude">claude_policy</span><span class="lane-status waiting">waiting</span></div><div class="lane-reward" id="reward-claude_policy">-</div><div class="lane-steps" id="steps-claude_policy"></div></div>
-        <div class="race-lane" id="lane-naive_rag"><div class="lane-header"><span class="lane-name policy-naive">naive_rag</span><span class="lane-status waiting">waiting</span></div><div class="lane-reward" id="reward-naive_rag">-</div><div class="lane-steps" id="steps-naive_rag"></div></div>
-        <div class="race-lane" id="lane-context_stuffing"><div class="lane-header"><span class="lane-name policy-stuffing">context_stuffing</span><span class="lane-status waiting">waiting</span></div><div class="lane-reward" id="reward-context_stuffing">-</div><div class="lane-steps" id="steps-context_stuffing"></div></div>
-        <div class="race-lane" id="lane-single_shot"><div class="lane-header"><span class="lane-name policy-single">single_shot</span><span class="lane-status waiting">waiting</span></div><div class="lane-reward" id="reward-single_shot">-</div><div class="lane-steps" id="steps-single_shot"></div></div>
-      </div>
+      <div class="live-question" id="liveQuestionText">Choose a policy and question, then run the agent</div>
+      <div class="race-grid" id="raceGrid"></div>
     </div>
   </div>
 
   <!-- HISTORY TAB -->
   <div class="tab-content" id="tab-history">
     <div class="sidebar">
-      <div class="sidebar-header"><h1>RLM Explorer</h1><p>Trajectory Viewer</p></div>
+      <div class="sidebar-header"><h1>Envoy</h1><p>Trajectory Viewer</p></div>
       <div class="sidebar-section">Runs</div>
       <div class="run-list" id="runList"></div>
       <div class="sidebar-section">Policy Filter</div>
@@ -222,24 +225,63 @@ function switchTab(name) {
 
 /* ===== LIVE RACE ===== */
 let ws = null;
-const policies = ['claude_policy', 'naive_rag', 'context_stuffing', 'single_shot'];
+let policies = [];
+let policyCatalog = [];
 let questionData = [];
+
+async function loadPolicyList() {
+  policyCatalog = await (await fetch('/api/policies')).json();
+  const sel = document.getElementById('livePolicy');
+  sel.innerHTML = policyCatalog.map(p => {
+    const suffix = p.available ? '' : ` — unavailable: ${p.reason}`;
+    return `<option value="${p.name}" ${p.available ? '' : 'disabled'}>${p.label}${suffix}</option>`;
+  }).join('');
+}
+
+async function loadCorpusList() {
+  const corpora = await (await fetch('/api/corpora')).json();
+  const sel = document.getElementById('liveCorpus');
+  sel.innerHTML = corpora.map(c =>
+    `<option value="${c.id}">${c.label} (${c.question_count} saved questions)</option>`
+  ).join('');
+  await loadQuestionList();
+}
 
 async function loadQuestionList() {
   const corpus = document.getElementById('liveCorpus').value;
+  if (!corpus) {
+    questionData = [];
+    document.getElementById('liveQuestion').innerHTML = '';
+    return;
+  }
   const res = await fetch(`/api/questions/${corpus}`);
   questionData = await res.json();
   const sel = document.getElementById('liveQuestion');
-  sel.innerHTML = questionData.map((q, i) =>
+  sel.innerHTML = questionData.length ? questionData.map((q, i) =>
     `<option value="${i}">${q.id} — ${q.question.slice(0, 80)}${q.question.length > 80 ? '...' : ''}</option>`
-  ).join('');
+  ).join('') : '<option value="">No saved questions; type one</option>';
+}
+
+function renderLanes(names) {
+  document.getElementById('raceGrid').innerHTML = names.map(p => {
+    const meta = policyCatalog.find(item => item.name === p);
+    const label = meta?.label || p;
+    return `<div class="race-lane" id="lane-${p}">
+      <div class="lane-header"><span class="lane-name">${escapeHtml(label)}</span>
+      <span class="lane-status waiting">waiting</span></div>
+      <div class="lane-reward" id="reward-${p}">-</div>
+      <div class="lane-result" id="result-${p}" hidden></div>
+      <div class="lane-steps" id="steps-${p}"></div></div>`;
+  }).join('');
 }
 
 function resetLanes() {
+  renderLanes(policies);
   policies.forEach(p => {
     document.getElementById(`steps-${p}`).innerHTML = '';
     document.getElementById(`reward-${p}`).textContent = '-';
     document.getElementById(`reward-${p}`).className = 'lane-reward';
+    document.getElementById(`result-${p}`).hidden = true;
     const status = document.querySelector(`#lane-${p} .lane-status`);
     status.textContent = 'waiting';
     status.className = 'lane-status waiting';
@@ -248,13 +290,20 @@ function resetLanes() {
 
 async function startRace() {
   const idx = parseInt(document.getElementById('liveQuestion').value);
-  const q = questionData[idx];
+  const customQuestion = document.getElementById('customQuestion').value.trim();
+  const q = customQuestion
+    ? {id: `custom-${Date.now()}`, question: customQuestion}
+    : questionData[idx];
   const corpus = document.getElementById('liveCorpus').value;
+  const selectedPolicy = document.getElementById('livePolicy').value;
   const maxSteps = parseInt(document.getElementById('liveSteps').value);
   const apiKey = document.getElementById('apiKey').value.trim() || null;
-  if (!q) return;
+  if (!q || !corpus || !selectedPolicy) return;
+  policies = [selectedPolicy];
 
-  document.getElementById('liveQuestionText').textContent = q.question;
+  document.getElementById('liveQuestionText').textContent = customQuestion
+    ? `${q.question} · custom question (unscored)`
+    : q.question;
   document.getElementById('btnStart').disabled = true;
 
   // Get rate-limit token
@@ -324,11 +373,26 @@ function handleStep(ev) {
   if (ev.done) {
     const rewardEl = document.getElementById(`reward-${ev.policy}`);
     const r = ev.total_reward;
-    rewardEl.textContent = r.toFixed(3);
-    rewardEl.classList.add(r >= 0.6 ? 'good' : r >= 0.3 ? 'mid' : 'bad');
+    if (ev.scored === false) {
+      rewardEl.textContent = 'unscored';
+    } else {
+      rewardEl.textContent = r.toFixed(3);
+      rewardEl.classList.add(r >= 0.6 ? 'good' : r >= 0.3 ? 'mid' : 'bad');
+    }
+
+    const resultEl = document.getElementById(`result-${ev.policy}`);
+    const answer = ev.predicted_answer || 'No final answer was submitted.';
+    const citations = ev.predicted_citations?.length
+      ? `<div class="lane-result-citations">Evidence: ${escapeHtml(ev.predicted_citations.join(', '))}</div>`
+      : '';
+    resultEl.innerHTML = `<div class="lane-result-title">Final answer</div>
+      <div class="lane-result-answer">${escapeHtml(answer)}</div>${citations}`;
+    resultEl.hidden = false;
+
     const status = document.querySelector(`#lane-${ev.policy} .lane-status`);
-    status.textContent = r > 0.3 ? 'done' : 'failed';
-    status.className = `lane-status ${r > 0.3 ? 'done' : 'failed'}`;
+    const succeeded = ev.scored === false || r > 0.3;
+    status.textContent = succeeded ? 'done' : 'failed';
+    status.className = `lane-status ${succeeded ? 'done' : 'failed'}`;
   }
 }
 
@@ -355,7 +419,10 @@ async function playReplay() {
   const events = data.events || [];
   if (!events.length) { alert('Replay has no events.'); return; }
 
-  document.getElementById('liveQuestionText').textContent = data.meta?.question || 'Replay';
+  policies = [...new Set(events.map(event => event.policy))];
+  const replayQuestion = data.meta?.question || 'Replay';
+  const replayLabel = data.meta?.label ? ` · ${data.meta.label}` : '';
+  document.getElementById('liveQuestionText').textContent = `${replayQuestion}${replayLabel}`;
   document.getElementById('btnStart').disabled = true;
   document.getElementById('btnReplay').disabled = true;
   resetLanes();
@@ -481,7 +548,8 @@ function escapeHtml(s) { const d = document.createElement('div'); d.textContent 
 
 /* Init */
 loadRuns();
-loadQuestionList();
+loadPolicyList();
+loadCorpusList();
 </script>
 </body>
 </html>

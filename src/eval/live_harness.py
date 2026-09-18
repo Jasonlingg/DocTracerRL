@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from src.env.corpus import Corpus
 from src.env.document_env import DocumentExplorationEnv
+from src.policies.protocol import Policy
 
 
 class StepEvent(BaseModel):
@@ -34,6 +35,7 @@ class StepEvent(BaseModel):
     predicted_answer: str
     predicted_citations: list[str]
     elapsed: float
+    scored: bool
 
     def to_dict(self) -> dict:
         return self.model_dump()
@@ -43,11 +45,12 @@ def run_policy_live(
     corpus: Corpus,
     question: dict,
     question_idx: int,
-    policy: object,
+    policy: Policy,
     policy_name: str,
     max_steps: int,
     corpus_path: str,
     on_step: Callable[[StepEvent], None],
+    include_preamble: bool = True,
 ) -> None:
     """Run a single policy on a single question, calling on_step after each action."""
     env = DocumentExplorationEnv(
@@ -56,11 +59,13 @@ def run_policy_live(
         max_steps=max_steps,
         use_docker=None,
         corpus_path=corpus_path,
+        include_preamble=include_preamble,
     )
     try:
         policy.reset()
         obs = env.reset(question_idx=0)
         start = time.time()
+        scored = question.get("scored", True)
 
         for step_num in range(1, max_steps + 1):
             action = policy.act(obs)
@@ -83,20 +88,33 @@ def run_policy_live(
                 predicted_answer=info.get("predicted_answer", ""),
                 predicted_citations=info.get("predicted_citations", []),
                 elapsed=time.time() - start,
+                scored=scored,
             )
             on_step(event)
             if done:
                 break
     except Exception as e:
         logger.error(f"Error in {policy_name}: {e}\n{traceback.format_exc()}")
-        on_step(StepEvent(
-            policy=policy_name, question_id=question["id"],
-            question=question["question"], step=0, action="",
-            observation=f"ERROR: {e}", reward=0.0, done=True,
-            total_reward=0.0, answer_score=0.0, citation_precision=0.0,
-            citation_recall=0.0, predicted_answer="", predicted_citations=[],
-            elapsed=0.0,
-        ))
+        on_step(
+            StepEvent(
+                policy=policy_name,
+                question_id=question["id"],
+                question=question["question"],
+                step=0,
+                action="",
+                observation=f"ERROR: {e}",
+                reward=0.0,
+                done=True,
+                total_reward=0.0,
+                answer_score=0.0,
+                citation_precision=0.0,
+                citation_recall=0.0,
+                predicted_answer="",
+                predicted_citations=[],
+                elapsed=0.0,
+                scored=question.get("scored", True),
+            )
+        )
     finally:
         env.close()
 
@@ -104,17 +122,26 @@ def run_policy_live(
 def run_parallel(
     corpus: Corpus,
     question: dict,
-    policies: dict[str, object],
+    policies: dict[str, Policy],
     max_steps: int,
     corpus_path: str,
     on_step: Callable[[StepEvent], None],
+    include_preamble: bool = True,
 ) -> None:
     """Run all policies on a question in parallel, streaming steps via on_step."""
     with ThreadPoolExecutor(max_workers=len(policies)) as pool:
         futures = {
             pool.submit(
-                run_policy_live, corpus, question, 0, policy, name,
-                max_steps, corpus_path, on_step,
+                run_policy_live,
+                corpus,
+                question,
+                0,
+                policy,
+                name,
+                max_steps,
+                corpus_path,
+                on_step,
+                include_preamble,
             ): name
             for name, policy in policies.items()
         }

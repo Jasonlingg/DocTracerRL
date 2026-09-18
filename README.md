@@ -216,6 +216,48 @@ CHECKPOINT_PATH=/path/to/adapter/final \
 See [docs/GPU_TRAINING_READINESS.md](docs/GPU_TRAINING_READINESS.md) before starting a GPU run and
 [docs/EVAL_RUNBOOK.md](docs/EVAL_RUNBOOK.md) before comparing checkpoints.
 
+### Local trajectory UI
+
+The viewer can run an agent live, stream every Python action and tool result, and browse saved
+evaluation transcripts. It discovers the synthetic, MuSiQue, QASPER, AI-paper, and imported-vault
+corpora available under `out/research/`. Select a saved question or type a new one. **Watch
+Replay** runs a bundled, recorded QASPER trajectory without loading a model or using an API key;
+it is labeled as a Claude reference trace in the UI.
+
+```bash
+pip install -e ".[viewer]"
+python scripts/viewer.py
+# Open http://127.0.0.1:8000
+```
+
+The UI reads its policy list from the shared registry rather than hardcoding Qwen or Claude. To use
+an OpenAI-compatible vLLM, Ollama, LM Studio, or hosted endpoint:
+
+```bash
+export ENVOY_MODEL_ENDPOINT=http://localhost:8000/v1
+export ENVOY_MODEL_ID=Qwen/Qwen3-8B
+
+# Useful for a Qwen3 model served by vLLM:
+export ENVOY_MODEL_EXTRA_JSON='{"chat_template_kwargs":{"enable_thinking":false}}'
+
+python scripts/viewer.py
+```
+
+The same adapter works in the command-line evaluator:
+
+```bash
+python scripts/run_eval.py \
+  --policy openai_compatible \
+  --questions data/research/code_exec_pilot_v1.json \
+  --corpus out/research/starter-2026-09-12/corpus \
+  --question-only-observation \
+  --no-vector-index
+```
+
+At the harness boundary, a policy only needs `act(observation) -> action` and `reset()`. The
+environment, REPL, tools, transcript format, UI, and scoring code do not depend on the provider or
+model family.
+
 ## Agent tools
 
 | Tool | Description |

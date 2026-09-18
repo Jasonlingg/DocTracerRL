@@ -20,14 +20,7 @@ from src.env.reward import REWARD_VERSION, REWARD_WEIGHTS
 from src.eval.artifacts import configuration_hash, content_hash
 from src.eval.harness import run_eval
 from src.eval.report import print_results
-from src.policies.claude_policy import ClaudePolicy
-from src.policies.grpo_policy import GRPOPolicy
-from src.policies.naive_rag import NaiveRAGPolicy
-from src.policies.qwen_base_policy import QwenBasePolicy
-from src.policies.qwen_sft_policy import QwenSFTPolicy
-from src.policies.single_shot import SingleShotPolicy
-from src.policies.sparse_rag import SparseRAGPolicy
-from src.policies.stuffing import ContextStuffingPolicy
+from src.policies.registry import build_policies as build_registered_policies
 
 # An exported-but-EMPTY key shadows .env: load_dotenv() defaults to
 # override=False and treats "" as already-set, so the blank value wins and
@@ -56,30 +49,33 @@ def build_policies(
     policy_names: list[str] | None = None,
     as_factories: bool = False,
 ) -> dict[str, object]:
-    """Build policy instances (or factories when as_factories=True).
+    """Build registered policies while keeping the CLI's historical seam."""
+    return build_registered_policies(corpus, policy_names, as_factories=as_factories)
 
-    Pass as_factories=True when using workers > 1 so each worker thread
-    creates its own fresh instance with no shared mutable state.
-    """
-    all_policies = {
-        "claude_policy": lambda: ClaudePolicy(),
-        "naive_rag": lambda: NaiveRAGPolicy(corpus=corpus),
-        "sparse_rag": lambda: SparseRAGPolicy(corpus=corpus),
-        "context_stuffing": lambda: ContextStuffingPolicy(corpus=corpus),
-        "single_shot": lambda: SingleShotPolicy(corpus=corpus),
-        "qwen_base_policy": lambda: QwenBasePolicy(),
-        "qwen_sft_policy": lambda: QwenSFTPolicy(),
-        "grpo_policy": lambda: GRPOPolicy(),
-    }
 
-    selected = {
-        name: factory
-        for name, factory in all_policies.items()
-        if policy_names is None or name in policy_names
-    }
-    if as_factories:
-        return selected
-    return {name: factory() for name, factory in selected.items()}
+def _policy_settings(policy_name: str, policy: object) -> dict:
+    """Return reproducibility metadata without depending on a policy class."""
+    settings = dict(getattr(policy, "config", {}) or {})
+    max_tokens = getattr(policy, "_max_tokens", getattr(policy, "max_tokens", None))
+    temperature = getattr(policy, "_temperature", getattr(policy, "temperature", None))
+    if max_tokens is not None:
+        settings.setdefault("max_tokens", max_tokens)
+    if temperature is not None:
+        settings.setdefault("temperature", temperature)
+
+    if policy_name == "openai_compatible":
+        settings.setdefault("backend", "openai_compatible")
+        settings.setdefault("endpoint", os.environ.get("ENVOY_MODEL_ENDPOINT"))
+        settings.setdefault("model", os.environ.get("ENVOY_MODEL_ID"))
+    elif policy_name in {"qwen_base_policy", "qwen_sft_policy", "grpo_policy"}:
+        settings.setdefault("model", os.environ.get("BASE_MODEL_PATH", "Qwen/Qwen2.5-7B-Instruct"))
+        settings.setdefault("checkpoint", os.environ.get("CHECKPOINT_PATH"))
+
+    revision = getattr(getattr(getattr(policy, "_model", None),
+                               "config", None), "_commit_hash", None)
+    if revision is not None:
+        settings.setdefault("base_revision", revision)
+    return settings
 
 
 @app.command()
@@ -206,6 +202,10 @@ def main(
     console.print()
     if results:
         print_results(results, verbose=verbose)
+    policy_settings = {
+        name: _policy_settings(name, policy_instance)
+        for name, policy_instance in policies.items()
+    }
     protocol = {
         "question_ids": [q["id"] for q in questions],
         "questions_sha256": content_hash(Path(questions_path)),
@@ -215,9 +215,9 @@ def main(
         "observation_preamble": not question_only_observation,
         "vector_index": not no_vector_index,
         "decoding": sorted({
-            json.dumps({"max_tokens": getattr(p, "_max_tokens", None),
-                        "temperature": getattr(p, "_temperature", None)}, sort_keys=True)
-            for p in policies.values()
+            json.dumps({"max_tokens": settings.get("max_tokens"),
+                        "temperature": settings.get("temperature")}, sort_keys=True)
+            for settings in policy_settings.values()
         }),
     }
     manifest = {
@@ -225,8 +225,8 @@ def main(
         "comparison_id": configuration_hash(protocol),
         "split": split if musique else questions_path,
         "checkpoint_id": os.environ.get("CHECKPOINT_PATH"),
-        "base_model": os.environ.get("BASE_MODEL_PATH", "Qwen/Qwen2.5-7B-Instruct")
-        if policy in {"qwen_base_policy", "qwen_sft_policy", "grpo_policy"} else None,
+        "base_model": next((settings.get("model") for settings in policy_settings.values()
+                            if settings.get("model")), None),
         "git_commit": subprocess.run(
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
         ).stdout.strip(),
@@ -241,13 +241,7 @@ def main(
             else None
         ),
         "workers": workers,
-        "policy_settings": {
-            name: {"max_tokens": getattr(p, "_max_tokens", None),
-                   "temperature": getattr(p, "_temperature", None),
-                   "base_revision": getattr(getattr(getattr(p, "_model", None),
-                                                    "config", None), "_commit_hash", None)}
-            for name, p in policies.items()
-        },
+        "policy_settings": policy_settings,
     }
     save_transcripts(results, output=output, run_label=run_label, manifest=manifest)
     if len(results) != len(questions) * len(policies) or any(r.status == "error" for r in results):

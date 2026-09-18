@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from src.env.corpus import Corpus
 from src.env.document_env import DocumentExplorationEnv, StepRecord
 from src.env.reward import REWARD_VERSION
+from src.policies.protocol import Policy
 
 
 class EvalResult(BaseModel):
@@ -39,7 +40,7 @@ class EvalResult(BaseModel):
 
 def run_single(
     env: DocumentExplorationEnv,
-    policy: object,
+    policy: Policy,
     question_idx: int,
 ) -> EvalResult:
     """Run a single policy on a single question through the environment."""
@@ -109,7 +110,7 @@ def _run_one_question(
     questions: list[dict],
     q_idx: int,
     policy_name: str,
-    policy_factory: Callable,
+    policy_factory: Callable[[], Policy],
     max_steps: int,
     use_docker: bool | None,
     corpus_path: str,
@@ -159,7 +160,7 @@ def _run_one_question(
 def run_eval(
     corpus: Corpus,
     questions: list[dict],
-    policies: dict[str, object],
+    policies: dict[str, Policy | Callable[[], Policy]],
     max_steps: int = 10,
     use_docker: bool | None = None,
     corpus_path: str = "data/corpus",
@@ -183,7 +184,7 @@ def run_eval(
         q_indices = list(range(len(questions)))
 
     # Normalise: wrap plain instances in a factory so parallel path always has a callable.
-    factories: dict[str, Callable] = {}
+    factories: dict[str, Callable[[], Policy]] = {}
     for name, p in policies.items():
         factories[name] = p if callable(p) and not hasattr(p, "act") else (lambda _p=p: _p)
 
